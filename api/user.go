@@ -118,7 +118,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 	
-	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.Email, user.Role, server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, user.Role, server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))

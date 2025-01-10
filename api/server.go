@@ -39,10 +39,13 @@ func (server *Server) setupRouter() {
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     server.config.AllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
 	v1 := router.Group("/v1")
+	
+	v1.POST("/tokens/verify", server.verifyAccessToken)
 	
 	userGroup := v1.Group("/users")
 	{
