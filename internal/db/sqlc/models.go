@@ -9,9 +9,12 @@ import (
 )
 
 type User struct {
-	ID             int64     `json:"id"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
 	HashedPassword string    `json:"-"`
 	Email          string    `json:"email"`
+	EmailVerified  bool      `json:"email_verified"`
 	Role           string    `json:"role"`
+	Picture        string    `json:"picture"`
 	CreatedAt      time.Time `json:"created_at"`
 }

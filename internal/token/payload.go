@@ -2,7 +2,6 @@ package token
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	
 	"github.com/golang-jwt/jwt/v5"
@@ -14,7 +13,7 @@ type Payload struct {
 	Role string `json:"role"`
 }
 
-func NewPayload(userID int64, role string, duration time.Duration) (payload Payload, err error) {
+func NewPayload(userID string, role string, duration time.Duration) (payload Payload, err error) {
 	tokenID, err := uuid.NewRandom()
 	if err != nil {
 		return payload, fmt.Errorf("failed to generate tokenID: %w", err)
@@ -25,7 +24,7 @@ func NewPayload(userID int64, role string, duration time.Duration) (payload Payl
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        tokenID.String(),
 			Issuer:    "cvp",
-			Subject:   strconv.FormatInt(userID, 10),
+			Subject:   userID,
 			Audience:  jwt.ClaimStrings{"client"},
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),

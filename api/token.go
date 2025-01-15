@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 	
 	"github.com/gin-gonic/gin"
 )
@@ -25,13 +24,7 @@ func (server *Server) verifyAccessToken(c *gin.Context) {
 		return
 	}
 	
-	userID, err := strconv.ParseInt(claims.Subject, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, errorResponse(err))
-		return
-	}
-	
-	user, err := server.store.GetUserByID(c, userID)
+	user, err := server.store.GetUserByID(c, claims.Subject)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, errorResponse(err))
 		return

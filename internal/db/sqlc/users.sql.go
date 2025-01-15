@@ -10,30 +10,69 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (hashed_password, email)
-VALUES ($1, $2) RETURNING id, hashed_password, email, role, created_at
+INSERT INTO users (hashed_password, email, email_verified)
+VALUES ($1, $2, $3) RETURNING id, name, hashed_password, email, email_verified, role, picture, created_at
 `
 
 type CreateUserParams struct {
 	HashedPassword string `json:"-"`
 	Email          string `json:"email"`
+	EmailVerified  bool   `json:"email_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.HashedPassword, arg.Email)
+	row := q.db.QueryRow(ctx, createUser, arg.HashedPassword, arg.Email, arg.EmailVerified)
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.HashedPassword,
 		&i.Email,
+		&i.EmailVerified,
 		&i.Role,
+		&i.Picture,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createUserWithGoogleAccount = `-- name: CreateUserWithGoogleAccount :one
+INSERT INTO users (id, name, email, email_verified, picture)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, name, hashed_password, email, email_verified, role, picture, created_at
+`
+
+type CreateUserWithGoogleAccountParams struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Picture       string `json:"picture"`
+}
+
+func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUserWithGoogleAccount,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.EmailVerified,
+		arg.Picture,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.HashedPassword,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Role,
+		&i.Picture,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, hashed_password, email, role, created_at
+SELECT id, name, hashed_password, email, email_verified, role, picture, created_at
 FROM users
 WHERE email = $1
 `
@@ -43,28 +82,34 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.HashedPassword,
 		&i.Email,
+		&i.EmailVerified,
 		&i.Role,
+		&i.Picture,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, hashed_password, email, role, created_at
+SELECT id, name, hashed_password, email, email_verified, role, picture, created_at
 FROM users
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.Name,
 		&i.HashedPassword,
 		&i.Email,
+		&i.EmailVerified,
 		&i.Role,
+		&i.Picture,
 		&i.CreatedAt,
 	)
 	return i, err

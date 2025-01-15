@@ -47,10 +47,12 @@ func (server *Server) setupRouter() {
 	
 	v1.POST("/tokens/verify", server.verifyAccessToken)
 	
+	v1.POST("/auth/login", server.loginUser)
+	v1.POST("/auth/google-login", server.loginUserWithGoogle)
+	
 	userGroup := v1.Group("/users")
 	{
 		userGroup.POST("", server.createUser)
-		userGroup.POST("/login", server.loginUser)
 	}
 	
 	server.router = router
