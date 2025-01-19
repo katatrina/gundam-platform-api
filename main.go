@@ -17,7 +17,7 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	
 	// Load configurations
-	config, err := util.LoadConfig("./app.env")
+	config, err := util.LoadConfig("./local.env")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load config file 😣")
 	}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	
 	"github.com/gin-contrib/cors"
@@ -8,13 +9,15 @@ import (
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"google.golang.org/api/idtoken"
 )
 
 type Server struct {
-	router     *gin.Engine
-	store      db.Store
-	tokenMaker token.Maker
-	config     util.Config
+	router                 *gin.Engine
+	store                  db.Store
+	tokenMaker             token.Maker
+	config                 util.Config
+	googleIDTokenValidator *idtoken.Validator
 }
 
 // NewServer creates a new HTTP server and set up routing.
@@ -24,10 +27,16 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create token maker: %w", err)
 	}
 	
+	googleIDTokenValidator, err := idtoken.NewValidator(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create google id token validator: %w", err)
+	}
+	
 	server := &Server{
-		store:      store,
-		tokenMaker: tokenMaker,
-		config:     config,
+		store:                  store,
+		tokenMaker:             tokenMaker,
+		config:                 config,
+		googleIDTokenValidator: googleIDTokenValidator,
 	}
 	
 	server.setupRouter()
@@ -43,6 +52,11 @@ func (server *Server) setupRouter() {
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+	router.Use(func(c *gin.Context) {
+		c.Header("Cross-Origin-Opener-Policy", "same-origin same-origin-allow-popups")
+		c.Header("Cross-Origin-Embedder-Policy", "unsafe-none")
+		c.Next()
+	})
 	v1 := router.Group("/v1")
 	
 	v1.POST("/tokens/verify", server.verifyAccessToken)
@@ -53,6 +67,8 @@ func (server *Server) setupRouter() {
 	userGroup := v1.Group("/users")
 	{
 		userGroup.POST("", server.createUser)
+		userGroup.GET(":id", server.getUser)
+		userGroup.PUT(":id", server.updateUser)
 	}
 	
 	server.router = router

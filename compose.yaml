@@ -3,8 +3,8 @@ name: gundam_platform
 services:
   postgres:
     image: postgres:17.2-alpine3.21
-    volumes:
-      - db-data:/var/lib/postgresql/data
+#    volumes:
+#      - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     environment:
@@ -29,5 +29,5 @@ services:
     environment:
       DATABASE_URL: "postgres://root:secret@postgres:5432/gundam_platform?sslmode=disable"
 
-volumes:
-    db-data:
+#volumes:
+#    db-data:

@@ -7,17 +7,19 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (hashed_password, email, email_verified)
-VALUES ($1, $2, $3) RETURNING id, name, hashed_password, email, email_verified, role, picture, created_at
+VALUES ($1, $2, $3) RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
 `
 
 type CreateUserParams struct {
-	HashedPassword string `json:"-"`
-	Email          string `json:"email"`
-	EmailVerified  bool   `json:"email_verified"`
+	HashedPassword pgtype.Text `json:"-"`
+	Email          string      `json:"email"`
+	EmailVerified  bool        `json:"email_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -30,23 +32,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.EmailVerified,
 		&i.Role,
-		&i.Picture,
+		&i.Avatar,
 		&i.CreatedAt,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
 	)
 	return i, err
 }
 
 const createUserWithGoogleAccount = `-- name: CreateUserWithGoogleAccount :one
-INSERT INTO users (id, name, email, email_verified, picture)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, name, hashed_password, email, email_verified, role, picture, created_at
+INSERT INTO users (id, name, email, email_verified, avatar)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
 `
 
 type CreateUserWithGoogleAccountParams struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Picture       string `json:"picture"`
+	ID            string      `json:"id"`
+	Name          string      `json:"name"`
+	Email         string      `json:"email"`
+	EmailVerified bool        `json:"email_verified"`
+	Avatar        pgtype.Text `json:"avatar"`
 }
 
 func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error) {
@@ -55,7 +59,7 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		arg.Name,
 		arg.Email,
 		arg.EmailVerified,
-		arg.Picture,
+		arg.Avatar,
 	)
 	var i User
 	err := row.Scan(
@@ -65,14 +69,16 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		&i.Email,
 		&i.EmailVerified,
 		&i.Role,
-		&i.Picture,
+		&i.Avatar,
 		&i.CreatedAt,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, hashed_password, email, email_verified, role, picture, created_at
+SELECT id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
 FROM users
 WHERE email = $1
 `
@@ -87,14 +93,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Email,
 		&i.EmailVerified,
 		&i.Role,
-		&i.Picture,
+		&i.Avatar,
 		&i.CreatedAt,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, hashed_password, email, email_verified, role, picture, created_at
+SELECT id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
 FROM users
 WHERE id = $1
 `
@@ -109,8 +117,39 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.Email,
 		&i.EmailVerified,
 		&i.Role,
-		&i.Picture,
+		&i.Avatar,
 		&i.CreatedAt,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
+	)
+	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET name = COALESCE($1, name)
+WHERE id = $2 RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+`
+
+type UpdateUserParams struct {
+	Name pgtype.Text `json:"name"`
+	ID   string      `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.HashedPassword,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Role,
+		&i.Avatar,
+		&i.CreatedAt,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
 	)
 	return i, err
 }
