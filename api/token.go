@@ -24,7 +24,7 @@ func (server *Server) verifyAccessToken(c *gin.Context) {
 		return
 	}
 	
-	user, err := server.store.GetUserByID(c, claims.Subject)
+	user, err := server.dbStore.GetUserByID(c, claims.Subject)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, errorResponse(err))
 		return

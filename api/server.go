@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"google.golang.org/api/idtoken"
@@ -14,7 +15,8 @@ import (
 
 type Server struct {
 	router                 *gin.Engine
-	store                  db.Store
+	dbStore                db.Store
+	fileStore              storage.FileStore
 	tokenMaker             token.Maker
 	config                 util.Config
 	googleIDTokenValidator *idtoken.Validator
@@ -22,18 +24,22 @@ type Server struct {
 
 // NewServer creates a new HTTP server and set up routing.
 func NewServer(store db.Store, config util.Config) (*Server, error) {
+	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token maker: %w", err)
 	}
 	
+	// Create a new Google ID token validator
 	googleIDTokenValidator, err := idtoken.NewValidator(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create google id token validator: %w", err)
 	}
 	
+	fileStore := storage.NewCloudinaryStore()
+	
 	server := &Server{
-		store:                  store,
+		dbStore:                store,
 		tokenMaker:             tokenMaker,
 		config:                 config,
 		googleIDTokenValidator: googleIDTokenValidator,

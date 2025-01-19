@@ -62,7 +62,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		EmailVerified: false,
 	}
 	
-	user, err := server.store.CreateUser(context.Background(), arg)
+	user, err := server.dbStore.CreateUser(context.Background(), arg)
 	if err != nil {
 		errCode, constraintName := db.ErrorDescription(err)
 		switch {
@@ -99,7 +99,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 	
-	user, err := server.store.GetUserByEmail(context.Background(), req.Email)
+	user, err := server.dbStore.GetUserByEmail(context.Background(), req.Email)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = errors.New("email not found")
@@ -157,7 +157,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	}
 	
 	// Check identity
-	user, err := server.store.GetUserByEmail(context.Background(), payload.Claims["email"].(string))
+	user, err := server.dbStore.GetUserByEmail(context.Background(), payload.Claims["email"].(string))
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			// Create a new user
@@ -172,7 +172,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 				},
 			}
 			
-			user, err = server.store.CreateUserWithGoogleAccount(context.Background(), arg)
+			user, err = server.dbStore.CreateUserWithGoogleAccount(context.Background(), arg)
 			if err != nil {
 				log.Err(err).Msg("failed to create user with google account")
 				ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
@@ -205,7 +205,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 func (server *Server) getUser(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
-	user, err := server.store.GetUserByID(context.Background(), userID)
+	user, err := server.dbStore.GetUserByID(context.Background(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("user %s not found", userID)
@@ -243,7 +243,7 @@ func (server *Server) updateUser(ctx *gin.Context) {
 		},
 	}
 	
-	user, err := server.store.UpdateUser(context.Background(), arg)
+	user, err := server.dbStore.UpdateUser(context.Background(), arg)
 	if err != nil {
 		log.Err(err).Msg("failed to update user")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
