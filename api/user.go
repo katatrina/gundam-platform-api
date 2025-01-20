@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/validator"
@@ -139,15 +142,12 @@ type loginUserWithGoogleRequest struct {
 }
 
 func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
-	log.Info().Msg("Received Google login request")
 	req := new(loginUserWithGoogleRequest)
 	
 	if err := ctx.ShouldBindJSON(req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	
-	log.Info().Msgf("Received ID token length: %d", len(req.IDToken))
 	
 	payload, err := server.googleIDTokenValidator.Validate(ctx, req.IDToken, server.config.GoogleClientID)
 	if err != nil {
@@ -236,7 +236,7 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	}
 	
 	arg := db.UpdateUserParams{
-		ID: userID,
+		UserID: userID,
 		Name: pgtype.Text{
 			String: *req.Name,
 			Valid:  req.Name != nil,
@@ -251,4 +251,90 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, createUserResponse{User: user})
+}
+
+type updateAvatarRequest struct {
+	Avatar *multipart.FileHeader `form:"avatar" binding:"required"`
+}
+
+type updateAvatarResponse struct {
+	AvatarURL string `json:"avatar_url"`
+}
+
+func (server *Server) updateAvatar(ctx *gin.Context) {
+	req := new(updateAvatarRequest)
+	
+	if err := ctx.ShouldBindWith(&req, binding.FormMultipart); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// For simplicity, we will skip the validation of the file type and size because frontend already handles it.
+	
+	userID := ctx.Param("id")
+	
+	// Get current user to retrieve old avatar URL first
+	user, err := server.dbStore.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	// Open and read file
+	file, err := req.Avatar.Open()
+	if err != nil {
+		log.Err(err).Msg("failed to open file")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	defer file.Close()
+	
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		log.Err(err).Msg("failed to read file")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	fileName := fmt.Sprintf("user_%s_%d", userID, time.Now().Unix())
+	
+	// Upload new avatar to cloudinary
+	uploadedFileURL, err := server.fileStore.UploadFile(fileBytes, fileName, FolderAvatars)
+	if err != nil {
+		log.Err(err).Msg("failed to upload file")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	arg := db.UpdateUserParams{
+		Avatar: pgtype.Text{
+			String: uploadedFileURL,
+			Valid:  true,
+		},
+		UserID: userID,
+	}
+	
+	// Update user avatar URL in transaction
+	user, err = server.dbStore.UpdateUser(ctx, arg)
+	if err != nil {
+		// Delete newly uploaded avatar if update fails
+		if deleteErr := server.fileStore.DeleteFile(fileName, FolderAvatars); deleteErr != nil {
+			log.Err(deleteErr).Msg("failed to delete new avatar after update failure")
+		}
+		
+		log.Err(err).Msg("failed to update user avatar")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, updateAvatarResponse{AvatarURL: user.Avatar.String})
+	
+	// Optionally, delete old avatar if it exists
 }

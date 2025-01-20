@@ -10,6 +10,7 @@ import (
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/api/idtoken"
 )
 
@@ -29,6 +30,7 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token maker: %w", err)
 	}
+	log.Info().Msg("Token maker created successfully ✅")
 	
 	// Create a new Google ID token validator
 	googleIDTokenValidator, err := idtoken.NewValidator(context.Background())
@@ -36,13 +38,16 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create google id token validator: %w", err)
 	}
 	
-	fileStore := storage.NewCloudinaryStore()
+	// Create a new Cloudinary instance
+	fileStore := storage.NewCloudinaryStore(config.CloudinaryURL)
+	log.Info().Msg("Cloudinary store created successfully ✅")
 	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
 		config:                 config,
 		googleIDTokenValidator: googleIDTokenValidator,
+		fileStore:              fileStore,
 	}
 	
 	server.setupRouter()
@@ -51,6 +56,7 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 
 // setupRouter configures the HTTP server routes.
 func (server *Server) setupRouter() {
+	gin.ForceConsoleColor()
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     server.config.AllowedOrigins,
@@ -75,6 +81,7 @@ func (server *Server) setupRouter() {
 		userGroup.POST("", server.createUser)
 		userGroup.GET(":id", server.getUser)
 		userGroup.PUT(":id", server.updateUser)
+		userGroup.PATCH(":id/avatar", server.updateAvatar)
 	}
 	
 	server.router = router

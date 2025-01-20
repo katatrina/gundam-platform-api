@@ -127,17 +127,19 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET name = COALESCE($1, name)
-WHERE id = $2 RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+SET name = COALESCE($1, name),
+    avatar = COALESCE($2, avatar)
+WHERE id = $3 RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
 `
 
 type UpdateUserParams struct {
-	Name pgtype.Text `json:"name"`
-	ID   string      `json:"id"`
+	Name   pgtype.Text `json:"name"`
+	Avatar pgtype.Text `json:"avatar"`
+	UserID string      `json:"user_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.ID)
+	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.Avatar, arg.UserID)
 	var i User
 	err := row.Scan(
 		&i.ID,

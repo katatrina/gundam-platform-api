@@ -18,5 +18,6 @@ WHERE email = $1;
 
 -- name: UpdateUser :one
 UPDATE users
-SET name = COALESCE(sqlc.narg('name'), name)
-WHERE id = sqlc.arg('id') RETURNING *;
+SET name = COALESCE(sqlc.narg('name'), name),
+    avatar = COALESCE(sqlc.narg('avatar'), avatar)
+WHERE id = sqlc.arg('user_id') RETURNING *;

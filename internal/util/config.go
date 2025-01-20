@@ -15,6 +15,7 @@ type Config struct {
 	TokenSecretKey      string        `mapstructure:"TOKEN_SECRET_KEY"`
 	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	GoogleClientID      string        `mapstructure:"GOOGLE_CLIENT_ID"`
+	CloudinaryURL       string        `mapstructure:"CLOUDINARY_URL"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
