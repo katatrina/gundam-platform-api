@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 	
-	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/rs/zerolog/log"
 	
 	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
@@ -22,7 +22,7 @@ func (cld *CloudinaryStore) UploadFile(file []byte, filename string, folder stri
 	// Create upload parameters
 	uploadParams := uploader.UploadParams{
 		Folder:         folder,
-		PublicID:       strings.TrimSuffix(filename, filepath.Ext(filename)), // Calculated later
+		PublicID:       strings.TrimSuffix(filename, filepath.Ext(filename)),
 		UniqueFilename: api.Bool(false),
 		Overwrite:      api.Bool(true),
 	}

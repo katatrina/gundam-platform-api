@@ -321,7 +321,6 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 		UserID: userID,
 	}
 	
-	// Update user avatar URL in transaction
 	user, err = server.dbStore.UpdateUser(ctx, arg)
 	if err != nil {
 		// Delete newly uploaded avatar if update fails

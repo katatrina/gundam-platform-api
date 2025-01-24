@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"time"
 	
 	"github.com/spf13/viper"
@@ -20,18 +21,44 @@ type Config struct {
 
 // LoadConfig reads configuration from file or environment variables.
 func LoadConfig(path string) (config Config, err error) {
-	viper.AutomaticEnv()
-	viper.SetConfigFile(path)
+	// Set defaults for non-sensitive config
+	viper.SetDefault("ALLOWED_ORIGINS", []string{"http://localhost:3000"})
+	viper.SetDefault("HTTP_SERVER_ADDRESS", "0.0.0.0:8080")
+	viper.SetDefault("ACCESS_TOKEN_DURATION", "24h")
 	
-	err = viper.ReadInConfig()
-	if err != nil {
+	// Prefer environment variables over config file
+	viper.AutomaticEnv()
+	
+	// Load config file
+	viper.SetConfigFile(path)
+	if err = viper.ReadInConfig(); err != nil {
 		return
 	}
 	
+	// Unmarshal config into struct
 	err = viper.UnmarshalExact(&config)
 	if err != nil {
 		return
 	}
 	
+	// Validate required configuration
+	err = validateConfig(config)
 	return
+}
+
+func validateConfig(config Config) error {
+	if config.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
+	}
+	if config.TokenSecretKey == "" {
+		return fmt.Errorf("TOKEN_SECRET_KEY is required")
+	}
+	if config.GoogleClientID == "" {
+		return fmt.Errorf("GOOGLE_CLIENT_ID is required")
+	}
+	if config.CloudinaryURL == "" {
+		return fmt.Errorf("CLOUDINARY_URL is required")
+	}
+	
+	return nil
 }
