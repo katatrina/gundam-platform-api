@@ -15,6 +15,7 @@ import (
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/validator"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/api/idtoken"
 	
 	"github.com/katatrina/gundam-BE/internal/util"
 )
@@ -145,6 +146,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	req := new(loginUserWithGoogleRequest)
 	
 	if err := ctx.ShouldBindJSON(req); err != nil {
+		log.Err(err).Msg("failed to bind json")
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -157,32 +159,9 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	}
 	
 	// Check identity
-	user, err := server.dbStore.GetUserByEmail(context.Background(), payload.Claims["email"].(string))
+	user, err := server.getOrCreateGoogleUser(ctx, payload)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			// Create a new user
-			arg := db.CreateUserWithGoogleAccountParams{
-				ID:            payload.Subject,
-				Name:          payload.Claims["name"].(string),
-				Email:         payload.Claims["email"].(string),
-				EmailVerified: payload.Claims["email_verified"].(bool),
-				Avatar: pgtype.Text{
-					String: payload.Claims["picture"].(string),
-					Valid:  true,
-				},
-			}
-			
-			user, err = server.dbStore.CreateUserWithGoogleAccount(context.Background(), arg)
-			if err != nil {
-				log.Err(err).Msg("failed to create user with google account")
-				ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
-				return
-			}
-			
-			return
-		}
-		
-		log.Err(err).Msg("failed to find user")
+		log.Err(err).Msg("failed to get or create google user")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
 		return
 	}
@@ -197,9 +176,40 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	resp := loginUserResponse{
 		AccessToken:          accessToken,
 		AccessTokenExpiresAt: accessPayload.ExpiresAt.Time,
-		User:                 user,
+		User:                 *user,
 	}
 	ctx.JSON(http.StatusOK, resp)
+}
+
+func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.Payload) (*db.User, error) {
+	email := payload.Claims["email"].(string)
+	user, err := server.dbStore.GetUserByEmail(ctx, email)
+	if err == nil {
+		return &user, nil
+	}
+	
+	if !errors.Is(err, db.ErrRecordNotFound) {
+		log.Err(err).Msg("failed to find user")
+		return nil, fmt.Errorf("failed to query user: %w", err)
+	}
+	
+	// User doesn't exist - create new account
+	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
+		ID:            payload.Subject,
+		Name:          payload.Claims["name"].(string),
+		Email:         email,
+		EmailVerified: payload.Claims["email_verified"].(bool),
+		Avatar: pgtype.Text{
+			String: payload.Claims["picture"].(string),
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to create user with google account")
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+	
+	return &newUser, nil
 }
 
 func (server *Server) getUser(ctx *gin.Context) {

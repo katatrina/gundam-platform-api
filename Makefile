@@ -10,6 +10,7 @@ migrate-down:
 sqlc:
 	sqlc generate
 
-compose-down:
+compose:
 	docker compose down
 	docker rmi -f gundam_platform-api:latest
+	docker compose up --build
