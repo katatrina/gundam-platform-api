@@ -17,6 +17,9 @@ type Config struct {
 	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	GoogleClientID      string        `mapstructure:"GOOGLE_CLIENT_ID"`
 	CloudinaryURL       string        `mapstructure:"CLOUDINARY_URL"`
+	RedisServerAddress  string        `mapstructure:"REDIS_SERVER_ADDRESS"`
+	DiscordBotToken     string        `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -58,6 +61,9 @@ func validateConfig(config Config) error {
 	}
 	if config.CloudinaryURL == "" {
 		return fmt.Errorf("CLOUDINARY_URL is required")
+	}
+	if config.RedisServerAddress == "" {
+		return fmt.Errorf("REDIS_SERVER_ADDRESS is required")
 	}
 	
 	return nil

@@ -1,6 +1,16 @@
 name: gundam_platform
 
 services:
+  redis:
+    image: redis:7.4.1-alpine3.20
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
   postgres:
     image: postgres:17.2-alpine3.21
 #    volumes:
@@ -28,6 +38,7 @@ services:
       - "8080:8080"
     environment:
       DATABASE_URL: "postgres://root:secret@postgres:5432/gundam_platform?sslmode=disable"
+      REDIS_SERVER_ADDRESS: "redis:6379"
 
 #volumes:
-#    db-data:
+#  db-data:

@@ -1,3 +1,5 @@
+DB_URL=postgresql://root:secret@localhost:5432/gundam_platform?sslmode=disable
+
 migrate-create:
 	migrate create -ext sql -dir internal/db/migrations -seq -digits 2 $(NAME)
 

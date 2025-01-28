@@ -7,9 +7,11 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/otp"
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/idtoken"
 )
@@ -21,10 +23,12 @@ type Server struct {
 	tokenMaker             token.Maker
 	config                 util.Config
 	googleIDTokenValidator *idtoken.Validator
+	redisDb                *redis.Client
+	otpService             *otp.OTPService
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, config util.Config) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -42,12 +46,21 @@ func NewServer(store db.Store, config util.Config) (*Server, error) {
 	fileStore := storage.NewCloudinaryStore(config.CloudinaryURL)
 	log.Info().Msg("Cloudinary store created successfully ✅")
 	
+	// Create a new OTP service
+	otpService, err := otp.NewOTPService(config, redisDb)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTP service: %w", err)
+	}
+	log.Info().Msg("OTP service created successfully ✅")
+	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
 		config:                 config,
 		googleIDTokenValidator: googleIDTokenValidator,
 		fileStore:              fileStore,
+		otpService:             otpService,
+		redisDb:                redisDb,
 	}
 	
 	server.setupRouter()
@@ -81,7 +94,14 @@ func (server *Server) setupRouter() {
 		userGroup.POST("", server.createUser)
 		userGroup.GET(":id", server.getUser)
 		userGroup.PUT(":id", server.updateUser)
+		userGroup.GET("by-phone", server.getUserByPhoneNumber)
 		userGroup.PATCH(":id/avatar", server.updateAvatar)
+	}
+	
+	otpGroup := v1.Group("/otp")
+	{
+		otpGroup.POST("/generate", server.generateOTP)
+		otpGroup.POST("/verify", server.verifyOTP)
 	}
 	
 	server.router = router

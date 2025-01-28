@@ -5,20 +5,157 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type UserRole string
+
+const (
+	UserRoleBuyer  UserRole = "buyer"
+	UserRoleSeller UserRole = "seller"
+)
+
+func (e *UserRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserRole(s)
+	case string:
+		*e = UserRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserRole: %T", src)
+	}
+	return nil
+}
+
+type NullUserRole struct {
+	UserRole UserRole `json:"user_role"`
+	Valid    bool     `json:"valid"` // Valid is true if UserRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserRole), nil
+}
+
+type Gundam struct {
+	ID           int64              `json:"id"`
+	OwnerID      string             `json:"owner_id"`
+	Name         string             `json:"name"`
+	CategoryID   int64              `json:"category_id"`
+	Condition    string             `json:"condition"`
+	Manufacturer string             `json:"manufacturer"`
+	Scale        string             `json:"scale"`
+	Description  string             `json:"description"`
+	Price        int64              `json:"price"`
+	Status       string             `json:"status"`
+	CreatedAt    time.Time          `json:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type GundamCategory struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type GundamImage struct {
+	ID        int64     `json:"id"`
+	GundamID  int64     `json:"gundam_id"`
+	ImageUrl  string    `json:"image_url"`
+	IsPrimary bool      `json:"is_primary"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Order struct {
+	ID         int64     `json:"id"`
+	BuyerID    string    `json:"buyer_id"`
+	SellerID   string    `json:"seller_id"`
+	TotalPrice int64     `json:"total_price"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type OrderItem struct {
+	ID        int64     `json:"id"`
+	OrderID   int64     `json:"order_id"`
+	GundamID  int64     `json:"gundam_id"`
+	Price     int64     `json:"price"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Shipment struct {
+	ID              int64       `json:"id"`
+	OrderID         pgtype.Int8 `json:"order_id"`
+	TrackingCode    string      `json:"tracking_code"`
+	ShippingAddress string      `json:"shipping_address"`
+	ShippingMethod  string      `json:"shipping_method"`
+	Status          string      `json:"status"`
+	ShippingCost    int64       `json:"shipping_cost"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
+}
+
 type User struct {
 	ID                  string      `json:"id"`
-	Name                string      `json:"name"`
+	FullName            string      `json:"full_name"`
 	HashedPassword      pgtype.Text `json:"-"`
 	Email               string      `json:"email"`
 	EmailVerified       bool        `json:"email_verified"`
-	Role                string      `json:"role"`
-	Avatar              pgtype.Text `json:"avatar"`
-	CreatedAt           time.Time   `json:"created_at"`
 	PhoneNumber         pgtype.Text `json:"phone_number"`
 	PhoneNumberVerified bool        `json:"phone_number_verified"`
+	Role                UserRole    `json:"role"`
+	AvatarUrl           pgtype.Text `json:"avatar_url"`
+	CreatedAt           time.Time   `json:"created_at"`
+	UpdatedAt           time.Time   `json:"updated_at"`
+}
+
+type UserAddress struct {
+	ID        int64     `json:"id"`
+	UserID    string    `json:"user_id"`
+	Province  string    `json:"province"`
+	District  string    `json:"district"`
+	Ward      string    `json:"ward"`
+	Detail    string    `json:"detail"`
+	IsPrimary bool      `json:"is_primary"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Wallet struct {
+	ID        int64     `json:"id"`
+	UserID    string    `json:"user_id"`
+	Balance   int64     `json:"balance"`
+	Currency  string    `json:"currency"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type WalletTransaction struct {
+	ID              int64       `json:"id"`
+	WalletID        int64       `json:"wallet_id"`
+	TransactionType string      `json:"transaction_type"`
+	Amount          int64       `json:"amount"`
+	Description     pgtype.Text `json:"description"`
+	Status          string      `json:"status"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
 }

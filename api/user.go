@@ -123,7 +123,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 	
-	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, user.Role, server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
@@ -166,7 +166,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 		return
 	}
 	
-	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, user.Role, server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
@@ -196,10 +196,10 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	// User doesn't exist - create new account
 	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
 		ID:            payload.Subject,
-		Name:          payload.Claims["name"].(string),
+		FullName:      payload.Claims["name"].(string),
 		Email:         email,
 		EmailVerified: payload.Claims["email_verified"].(bool),
-		Avatar: pgtype.Text{
+		AvatarUrl: pgtype.Text{
 			String: payload.Claims["picture"].(string),
 			Valid:  true,
 		},
@@ -232,7 +232,7 @@ func (server *Server) getUser(ctx *gin.Context) {
 }
 
 type updateUserRequest struct {
-	Name *string `json:"name"`
+	FullName *string `json:"full_name"`
 }
 
 func (server *Server) updateUser(ctx *gin.Context) {
@@ -247,9 +247,9 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	
 	arg := db.UpdateUserParams{
 		UserID: userID,
-		Name: pgtype.Text{
-			String: *req.Name,
-			Valid:  req.Name != nil,
+		FullName: pgtype.Text{
+			String: *req.FullName,
+			Valid:  req.FullName != nil,
 		},
 	}
 	
@@ -324,7 +324,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	}
 	
 	arg := db.UpdateUserParams{
-		Avatar: pgtype.Text{
+		AvatarUrl: pgtype.Text{
 			String: uploadedFileURL,
 			Valid:  true,
 		},
@@ -343,7 +343,29 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, updateAvatarResponse{AvatarURL: user.Avatar.String})
+	ctx.JSON(http.StatusOK, updateAvatarResponse{AvatarURL: user.AvatarUrl.String})
 	
 	// Optionally, delete old avatar if it exists
+}
+
+func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
+	phoneNumber := ctx.Query("phone_number")
+	
+	user, err := server.dbStore.GetUserByPhoneNumber(context.Background(), pgtype.Text{
+		String: phoneNumber,
+		Valid:  true,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user with phone number %s not found", phoneNumber)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user by phone number")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, user)
 }

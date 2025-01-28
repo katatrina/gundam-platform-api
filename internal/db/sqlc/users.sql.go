@@ -13,7 +13,7 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (hashed_password, email, email_verified)
-VALUES ($1, $2, $3) RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+VALUES ($1, $2, $3) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -27,58 +27,60 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
 		&i.EmailVerified,
-		&i.Role,
-		&i.Avatar,
-		&i.CreatedAt,
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const createUserWithGoogleAccount = `-- name: CreateUserWithGoogleAccount :one
-INSERT INTO users (id, name, email, email_verified, avatar)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+INSERT INTO users (id, full_name, email, email_verified, avatar_url)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type CreateUserWithGoogleAccountParams struct {
 	ID            string      `json:"id"`
-	Name          string      `json:"name"`
+	FullName      string      `json:"full_name"`
 	Email         string      `json:"email"`
 	EmailVerified bool        `json:"email_verified"`
-	Avatar        pgtype.Text `json:"avatar"`
+	AvatarUrl     pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUserWithGoogleAccount,
 		arg.ID,
-		arg.Name,
+		arg.FullName,
 		arg.Email,
 		arg.EmailVerified,
-		arg.Avatar,
+		arg.AvatarUrl,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
 		&i.EmailVerified,
-		&i.Role,
-		&i.Avatar,
-		&i.CreatedAt,
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 FROM users
 WHERE email = $1
 `
@@ -88,21 +90,22 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
 		&i.EmailVerified,
-		&i.Role,
-		&i.Avatar,
-		&i.CreatedAt,
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 FROM users
 WHERE id = $1
 `
@@ -112,46 +115,81 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
 		&i.EmailVerified,
-		&i.Role,
-		&i.Avatar,
-		&i.CreatedAt,
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
+SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+FROM users
+WHERE phone_number = $1
+`
+
+func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByPhoneNumber, phoneNumber)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FullName,
+		&i.HashedPassword,
+		&i.Email,
+		&i.EmailVerified,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET name = COALESCE($1, name),
-    avatar = COALESCE($2, avatar)
-WHERE id = $3 RETURNING id, name, hashed_password, email, email_verified, role, avatar, created_at, phone_number, phone_number_verified
+SET full_name    = COALESCE($1, full_name),
+    avatar_url   = COALESCE($2, avatar_url),
+    phone_number = COALESCE($3, phone_number),
+    updated_at   = now()
+WHERE id = $4 RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Name   pgtype.Text `json:"name"`
-	Avatar pgtype.Text `json:"avatar"`
-	UserID string      `json:"user_id"`
+	FullName    pgtype.Text `json:"full_name"`
+	AvatarUrl   pgtype.Text `json:"avatar_url"`
+	PhoneNumber pgtype.Text `json:"phone_number"`
+	UserID      string      `json:"user_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.Avatar, arg.UserID)
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.FullName,
+		arg.AvatarUrl,
+		arg.PhoneNumber,
+		arg.UserID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
 		&i.EmailVerified,
-		&i.Role,
-		&i.Avatar,
-		&i.CreatedAt,
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

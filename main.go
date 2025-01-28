@@ -8,6 +8,7 @@ import (
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	
 	"github.com/rs/zerolog/log"
@@ -38,11 +39,17 @@ func main() {
 	
 	store := db.NewStore(connPool)
 	
-	runHTTPServer(config, store)
+	redisDb := redis.NewClient(&redis.Options{
+		Addr:     config.RedisServerAddress,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	
+	runHTTPServer(config, store, redisDb)
 }
 
-func runHTTPServer(config util.Config, store db.Store) {
-	server, err := api.NewServer(store, config)
+func runHTTPServer(config util.Config, store db.Store, redisDb *redis.Client) {
+	server, err := api.NewServer(store, redisDb, config)
 	
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")

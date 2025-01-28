@@ -21,3 +21,5 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+#          - column: "users.role"
+#            go_type: "string"
