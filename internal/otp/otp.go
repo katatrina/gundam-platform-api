@@ -75,14 +75,26 @@ func (s *OTPService) GenerateAndSendOTP(ctx context.Context, phoneNumber string)
 		return "", time.Time{}, err
 	}
 	
-	// Send to Discord Channel
-	message := fmt.Sprintf("Số điện thoại: %s | OTP: %s | Hiệu lực từ: %s đến %s",
+	// Load specific timezone
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		// Handle error
+		log.Error().Err(err).Msg("failed to load timezone")
+	}
+	
+	now := time.Now().In(loc)
+	expiryTime := now.Add(10 * time.Minute)
+	
+	// Format message
+	message := fmt.Sprintf("Số điện thoại: %s | OTP: %s | Hiệu lực từ %s đến %s",
 		phoneNumber,
 		otp,
-		time.Now().Format("15:04:05"),
-		time.Now().Add(10*time.Minute).Format("15:04:05"),
+		// Format time in HH:MM:SS dd/mm/yyyy
+		now.Format("15:04:05 02/01/2006"),
+		expiryTime.Format("15:04:05 02/01/2006"),
 	)
 	
+	// Send to Discord Channel
 	if _, err = s.discord.ChannelMessageSend(s.config.DiscordChannelID, message); err != nil {
 		return "", time.Time{}, err
 	}

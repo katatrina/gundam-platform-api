@@ -17,6 +17,7 @@ FROM alpine:3.21
 WORKDIR /app
 COPY --from=builder app/main .
 COPY --from=builder app/migrate .
+RUN apk add --no-cache tzdata
 COPY app.env .
 COPY internal/db/migrations ./migrations/
 COPY start.sh .
