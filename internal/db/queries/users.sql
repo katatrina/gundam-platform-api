@@ -28,3 +28,18 @@ SET full_name    = COALESCE(sqlc.narg('full_name'), full_name),
     phone_number = COALESCE(sqlc.narg('phone_number'), phone_number),
     updated_at   = now()
 WHERE id = sqlc.arg('user_id') RETURNING *;
+
+-- name: CreateUserAddress :exec
+INSERT INTO user_addresses (user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name,
+                            detail, is_primary)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: GetUserAddresses :many
+SELECT * FROM user_addresses
+WHERE user_id = $1
+ORDER BY is_primary DESC, created_at DESC;
+
+-- name: UnsetPrimaryAddress :exec
+UPDATE user_addresses
+SET is_primary = false
+WHERE user_id = $1 AND is_primary = true;

@@ -129,15 +129,17 @@ type User struct {
 }
 
 type UserAddress struct {
-	ID        int64     `json:"id"`
-	UserID    string    `json:"user_id"`
-	Province  string    `json:"province"`
-	District  string    `json:"district"`
-	Ward      string    `json:"ward"`
-	Detail    string    `json:"detail"`
-	IsPrimary bool      `json:"is_primary"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                  int64     `json:"id"`
+	UserID              string    `json:"user_id"`
+	ReceiverName        string    `json:"receiver_name"`
+	ReceiverPhoneNumber string    `json:"receiver_phone_number"`
+	ProvinceName        string    `json:"province_name"`
+	DistrictName        string    `json:"district_name"`
+	WardName            string    `json:"ward_name"`
+	Detail              string    `json:"detail"`
+	IsPrimary           bool      `json:"is_primary"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 type Wallet struct {

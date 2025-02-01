@@ -96,6 +96,8 @@ func (server *Server) setupRouter() {
 		userGroup.PUT(":id", server.updateUser)
 		userGroup.GET("by-phone", server.getUserByPhoneNumber)
 		userGroup.PATCH(":id/avatar", server.updateAvatar)
+		userGroup.GET(":id/addresses", server.getUserAddresses)
+		userGroup.POST(":id/addresses", server.createUserAddress)
 	}
 	
 	otpGroup := v1.Group("/otp")
@@ -103,6 +105,8 @@ func (server *Server) setupRouter() {
 		otpGroup.POST("/generate", server.generateOTP)
 		otpGroup.POST("/verify", server.verifyOTP)
 	}
+	
+	// v1.POST("/seed", server.seed)
 	
 	server.router = router
 }

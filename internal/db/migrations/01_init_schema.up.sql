@@ -12,7 +12,7 @@ CREATE TABLE "users"
     "email_verified"        bool        NOT NULL DEFAULT false,
     "phone_number"          text UNIQUE,
     "phone_number_verified" bool        NOT NULL DEFAULT false,
-    "role"                  user_role  NOT NULL DEFAULT 'buyer',
+    "role"                  user_role   NOT NULL DEFAULT 'buyer',
     "avatar_url"            text,
     "created_at"            timestamptz NOT NULL DEFAULT (now()),
     "updated_at"            timestamptz NOT NULL DEFAULT (now())
@@ -20,15 +20,17 @@ CREATE TABLE "users"
 
 CREATE TABLE "user_addresses"
 (
-    "id"         bigserial PRIMARY KEY,
-    "user_id"    text        NOT NULL,
-    "province"   text        NOT NULL,
-    "district"   text        NOT NULL,
-    "ward"       text        NOT NULL,
-    "detail"     text        NOT NULL,
-    "is_primary" boolean     NOT NULL DEFAULT false,
-    "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "updated_at" timestamptz NOT NULL DEFAULT (now())
+    "id"                    bigserial PRIMARY KEY,
+    "user_id"               text        NOT NULL,
+    "receiver_name"         text        NOT NULL,
+    "receiver_phone_number" text        NOT NULL,
+    "province_name"         text        NOT NULL,
+    "district_name"         text        NOT NULL,
+    "ward_name"             text        NOT NULL,
+    "detail"                text        NOT NULL,
+    "is_primary"            bool        NOT NULL DEFAULT false,
+    "created_at"            timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"            timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "gundams"

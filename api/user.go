@@ -369,3 +369,56 @@ func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	
 	ctx.JSON(http.StatusOK, user)
 }
+
+type createUserAddressRequest struct {
+	ReceiverName        string `json:"receiver_name"`
+	ReceiverPhoneNumber string `json:"receiver_phone_number"`
+	ProvinceName        string `json:"province_name"`
+	DistrictName        string `json:"district_name"`
+	WardName            string `json:"ward_name"`
+	Detail              string `json:"detail"`
+	IsPrimary           bool   `json:"is_primary"`
+}
+
+func (server *Server) createUserAddress(ctx *gin.Context) {
+	userID := ctx.Param("id")
+	
+	req := new(createUserAddressRequest)
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	arg := db.CreateUserAddressTxParams{
+		UserID:              userID,
+		ReceiverName:        req.ReceiverName,
+		ReceiverPhoneNumber: req.ReceiverPhoneNumber,
+		ProvinceName:        req.ProvinceName,
+		DistrictName:        req.DistrictName,
+		WardName:            req.WardName,
+		Detail:              req.Detail,
+		IsPrimary:           req.IsPrimary,
+	}
+	
+	err := server.dbStore.CreateUserAddressTx(context.Background(), arg)
+	if err != nil {
+		log.Err(err).Msg("failed to create address")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "user address created"})
+}
+
+func (server *Server) getUserAddresses(ctx *gin.Context) {
+	userID := ctx.Param("id")
+	
+	addresses, err := server.dbStore.GetUserAddresses(context.Background(), userID)
+	if err != nil {
+		log.Err(err).Msg("failed to get user addresses")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, addresses)
+}
