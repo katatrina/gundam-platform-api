@@ -12,11 +12,146 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type GundamCondition string
+
+const (
+	GundamConditionMint           GundamCondition = "mint"
+	GundamConditionNearmint       GundamCondition = "near mint"
+	GundamConditionGood           GundamCondition = "good"
+	GundamConditionModeratewear   GundamCondition = "moderate wear"
+	GundamConditionHeavilydamaged GundamCondition = "heavily damaged"
+)
+
+func (e *GundamCondition) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GundamCondition(s)
+	case string:
+		*e = GundamCondition(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GundamCondition: %T", src)
+	}
+	return nil
+}
+
+type NullGundamCondition struct {
+	GundamCondition GundamCondition `json:"gundam_condition"`
+	Valid           bool            `json:"valid"` // Valid is true if GundamCondition is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGundamCondition) Scan(value interface{}) error {
+	if value == nil {
+		ns.GundamCondition, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GundamCondition.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGundamCondition) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GundamCondition), nil
+}
+
+type GundamScale string
+
+const (
+	GundamScale1144 GundamScale = "1/144"
+	GundamScale1100 GundamScale = "1/100"
+	GundamScale160  GundamScale = "1/60"
+	GundamScale148  GundamScale = "1/48"
+)
+
+func (e *GundamScale) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GundamScale(s)
+	case string:
+		*e = GundamScale(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GundamScale: %T", src)
+	}
+	return nil
+}
+
+type NullGundamScale struct {
+	GundamScale GundamScale `json:"gundam_scale"`
+	Valid       bool        `json:"valid"` // Valid is true if GundamScale is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGundamScale) Scan(value interface{}) error {
+	if value == nil {
+		ns.GundamScale, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GundamScale.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGundamScale) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GundamScale), nil
+}
+
+type GundamStatus string
+
+const (
+	GundamStatusAvailable GundamStatus = "available"
+	GundamStatusSelling   GundamStatus = "selling"
+	GundamStatusAuction   GundamStatus = "auction"
+	GundamStatusExchange  GundamStatus = "exchange"
+)
+
+func (e *GundamStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GundamStatus(s)
+	case string:
+		*e = GundamStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GundamStatus: %T", src)
+	}
+	return nil
+}
+
+type NullGundamStatus struct {
+	GundamStatus GundamStatus `json:"gundam_status"`
+	Valid        bool         `json:"valid"` // Valid is true if GundamStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGundamStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.GundamStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GundamStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGundamStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GundamStatus), nil
+}
+
 type UserRole string
 
 const (
-	UserRoleBuyer  UserRole = "buyer"
-	UserRoleSeller UserRole = "seller"
+	UserRoleBuyer     UserRole = "buyer"
+	UserRoleSeller    UserRole = "seller"
+	UserRoleModerator UserRole = "moderator"
+	UserRoleAdmin     UserRole = "admin"
 )
 
 func (e *UserRole) Scan(src interface{}) error {
@@ -58,22 +193,24 @@ type Gundam struct {
 	ID           int64              `json:"id"`
 	OwnerID      string             `json:"owner_id"`
 	Name         string             `json:"name"`
-	CategoryID   int64              `json:"category_id"`
-	Condition    string             `json:"condition"`
+	GradeID      int64              `json:"grade_id"`
+	Condition    GundamCondition    `json:"condition"`
 	Manufacturer string             `json:"manufacturer"`
-	Scale        string             `json:"scale"`
+	Scale        GundamScale        `json:"scale"`
 	Description  string             `json:"description"`
 	Price        int64              `json:"price"`
-	Status       string             `json:"status"`
+	Status       GundamStatus       `json:"status"`
 	CreatedAt    time.Time          `json:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
 }
 
-type GundamCategory struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+type GundamGrade struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	DisplayName string    `json:"display_name"`
+	Slug        string    `json:"slug"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type GundamImage struct {
@@ -138,6 +275,7 @@ type UserAddress struct {
 	WardName            string    `json:"ward_name"`
 	Detail              string    `json:"detail"`
 	IsPrimary           bool      `json:"is_primary"`
+	IsPickupAddress     bool      `json:"is_pickup_address"`
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
 }

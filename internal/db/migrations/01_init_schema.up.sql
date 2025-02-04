@@ -1,6 +1,30 @@
 CREATE TYPE "user_role" AS ENUM (
   'buyer',
-  'seller'
+  'seller',
+  'moderator',
+  'admin'
+);
+
+CREATE TYPE "gundam_condition" AS ENUM (
+  'mint',
+  'near mint',
+  'good',
+  'moderate wear',
+  'heavily damaged'
+);
+
+CREATE TYPE "gundam_scale" AS ENUM (
+  '1/144',
+  '1/100',
+  '1/60',
+  '1/48'
+);
+
+CREATE TYPE "gundam_status" AS ENUM (
+  'available',
+  'selling',
+  'auction',
+  'exchange'
 );
 
 CREATE TABLE "users"
@@ -28,7 +52,8 @@ CREATE TABLE "user_addresses"
     "district_name"         text        NOT NULL,
     "ward_name"             text        NOT NULL,
     "detail"                text        NOT NULL,
-    "is_primary"            bool        NOT NULL DEFAULT false,
+    "is_primary"            boolean     NOT NULL DEFAULT false,
+    "is_pickup_address"     boolean     NOT NULL DEFAULT false,
     "created_at"            timestamptz NOT NULL DEFAULT (now()),
     "updated_at"            timestamptz NOT NULL DEFAULT (now())
 );
@@ -36,25 +61,27 @@ CREATE TABLE "user_addresses"
 CREATE TABLE "gundams"
 (
     "id"           bigserial PRIMARY KEY,
-    "owner_id"     text        NOT NULL,
-    "name"         text        NOT NULL,
-    "category_id"  bigint      NOT NULL,
-    "condition"    text        NOT NULL,
-    "manufacturer" text        NOT NULL,
-    "scale"        text        NOT NULL,
-    "description"  text        NOT NULL DEFAULT '',
-    "price"        bigint      NOT NULL,
-    "status"       text        NOT NULL DEFAULT 'available',
-    "created_at"   timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"   timestamptz NOT NULL DEFAULT (now()),
+    "owner_id"     text             NOT NULL,
+    "name"         text             NOT NULL,
+    "grade_id"     bigint           NOT NULL,
+    "condition"    gundam_condition NOT NULL,
+    "manufacturer" text             NOT NULL,
+    "scale"        gundam_scale     NOT NULL,
+    "description"  text             NOT NULL DEFAULT '',
+    "price"        bigint           NOT NULL,
+    "status"       gundam_status    NOT NULL DEFAULT 'available',
+    "created_at"   timestamptz      NOT NULL DEFAULT (now()),
+    "updated_at"   timestamptz      NOT NULL DEFAULT (now()),
     "deleted_at"   timestamptz
 );
 
-CREATE TABLE "gundam_categories"
+CREATE TABLE "gundam_grades"
 (
-    "id"         bigserial PRIMARY KEY,
-    "name"       text        NOT NULL,
-    "created_at" timestamptz NOT NULL DEFAULT (now())
+    "id"           bigserial PRIMARY KEY,
+    "name"         text        NOT NULL,
+    "display_name" text        NOT NULL,
+    "slug"         text        NOT NULL,
+    "created_at"   timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "gundam_images"
@@ -134,7 +161,7 @@ ALTER TABLE "gundams"
     ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id");
 
 ALTER TABLE "gundams"
-    ADD FOREIGN KEY ("category_id") REFERENCES "gundam_categories" ("id");
+    ADD FOREIGN KEY ("grade_id") REFERENCES "gundam_grades" ("id");
 
 ALTER TABLE "gundam_images"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");

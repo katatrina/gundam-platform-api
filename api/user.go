@@ -21,8 +21,8 @@ import (
 )
 
 type createUserRequest struct {
-	Password string `json:"password"`
 	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type createUserResponse struct {
@@ -64,6 +64,16 @@ func (server *Server) createUser(ctx *gin.Context) {
 		},
 		Email:         req.Email,
 		EmailVerified: false,
+		PhoneNumber: pgtype.Text{
+			Valid:  false,
+			String: "",
+		},
+		PhoneNumberVerified: false,
+		Role:                db.UserRoleBuyer,
+		AvatarUrl: pgtype.Text{
+			Valid:  false,
+			String: "",
+		},
 	}
 	
 	user, err := server.dbStore.CreateUser(context.Background(), arg)

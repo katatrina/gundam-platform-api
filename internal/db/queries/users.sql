@@ -1,6 +1,6 @@
 -- name: CreateUser :one
-INSERT INTO users (hashed_password, email, email_verified)
-VALUES ($1, $2, $3) RETURNING *;
+INSERT INTO users (hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
 
 -- name: CreateUserWithGoogleAccount :one
 INSERT INTO users (id, full_name, email, email_verified, avatar_url)
@@ -31,8 +31,8 @@ WHERE id = sqlc.arg('user_id') RETURNING *;
 
 -- name: CreateUserAddress :exec
 INSERT INTO user_addresses (user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name,
-                            detail, is_primary)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+                            detail, is_primary, is_pickup_address)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetUserAddresses :many
 SELECT * FROM user_addresses

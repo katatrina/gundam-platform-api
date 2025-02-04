@@ -100,13 +100,20 @@ func (server *Server) setupRouter() {
 		userGroup.POST(":id/addresses", server.createUserAddress)
 	}
 	
+	v1.GET("/grades", server.listGundamGrades)
+	
+	gundamGroup := v1.Group("/gundams")
+	{
+		gundamGroup.GET("", server.listGundams)
+	}
+	
 	otpGroup := v1.Group("/otp")
 	{
 		otpGroup.POST("/generate", server.generateOTP)
 		otpGroup.POST("/verify", server.verifyOTP)
 	}
 	
-	// v1.POST("/seed", server.seed)
+	v1.POST("/seed", server.seedData)
 	
 	server.router = router
 }

@@ -24,8 +24,3 @@ func NewStore(db *pgxpool.Pool) Store {
 		connPool: db,
 	}
 }
-
-// Ping checks if the database connection is alive.
-func (store *SQLStore) Ping(ctx context.Context) error {
-	return store.connPool.Ping(ctx)
-}

@@ -12,18 +12,30 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (hashed_password, email, email_verified)
-VALUES ($1, $2, $3) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+INSERT INTO users (hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	HashedPassword pgtype.Text `json:"-"`
-	Email          string      `json:"email"`
-	EmailVerified  bool        `json:"email_verified"`
+	HashedPassword      pgtype.Text `json:"-"`
+	Email               string      `json:"email"`
+	EmailVerified       bool        `json:"email_verified"`
+	PhoneNumber         pgtype.Text `json:"phone_number"`
+	PhoneNumberVerified bool        `json:"phone_number_verified"`
+	Role                UserRole    `json:"role"`
+	AvatarUrl           pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.HashedPassword, arg.Email, arg.EmailVerified)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.HashedPassword,
+		arg.Email,
+		arg.EmailVerified,
+		arg.PhoneNumber,
+		arg.PhoneNumberVerified,
+		arg.Role,
+		arg.AvatarUrl,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -43,8 +55,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 
 const createUserAddress = `-- name: CreateUserAddress :exec
 INSERT INTO user_addresses (user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name,
-                            detail, is_primary)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            detail, is_primary, is_pickup_address)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateUserAddressParams struct {
@@ -56,6 +68,7 @@ type CreateUserAddressParams struct {
 	WardName            string `json:"ward_name"`
 	Detail              string `json:"detail"`
 	IsPrimary           bool   `json:"is_primary"`
+	IsPickupAddress     bool   `json:"is_pickup_address"`
 }
 
 func (q *Queries) CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) error {
@@ -68,6 +81,7 @@ func (q *Queries) CreateUserAddress(ctx context.Context, arg CreateUserAddressPa
 		arg.WardName,
 		arg.Detail,
 		arg.IsPrimary,
+		arg.IsPickupAddress,
 	)
 	return err
 }
@@ -111,7 +125,7 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 }
 
 const getUserAddresses = `-- name: GetUserAddresses :many
-SELECT id, user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name, detail, is_primary, created_at, updated_at FROM user_addresses
+SELECT id, user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name, detail, is_primary, is_pickup_address, created_at, updated_at FROM user_addresses
 WHERE user_id = $1
 ORDER BY is_primary DESC, created_at DESC
 `
@@ -135,6 +149,7 @@ func (q *Queries) GetUserAddresses(ctx context.Context, userID string) ([]UserAd
 			&i.WardName,
 			&i.Detail,
 			&i.IsPrimary,
+			&i.IsPickupAddress,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
