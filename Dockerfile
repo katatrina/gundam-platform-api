@@ -17,10 +17,11 @@ FROM alpine:3.21
 WORKDIR /app
 COPY --from=builder app/main .
 COPY --from=builder app/migrate .
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata dos2unix
 COPY app.env .
 COPY internal/db/migrations ./migrations/
 COPY start.sh .
+RUN dos2unix start.sh
 RUN chmod +x start.sh
 
 EXPOSE 8080
