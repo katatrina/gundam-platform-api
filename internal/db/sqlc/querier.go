@@ -21,7 +21,8 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
-	ListGundams(ctx context.Context) ([]Gundam, error)
+	ListGundamImages(ctx context.Context, gundamID int64) ([]GundamImage, error)
+	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

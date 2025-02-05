@@ -7,6 +7,9 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createGundam = `-- name: CreateGundam :one
@@ -57,35 +60,56 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 	return i, err
 }
 
-const listGundams = `-- name: ListGundams :many
-SELECT id, owner_id, name, grade_id, condition, manufacturer, scale, description, price, status, created_at, updated_at, deleted_at
-FROM gundams
-ORDER BY created_at DESC
+const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
+SELECT g.id,
+       g.name,
+       g.description,
+       g.price,
+       g.created_at,
+       g.updated_at,
+       gr.id         as grade_id,
+       gr.name       as grade_name,
+       gr.slug       as grade_slug
+FROM gundams g
+         JOIN gundam_grades gr ON g.grade_id = gr.id
+WHERE CASE
+          WHEN $1::text IS NULL THEN true
+        ELSE gr.slug = $1::text
+END
+ORDER BY g.created_at DESC
 `
 
-func (q *Queries) ListGundams(ctx context.Context) ([]Gundam, error) {
-	rows, err := q.db.Query(ctx, listGundams)
+type ListGundamsWithFiltersRow struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Price       int64     `json:"price"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	GradeID     int64     `json:"grade_id"`
+	GradeName   string    `json:"grade_name"`
+	GradeSlug   string    `json:"grade_slug"`
+}
+
+func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error) {
+	rows, err := q.db.Query(ctx, listGundamsWithFilters, gradeSlug)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Gundam{}
+	items := []ListGundamsWithFiltersRow{}
 	for rows.Next() {
-		var i Gundam
+		var i ListGundamsWithFiltersRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.OwnerID,
 			&i.Name,
-			&i.GradeID,
-			&i.Condition,
-			&i.Manufacturer,
-			&i.Scale,
 			&i.Description,
 			&i.Price,
-			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.DeletedAt,
+			&i.GradeID,
+			&i.GradeName,
+			&i.GradeSlug,
 		); err != nil {
 			return nil, err
 		}

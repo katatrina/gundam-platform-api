@@ -10,17 +10,49 @@ import (
 )
 
 const createGundamImage = `-- name: CreateGundamImage :exec
-INSERT INTO gundam_images (gundam_id, image_url, is_primary)
+INSERT INTO gundam_images (gundam_id, url, is_primary)
 VALUES ($1, $2, $3)
 `
 
 type CreateGundamImageParams struct {
 	GundamID  int64  `json:"gundam_id"`
-	ImageUrl  string `json:"image_url"`
+	Url       string `json:"url"`
 	IsPrimary bool   `json:"is_primary"`
 }
 
 func (q *Queries) CreateGundamImage(ctx context.Context, arg CreateGundamImageParams) error {
-	_, err := q.db.Exec(ctx, createGundamImage, arg.GundamID, arg.ImageUrl, arg.IsPrimary)
+	_, err := q.db.Exec(ctx, createGundamImage, arg.GundamID, arg.Url, arg.IsPrimary)
 	return err
+}
+
+const listGundamImages = `-- name: ListGundamImages :many
+SELECT id, gundam_id, url, is_primary, created_at
+FROM gundam_images
+WHERE gundam_id = $1
+`
+
+func (q *Queries) ListGundamImages(ctx context.Context, gundamID int64) ([]GundamImage, error) {
+	rows, err := q.db.Query(ctx, listGundamImages, gundamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GundamImage{}
+	for rows.Next() {
+		var i GundamImage
+		if err := rows.Scan(
+			&i.ID,
+			&i.GundamID,
+			&i.Url,
+			&i.IsPrimary,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

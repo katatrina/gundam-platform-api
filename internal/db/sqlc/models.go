@@ -216,7 +216,7 @@ type GundamGrade struct {
 type GundamImage struct {
 	ID        int64     `json:"id"`
 	GundamID  int64     `json:"gundam_id"`
-	ImageUrl  string    `json:"image_url"`
+	Url       string    `json:"url"`
 	IsPrimary bool      `json:"is_primary"`
 	CreatedAt time.Time `json:"created_at"`
 }

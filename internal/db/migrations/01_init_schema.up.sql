@@ -88,7 +88,7 @@ CREATE TABLE "gundam_images"
 (
     "id"         bigserial PRIMARY KEY,
     "gundam_id"  bigint      NOT NULL,
-    "image_url"  text        NOT NULL,
+    "url"        text        NOT NULL,
     "is_primary" bool        NOT NULL DEFAULT false,
     "created_at" timestamptz NOT NULL DEFAULT (now())
 );

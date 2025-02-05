@@ -15,4 +15,6 @@ sqlc:
 compose:
 	docker compose down
 	docker rmi -f gundam_platform-api:latest
-	docker compose up --build
+	docker compose up --build -d
+	sleep 1 # wait 1s for api server to be ready
+	curl -X POST http://localhost:8080/v1/seed
