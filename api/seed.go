@@ -217,7 +217,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 					"is_primary": false,
 				},
 				{
-					"url":        "https://res.cloudinary.com/cvp/image/upload/v1738062101/pic-3_avxia5.web",
+					"url":        "https://res.cloudinary.com/cvp/image/upload/v1738062101/pic-3_avxia5.webp",
 					"is_primary": false,
 				},
 				{
@@ -236,6 +236,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		currentGundam, err := server.dbStore.CreateGundam(context.Background(), db.CreateGundamParams{
 			OwnerID:      randomOwnerID,
 			Name:         gundam["name"].(string),
+			Slug:         util.GenerateRandomSlug(gundam["name"].(string)),
 			GradeID:      gundam["grade_id"].(int64),
 			Condition:    gundam["condition"].(db.GundamCondition),
 			Manufacturer: gundam["manufacturer"].(string),

@@ -13,13 +13,14 @@ import (
 )
 
 const createGundam = `-- name: CreateGundam :one
-INSERT INTO gundams (owner_id, name, grade_id, condition, manufacturer, scale, description, price, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, owner_id, name, grade_id, condition, manufacturer, scale, description, price, status, created_at, updated_at, deleted_at
+INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, scale, description, price, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, owner_id, name, slug, grade_id, condition, manufacturer, scale, description, price, status, created_at, updated_at, deleted_at
 `
 
 type CreateGundamParams struct {
 	OwnerID      string          `json:"owner_id"`
 	Name         string          `json:"name"`
+	Slug         string          `json:"slug"`
 	GradeID      int64           `json:"grade_id"`
 	Condition    GundamCondition `json:"condition"`
 	Manufacturer string          `json:"manufacturer"`
@@ -33,6 +34,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 	row := q.db.QueryRow(ctx, createGundam,
 		arg.OwnerID,
 		arg.Name,
+		arg.Slug,
 		arg.GradeID,
 		arg.Condition,
 		arg.Manufacturer,
@@ -46,6 +48,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.ID,
 		&i.OwnerID,
 		&i.Name,
+		&i.Slug,
 		&i.GradeID,
 		&i.Condition,
 		&i.Manufacturer,
@@ -60,16 +63,77 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 	return i, err
 }
 
-const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
+const getGundamBySlug = `-- name: GetGundamBySlug :one
 SELECT g.id,
+       g.owner_id,
        g.name,
+       g.slug,
+       g.manufacturer,
+       g.scale,
+       g.condition,
+       g.status,
        g.description,
        g.price,
        g.created_at,
        g.updated_at,
-       gr.id         as grade_id,
-       gr.name       as grade_name,
-       gr.slug       as grade_slug
+       gr.id, gr.name, gr.display_name, gr.slug, gr.created_at
+FROM gundams g
+         JOIN gundam_grades gr ON g.grade_id = gr.id
+WHERE g.slug = $1
+`
+
+type GetGundamBySlugRow struct {
+	ID           int64           `json:"id"`
+	OwnerID      string          `json:"owner_id"`
+	Name         string          `json:"name"`
+	Slug         string          `json:"slug"`
+	Manufacturer string          `json:"manufacturer"`
+	Scale        GundamScale     `json:"scale"`
+	Condition    GundamCondition `json:"condition"`
+	Status       GundamStatus    `json:"status"`
+	Description  string          `json:"description"`
+	Price        int64           `json:"price"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	GundamGrade  GundamGrade     `json:"gundam_grade"`
+}
+
+func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getGundamBySlug, slug)
+	var i GetGundamBySlugRow
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Name,
+		&i.Slug,
+		&i.Manufacturer,
+		&i.Scale,
+		&i.Condition,
+		&i.Status,
+		&i.Description,
+		&i.Price,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GundamGrade.ID,
+		&i.GundamGrade.Name,
+		&i.GundamGrade.DisplayName,
+		&i.GundamGrade.Slug,
+		&i.GundamGrade.CreatedAt,
+	)
+	return i, err
+}
+
+const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
+SELECT g.id,
+       g.name,
+       g.slug,
+       g.description,
+       g.price,
+       g.created_at,
+       g.updated_at,
+       gr.id   as grade_id,
+       gr.name as grade_name,
+       gr.slug as grade_slug
 FROM gundams g
          JOIN gundam_grades gr ON g.grade_id = gr.id
 WHERE CASE
@@ -82,6 +146,7 @@ ORDER BY g.created_at DESC
 type ListGundamsWithFiltersRow struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
 	Description string    `json:"description"`
 	Price       int64     `json:"price"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -103,6 +168,7 @@ func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.T
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Slug,
 			&i.Description,
 			&i.Price,
 			&i.CreatedAt,

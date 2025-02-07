@@ -105,6 +105,7 @@ func (server *Server) setupRouter() {
 	gundamGroup := v1.Group("/gundams")
 	{
 		gundamGroup.GET("", server.listGundams)
+		gundamGroup.GET(":slug", server.getGundamBySlug)
 	}
 	
 	otpGroup := v1.Group("/otp")

@@ -193,6 +193,7 @@ type Gundam struct {
 	ID           int64              `json:"id"`
 	OwnerID      string             `json:"owner_id"`
 	Name         string             `json:"name"`
+	Slug         string             `json:"slug"`
 	GradeID      int64              `json:"grade_id"`
 	Condition    GundamCondition    `json:"condition"`
 	Manufacturer string             `json:"manufacturer"`

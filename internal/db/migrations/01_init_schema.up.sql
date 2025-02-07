@@ -63,6 +63,7 @@ CREATE TABLE "gundams"
     "id"           bigserial PRIMARY KEY,
     "owner_id"     text             NOT NULL,
     "name"         text             NOT NULL,
+    "slug"         text             NOT NULL UNIQUE,
     "grade_id"     bigint           NOT NULL,
     "condition"    gundam_condition NOT NULL,
     "manufacturer" text             NOT NULL,

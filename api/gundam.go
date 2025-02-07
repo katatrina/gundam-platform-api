@@ -88,3 +88,44 @@ func (server *Server) listGundams(ctx *gin.Context) {
 	// Return the response struct, not the gundams slice
 	ctx.JSON(http.StatusOK, resp)
 }
+
+type getGundamBySlugResponse struct {
+	db.GetGundamBySlugRow
+	Images []db.GundamImage `json:"images"`
+	Owner  db.User          `json:"owner"`
+}
+
+func (server *Server) getGundamBySlug(ctx *gin.Context) {
+	slug := ctx.Param("slug")
+	
+	gundam, err := server.dbStore.GetGundamBySlug(ctx, slug)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gundam by slug")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	resp := &getGundamBySlugResponse{
+		GetGundamBySlugRow: gundam,
+	}
+	
+	images, err := server.dbStore.ListGundamImages(ctx, gundam.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list gundam images")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	resp.Images = images
+	
+	owner, err := server.dbStore.GetUserByID(ctx, gundam.OwnerID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get user by id")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		return
+	}
+	
+	resp.Owner = owner
+	
+	ctx.JSON(http.StatusOK, resp)
+}

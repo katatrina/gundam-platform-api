@@ -29,6 +29,7 @@ const listGundamImages = `-- name: ListGundamImages :many
 SELECT id, gundam_id, url, is_primary, created_at
 FROM gundam_images
 WHERE gundam_id = $1
+ORDER BY is_primary DESC, created_at DESC
 `
 
 func (q *Queries) ListGundamImages(ctx context.Context, gundamID int64) ([]GundamImage, error) {

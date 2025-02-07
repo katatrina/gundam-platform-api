@@ -5,4 +5,5 @@ VALUES ($1, $2, $3);
 -- name: ListGundamImages :many
 SELECT *
 FROM gundam_images
-WHERE gundam_id = $1;
+WHERE gundam_id = $1
+ORDER BY is_primary DESC, created_at DESC;
