@@ -12,12 +12,13 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+INSERT INTO users (hashed_password, full_name, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type CreateUserParams struct {
 	HashedPassword      pgtype.Text `json:"-"`
+	FullName            pgtype.Text `json:"full_name"`
 	Email               string      `json:"email"`
 	EmailVerified       bool        `json:"email_verified"`
 	PhoneNumber         pgtype.Text `json:"phone_number"`
@@ -29,6 +30,7 @@ type CreateUserParams struct {
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.HashedPassword,
+		arg.FullName,
 		arg.Email,
 		arg.EmailVerified,
 		arg.PhoneNumber,
@@ -93,7 +95,7 @@ VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, hashed_password, email, ema
 
 type CreateUserWithGoogleAccountParams struct {
 	ID            string      `json:"id"`
-	FullName      string      `json:"full_name"`
+	FullName      pgtype.Text `json:"full_name"`
 	Email         string      `json:"email"`
 	EmailVerified bool        `json:"email_verified"`
 	AvatarUrl     pgtype.Text `json:"avatar_url"`

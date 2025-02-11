@@ -4,21 +4,25 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *;
 
 -- name: ListGundamsWithFilters :many
 SELECT g.id,
+       g.owner_id,
        g.name,
        g.slug,
+       gg.display_name             AS grade,
+       g.condition,
+       g.manufacturer,
+       g.scale,
        g.description,
        g.price,
+       g.status,
        g.created_at,
        g.updated_at,
-       gr.id   as grade_id,
-       gr.name as grade_name,
-       gr.slug as grade_slug
+       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
+        FROM gundam_images gi
+        WHERE gi.gundam_id = g.id) AS image_urls
 FROM gundams g
-         JOIN gundam_grades gr ON g.grade_id = gr.id
-WHERE CASE
-          WHEN sqlc.narg('grade_slug')::text IS NULL THEN true
-        ELSE gr.slug = sqlc.narg('grade_slug')::text
-END
+         JOIN users u ON g.owner_id = u.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
+WHERE gg.slug = COALESCE(sqlc.narg('grade_slug')::text, gg.slug)
 ORDER BY g.created_at DESC;
 
 -- name: GetGundamBySlug :one
@@ -26,15 +30,20 @@ SELECT g.id,
        g.owner_id,
        g.name,
        g.slug,
+       gg.display_name             AS grade,
+       g.condition,
        g.manufacturer,
        g.scale,
-       g.condition,
-       g.status,
        g.description,
        g.price,
+       g.status,
        g.created_at,
        g.updated_at,
-       sqlc.embed(gr)
+       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
+        FROM gundam_images gi
+        WHERE gi.gundam_id = g.id) AS image_urls
 FROM gundams g
-         JOIN gundam_grades gr ON g.grade_id = gr.id
-WHERE g.slug = $1;
+         JOIN users u ON g.owner_id = u.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
+WHERE g.slug = $1
+ORDER BY g.created_at DESC;

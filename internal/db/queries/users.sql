@@ -1,6 +1,6 @@
 -- name: CreateUser :one
-INSERT INTO users (hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
+INSERT INTO users (hashed_password, full_name, email, email_verified, phone_number, phone_number_verified, role, avatar_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
 
 -- name: CreateUserWithGoogleAccount :one
 INSERT INTO users (id, full_name, email, email_verified, avatar_url)

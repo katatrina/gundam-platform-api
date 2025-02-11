@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,6 +22,7 @@ var ErrRecordNotFound = pgx.ErrNoRows
 func ErrorDescription(err error) (errCode string, constraintName string) {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
+		fmt.Println("pgErr: ", pgErr)
 		return pgErr.Code, pgErr.ConstraintName
 	}
 	

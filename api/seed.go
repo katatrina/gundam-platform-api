@@ -20,7 +20,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 			"email":        "seller1@gmail.com",
 			"phone_number": "0394231235",
 			"role":         db.UserRoleSeller,
-			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738125194/seller2-avatar_ewc0uc.jpg",
+			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738543861/6498a96ff70d54a01c2138bea8270363_kooii9.png",
 			"addresses": map[string]any{
 				"receiver_name":         "Nguyễn Văn Tuấn",
 				"receiver_phone_number": "0394231235",
@@ -35,7 +35,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 			"email":        "seller2@gmail.com",
 			"phone_number": "0394263125",
 			"role":         db.UserRoleSeller,
-			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738125072/seller1-avatar_cafdnm.jpg",
+			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738543918/f19fcef473da0837d575d5bf02564a62_thp5l3.png",
 			"addresses": map[string]any{
 				"receiver_name":         "Trần Thị Thanh",
 				"receiver_phone_number": "0394263125",
@@ -53,6 +53,10 @@ func (server *Server) seedData(ctx *gin.Context) {
 		user, err := server.dbStore.CreateUser(context.Background(), db.CreateUserParams{
 			HashedPassword: pgtype.Text{
 				String: hashedPassword,
+				Valid:  true,
+			},
+			FullName: pgtype.Text{
+				String: seller["full_name"].(string),
 				Valid:  true,
 			},
 			Email:         seller["email"].(string),

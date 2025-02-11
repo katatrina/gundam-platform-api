@@ -68,18 +68,23 @@ SELECT g.id,
        g.owner_id,
        g.name,
        g.slug,
+       gg.display_name             AS grade,
+       g.condition,
        g.manufacturer,
        g.scale,
-       g.condition,
-       g.status,
        g.description,
        g.price,
+       g.status,
        g.created_at,
        g.updated_at,
-       gr.id, gr.name, gr.display_name, gr.slug, gr.created_at
+       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
+        FROM gundam_images gi
+        WHERE gi.gundam_id = g.id) AS image_urls
 FROM gundams g
-         JOIN gundam_grades gr ON g.grade_id = gr.id
+         JOIN users u ON g.owner_id = u.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE g.slug = $1
+ORDER BY g.created_at DESC
 `
 
 type GetGundamBySlugRow struct {
@@ -87,15 +92,16 @@ type GetGundamBySlugRow struct {
 	OwnerID      string          `json:"owner_id"`
 	Name         string          `json:"name"`
 	Slug         string          `json:"slug"`
+	Grade        string          `json:"grade"`
+	Condition    GundamCondition `json:"condition"`
 	Manufacturer string          `json:"manufacturer"`
 	Scale        GundamScale     `json:"scale"`
-	Condition    GundamCondition `json:"condition"`
-	Status       GundamStatus    `json:"status"`
 	Description  string          `json:"description"`
 	Price        int64           `json:"price"`
+	Status       GundamStatus    `json:"status"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
-	GundamGrade  GundamGrade     `json:"gundam_grade"`
+	ImageURLs    []string        `json:"image_urls"`
 }
 
 func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error) {
@@ -106,54 +112,59 @@ func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBy
 		&i.OwnerID,
 		&i.Name,
 		&i.Slug,
+		&i.Grade,
+		&i.Condition,
 		&i.Manufacturer,
 		&i.Scale,
-		&i.Condition,
-		&i.Status,
 		&i.Description,
 		&i.Price,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.GundamGrade.ID,
-		&i.GundamGrade.Name,
-		&i.GundamGrade.DisplayName,
-		&i.GundamGrade.Slug,
-		&i.GundamGrade.CreatedAt,
+		&i.ImageURLs,
 	)
 	return i, err
 }
 
 const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
 SELECT g.id,
+       g.owner_id,
        g.name,
        g.slug,
+       gg.display_name             AS grade,
+       g.condition,
+       g.manufacturer,
+       g.scale,
        g.description,
        g.price,
+       g.status,
        g.created_at,
        g.updated_at,
-       gr.id   as grade_id,
-       gr.name as grade_name,
-       gr.slug as grade_slug
+       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
+        FROM gundam_images gi
+        WHERE gi.gundam_id = g.id) AS image_urls
 FROM gundams g
-         JOIN gundam_grades gr ON g.grade_id = gr.id
-WHERE CASE
-          WHEN $1::text IS NULL THEN true
-        ELSE gr.slug = $1::text
-END
+         JOIN users u ON g.owner_id = u.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
+WHERE gg.slug = COALESCE($1::text, gg.slug)
 ORDER BY g.created_at DESC
 `
 
 type ListGundamsWithFiltersRow struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Slug        string    `json:"slug"`
-	Description string    `json:"description"`
-	Price       int64     `json:"price"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	GradeID     int64     `json:"grade_id"`
-	GradeName   string    `json:"grade_name"`
-	GradeSlug   string    `json:"grade_slug"`
+	ID           int64           `json:"id"`
+	OwnerID      string          `json:"owner_id"`
+	Name         string          `json:"name"`
+	Slug         string          `json:"slug"`
+	Grade        string          `json:"grade"`
+	Condition    GundamCondition `json:"condition"`
+	Manufacturer string          `json:"manufacturer"`
+	Scale        GundamScale     `json:"scale"`
+	Description  string          `json:"description"`
+	Price        int64           `json:"price"`
+	Status       GundamStatus    `json:"status"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	ImageURLs    []string        `json:"image_urls"`
 }
 
 func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error) {
@@ -167,15 +178,19 @@ func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.T
 		var i ListGundamsWithFiltersRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.OwnerID,
 			&i.Name,
 			&i.Slug,
+			&i.Grade,
+			&i.Condition,
+			&i.Manufacturer,
+			&i.Scale,
 			&i.Description,
 			&i.Price,
+			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.GradeID,
-			&i.GradeName,
-			&i.GradeSlug,
+			&i.ImageURLs,
 		); err != nil {
 			return nil, err
 		}

@@ -189,6 +189,21 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type Cart struct {
+	ID        int64     `json:"id"`
+	UserID    string    `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type CartItem struct {
+	ID        string    `json:"id"`
+	CartID    int64     `json:"cart_id"`
+	GundamID  int64     `json:"gundam_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Gundam struct {
 	ID           int64              `json:"id"`
 	OwnerID      string             `json:"owner_id"`
@@ -254,7 +269,7 @@ type Shipment struct {
 
 type User struct {
 	ID                  string      `json:"id"`
-	FullName            string      `json:"full_name"`
+	FullName            pgtype.Text `json:"full_name"`
 	HashedPassword      pgtype.Text `json:"-"`
 	Email               string      `json:"email"`
 	EmailVerified       bool        `json:"email_verified"`

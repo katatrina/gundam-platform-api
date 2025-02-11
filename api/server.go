@@ -102,10 +102,19 @@ func (server *Server) setupRouter() {
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
+	v1.GET("/sellers/:id", server.getSeller)
+	
 	gundamGroup := v1.Group("/gundams")
 	{
 		gundamGroup.GET("", server.listGundams)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
+	}
+	
+	cartGroup := v1.Group("/cart", authMiddleware(server.tokenMaker))
+	{
+		cartGroup.POST("/items", server.addCartItem)
+		cartGroup.GET("/items", server.listCartItems)
+		cartGroup.DELETE("/items/:id", server.deleteCartItem)
 	}
 	
 	otpGroup := v1.Group("/otp")

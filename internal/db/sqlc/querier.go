@@ -11,19 +11,24 @@ import (
 )
 
 type Querier interface {
+	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
 	CreateGundamImage(ctx context.Context, arg CreateGundamImageParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) error
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
+	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error)
+	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
+	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
+	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
-	ListGundamImages(ctx context.Context, gundamID int64) ([]GundamImage, error)
 	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
+	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

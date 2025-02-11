@@ -24,36 +24,3 @@ func (q *Queries) CreateGundamImage(ctx context.Context, arg CreateGundamImagePa
 	_, err := q.db.Exec(ctx, createGundamImage, arg.GundamID, arg.Url, arg.IsPrimary)
 	return err
 }
-
-const listGundamImages = `-- name: ListGundamImages :many
-SELECT id, gundam_id, url, is_primary, created_at
-FROM gundam_images
-WHERE gundam_id = $1
-ORDER BY is_primary DESC, created_at DESC
-`
-
-func (q *Queries) ListGundamImages(ctx context.Context, gundamID int64) ([]GundamImage, error) {
-	rows, err := q.db.Query(ctx, listGundamImages, gundamID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GundamImage{}
-	for rows.Next() {
-		var i GundamImage
-		if err := rows.Scan(
-			&i.ID,
-			&i.GundamID,
-			&i.Url,
-			&i.IsPrimary,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}

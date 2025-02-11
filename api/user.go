@@ -205,8 +205,11 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	
 	// User doesn't exist - create new account
 	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
-		ID:            payload.Subject,
-		FullName:      payload.Claims["name"].(string),
+		ID: payload.Subject,
+		FullName: pgtype.Text{
+			String: payload.Claims["name"].(string),
+			Valid:  true,
+		},
 		Email:         email,
 		EmailVerified: payload.Claims["email_verified"].(bool),
 		AvatarUrl: pgtype.Text{

@@ -30,7 +30,7 @@ CREATE TYPE "gundam_status" AS ENUM (
 CREATE TABLE "users"
 (
     "id"                    text PRIMARY KEY     DEFAULT (gen_random_uuid()),
-    "full_name"             text        NOT NULL DEFAULT '',
+    "full_name"             text,
     "hashed_password"       text,
     "email"                 text UNIQUE NOT NULL,
     "email_verified"        bool        NOT NULL DEFAULT false,
@@ -63,7 +63,7 @@ CREATE TABLE "gundams"
     "id"           bigserial PRIMARY KEY,
     "owner_id"     text             NOT NULL,
     "name"         text             NOT NULL,
-    "slug"         text             NOT NULL UNIQUE,
+    "slug"         text UNIQUE      NOT NULL,
     "grade_id"     bigint           NOT NULL,
     "condition"    gundam_condition NOT NULL,
     "manufacturer" text             NOT NULL,
@@ -92,6 +92,23 @@ CREATE TABLE "gundam_images"
     "url"        text        NOT NULL,
     "is_primary" bool        NOT NULL DEFAULT false,
     "created_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "carts"
+(
+    "id"         bigserial PRIMARY KEY,
+    "user_id"    text        NOT NULL UNIQUE,
+    "created_at" timestamptz NOT NULL DEFAULT (now()),
+    "updated_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "cart_items"
+(
+    "id"         TEXT PRIMARY KEY     DEFAULT (gen_random_uuid()),
+    "cart_id"    bigint      NOT NULL,
+    "gundam_id"  bigint      NOT NULL,
+    "created_at" timestamptz NOT NULL DEFAULT (now()),
+    "updated_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "orders"
@@ -151,6 +168,8 @@ CREATE TABLE "wallet_transactions"
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");
 
+CREATE UNIQUE INDEX ON "cart_items" ("cart_id", "gundam_id");
+
 CREATE INDEX ON "wallets" ("user_id");
 
 CREATE INDEX ON "wallet_transactions" ("wallet_id");
@@ -165,6 +184,15 @@ ALTER TABLE "gundams"
     ADD FOREIGN KEY ("grade_id") REFERENCES "gundam_grades" ("id");
 
 ALTER TABLE "gundam_images"
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+
+ALTER TABLE "carts"
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "cart_items"
+    ADD FOREIGN KEY ("cart_id") REFERENCES "carts" ("id");
+
+ALTER TABLE "cart_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
 
 ALTER TABLE "orders"
