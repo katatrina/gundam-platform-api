@@ -71,8 +71,9 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Serv
 func (server *Server) setupRouter() {
 	gin.ForceConsoleColor()
 	router := gin.Default()
+	fmt.Println("Allowed origins:", server.config.AllowedOrigins)
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     server.config.AllowedOrigins,
+		AllowOrigins:     server.config.AllowedOrigins, // "http://localhost:3000"
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
