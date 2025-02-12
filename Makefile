@@ -18,3 +18,18 @@ compose:
 	docker compose up --build -d
 	sleep 1 # wait 1s for api server to be ready
 	curl -X POST http://localhost:8080/v1/seed
+
+swag-fmt:
+	swag fmt
+
+swag-init:
+	swag init \
+    		--parseDependency \
+    		--parseDependencyLevel 1 \
+    		-p "snakecase" \
+    		--parseInternal \
+    		--exclude ".*_test.go,./tmp" \
+    		--requiredByDefault
+
+swagger: swag-fmt swag-init
+	@echo 'API Docs generated. Happy Coding!'

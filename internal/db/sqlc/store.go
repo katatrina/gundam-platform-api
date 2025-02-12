@@ -9,7 +9,7 @@ import (
 // Store provides all functions to execute db queries and transactions.
 type Store interface {
 	Querier
-	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) error
+	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (CreateUserAddressTxResult, error)
 }
 
 type SQLStore struct {

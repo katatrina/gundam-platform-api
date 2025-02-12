@@ -89,7 +89,7 @@ CREATE TABLE "gundam_images"
 (
     "id"         bigserial PRIMARY KEY,
     "gundam_id"  bigint      NOT NULL,
-    "url"        text        NOT NULL,
+    "url"  text        NOT NULL,
     "is_primary" bool        NOT NULL DEFAULT false,
     "created_at" timestamptz NOT NULL DEFAULT (now())
 );
@@ -97,14 +97,14 @@ CREATE TABLE "gundam_images"
 CREATE TABLE "carts"
 (
     "id"         bigserial PRIMARY KEY,
-    "user_id"    text        NOT NULL UNIQUE,
+    "user_id"    text UNIQUE NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "cart_items"
 (
-    "id"         TEXT PRIMARY KEY     DEFAULT (gen_random_uuid()),
+    "id"         text PRIMARY KEY     DEFAULT (gen_random_uuid()),
     "cart_id"    bigint      NOT NULL,
     "gundam_id"  bigint      NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
@@ -187,13 +187,13 @@ ALTER TABLE "gundam_images"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
 
 ALTER TABLE "carts"
-    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "cart_items"
     ADD FOREIGN KEY ("cart_id") REFERENCES "carts" ("id");
 
 ALTER TABLE "cart_items"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "orders"
     ADD FOREIGN KEY ("buyer_id") REFERENCES "users" ("id");

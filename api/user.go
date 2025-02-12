@@ -20,28 +20,30 @@ import (
 	"github.com/katatrina/gundam-BE/internal/util"
 )
 
+// CreateUserRequest represents the input for creating a new user
 type createUserRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required" `
+	Password string `json:"password" binding:"required"`
 }
 
-type createUserResponse struct {
-	User db.User `json:"user"`
-}
-
-func validateCreateUserRequest(req *createUserRequest) (violations []*FieldViolation) {
-	if err := validator.ValidateEmail(req.Email); err != nil {
-		violations = append(violations, fieldViolation("email", err))
-	}
-	
-	return violations
-}
-
+// CreateUser godoc
+//	@Summary		Create a new user
+//	@Description	Create a new user with email and password
+//	@Tags			authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		createUserRequest	true	"User creation request"
+//	@Success		201		{object}	db.User				"Successfully created user"
+//	@Failure		400		"Invalid request body"
+//	@Failure		422		"Validation error"
+//	@Failure		409		"Email already exists"
+//	@Failure		500		"Internal server error"
+//	@Router			/users [post]
 func (server *Server) createUser(ctx *gin.Context) {
 	req := new(createUserRequest)
 	
 	if err := ctx.ShouldBindJSON(req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Status(http.StatusBadRequest)
 		return
 	}
 	
@@ -53,7 +55,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 	
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to hash password: %w", err)))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -81,22 +83,30 @@ func (server *Server) createUser(ctx *gin.Context) {
 		errCode, constraintName := db.ErrorDescription(err)
 		switch {
 		case errCode == db.UniqueViolationCode && constraintName == db.UniqueEmailConstraint:
-			err = fmt.Errorf("email %s already exists", req.Email)
-			ctx.JSON(http.StatusConflict, errorResponse(err))
+			ctx.Status(http.StatusConflict)
 			return
 		}
 		
 		log.Err(err).Msg("failed to create user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, createUserResponse{User: user})
+	ctx.JSON(http.StatusCreated, user)
+}
+
+// validateCreateUserRequest performs validation on the create user request
+func validateCreateUserRequest(req *createUserRequest) (violations []*FieldViolation) {
+	if err := validator.ValidateEmail(req.Email); err != nil {
+		violations = append(violations, fieldViolation("email", err))
+	}
+	
+	return violations
 }
 
 type loginUserRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type loginUserResponse struct {
@@ -105,6 +115,18 @@ type loginUserResponse struct {
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
 }
 
+//	@Summary		Login user
+//	@Description	Authenticate a user and return access token
+//	@Tags			authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		loginUserRequest	true	"Login credentials"
+//	@Success		200		{object}	loginUserResponse
+//	@Failure		400		"Invalid request parameters"
+//	@Failure		401		"Incorrect password"
+//	@Failure		404		"Email not found"
+//	@Failure		500		"Internal server error"
+//	@Router			/auth/login [post]
 func (server *Server) loginUser(ctx *gin.Context) {
 	req := new(loginUserRequest)
 	
@@ -122,7 +144,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		}
 		
 		log.Err(err).Msg("failed to find user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -136,7 +158,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -152,6 +174,17 @@ type loginUserWithGoogleRequest struct {
 	IDToken string `json:"id_token" binding:"required"`
 }
 
+//	@Summary		Login or register a user with Google account
+//	@Description	Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.
+//	@Tags			authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		loginUserWithGoogleRequest	true	"Google ID Token"
+//	@Success		200		{object}	loginUserResponse			"Successfully logged in"
+//	@Failure		400		"Invalid request body"
+//	@Failure		401		"Invalid Google ID token"
+//	@Failure		500		"Internal server error"
+//	@Router			/auth/google-login [post]
 func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	req := new(loginUserWithGoogleRequest)
 	
@@ -172,14 +205,14 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 	user, err := server.getOrCreateGoogleUser(ctx, payload)
 	if err != nil {
 		log.Err(err).Msg("failed to get or create google user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
 	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -225,6 +258,15 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	return &newUser, nil
 }
 
+//	@Summary		Retrieve a user by ID
+//	@Description	Get detailed information about a specific user
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path		string	true	"User ID"
+//	@Success		200	{object}	db.User	"Successfully retrieved user"
+//	@Failure		404	"User not found"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/{id} [get]
 func (server *Server) getUser(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
@@ -237,24 +279,36 @@ func (server *Server) getUser(ctx *gin.Context) {
 		}
 		
 		log.Err(err).Msg("failed to get user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
 	ctx.JSON(http.StatusOK, user)
 }
 
+// UpdateUserRequest represents the input for updating a user
 type updateUserRequest struct {
-	FullName *string `json:"full_name"`
+	FullName *string `json:"full_name" `
 }
 
+//	@Summary		Update a user's information
+//	@Description	Update specific user details by user ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"User ID"
+//	@Param			request	body		updateUserRequest	true	"User update request"
+//	@Success		200		{object}	db.User				"Successfully updated user"
+//	@Failure		400		"Invalid request body"
+//	@Failure		500		"Internal server error"
+//	@Router			/users/{id} [put]
 func (server *Server) updateUser(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
 	req := new(updateUserRequest)
 	
 	if err := ctx.ShouldBindJSON(req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Status(http.StatusBadRequest)
 		return
 	}
 	
@@ -269,26 +323,35 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	user, err := server.dbStore.UpdateUser(context.Background(), arg)
 	if err != nil {
 		log.Err(err).Msg("failed to update user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, createUserResponse{User: user})
+	ctx.JSON(http.StatusOK, user)
 }
 
+// UpdateAvatarRequest represents the input for updating a user's avatar
 type updateAvatarRequest struct {
 	Avatar *multipart.FileHeader `form:"avatar" binding:"required"`
 }
 
-type updateAvatarResponse struct {
-	AvatarURL string `json:"avatar_url"`
-}
-
+//	@Summary		Update user avatar
+//	@Description	Upload and update a user's profile avatar
+//	@Tags			users
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Param			id		path		string					true	"User ID"
+//	@Param			avatar	formData	file					true	"Avatar image file"
+//	@Success		200		{object}	updateAvatarResponse	"Successfully updated avatar"
+//	@Failure		400		"Invalid request"
+//	@Failure		404		"User not found"
+//	@Failure		500		"Internal server error"
+//	@Router			/users/{id}/avatar [patch]
 func (server *Server) updateAvatar(ctx *gin.Context) {
 	req := new(updateAvatarRequest)
 	
 	if err := ctx.ShouldBindWith(&req, binding.FormMultipart); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Status(http.StatusBadRequest)
 		return
 	}
 	
@@ -300,13 +363,12 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	user, err := server.dbStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user %s not found", userID)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			ctx.Status(http.StatusNotFound)
 			return
 		}
 		
 		log.Err(err).Msg("failed to get user")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -314,7 +376,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	file, err := req.Avatar.Open()
 	if err != nil {
 		log.Err(err).Msg("failed to open file")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	defer file.Close()
@@ -322,7 +384,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
 		log.Err(err).Msg("failed to read file")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -332,7 +394,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	uploadedFileURL, err := server.fileStore.UploadFile(fileBytes, fileName, FolderAvatars)
 	if err != nil {
 		log.Err(err).Msg("failed to upload file")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
@@ -352,15 +414,32 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 		}
 		
 		log.Err(err).Msg("failed to update user avatar")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, updateAvatarResponse{AvatarURL: user.AvatarUrl.String})
+	resp := updateAvatarResponse{
+		AvatarURL: user.AvatarUrl.String,
+	}
+	ctx.JSON(http.StatusOK, resp)
 	
-	// Optionally, delete old avatar if it exists
+	// TODO: delete old avatar after successful update
 }
 
+// UpdateAvatarResponse represents the response after updating a user's avatar
+type updateAvatarResponse struct {
+	AvatarURL string `json:"avatar_url" binding:"required"`
+}
+
+//	@Summary		Retrieve a user by phone number
+//	@Description	Get user details using a phone number as a query parameter
+//	@Tags			users
+//	@Produce		json
+//	@Param			phone_number	query		string	true	"Phone Number"
+//	@Success		200				{object}	db.User	"Successfully retrieved user"
+//	@Failure		404				"User not found"
+//	@Failure		500				"Internal server error"
+//	@Router			/users/by-phone [get]
 func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	phoneNumber := ctx.Query("phone_number")
 	
@@ -370,35 +449,46 @@ func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user with phone number %s not found", phoneNumber)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			ctx.Status(http.StatusNotFound)
 			return
 		}
 		
 		log.Err(err).Msg("failed to get user by phone number")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
 	ctx.JSON(http.StatusOK, user)
 }
 
+// CreateUserAddressRequest represents the input for creating a user address
 type createUserAddressRequest struct {
-	ReceiverName        string `json:"receiver_name"`
-	ReceiverPhoneNumber string `json:"receiver_phone_number"`
-	ProvinceName        string `json:"province_name"`
-	DistrictName        string `json:"district_name"`
-	WardName            string `json:"ward_name"`
-	Detail              string `json:"detail"`
+	ReceiverName        string `json:"receiver_name" binding:"required"`
+	ReceiverPhoneNumber string `json:"receiver_phone_number" binding:"required"`
+	ProvinceName        string `json:"province_name" binding:"required"`
+	DistrictName        string `json:"district_name" binding:"required"`
+	WardName            string `json:"ward_name" binding:"required"`
+	Detail              string `json:"detail" binding:"required"`
 	IsPrimary           bool   `json:"is_primary"`
 }
 
+//	@Summary		Create a new user address
+//	@Description	Add a new address for a specific user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string							true	"User ID"
+//	@Param			request	body		createUserAddressRequest		false	"Address creation request"
+//	@Success		201		{object}	db.CreateUserAddressTxResult	"Address created successfully"
+//	@Failure		400		"Invalid request body"
+//	@Failure		500		"Internal server error"
+//	@Router			/users/{id}/addresses [post]
 func (server *Server) createUserAddress(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
 	req := new(createUserAddressRequest)
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Status(http.StatusBadRequest)
 		return
 	}
 	
@@ -413,23 +503,31 @@ func (server *Server) createUserAddress(ctx *gin.Context) {
 		IsPrimary:           req.IsPrimary,
 	}
 	
-	err := server.dbStore.CreateUserAddressTx(context.Background(), arg)
+	result, err := server.dbStore.CreateUserAddressTx(context.Background(), arg)
 	if err != nil {
 		log.Err(err).Msg("failed to create address")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, gin.H{"message": "user address created"})
+	ctx.JSON(http.StatusCreated, result)
 }
 
+//	@Summary		Retrieve user addresses
+//	@Description	Get all addresses for a specific user
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path	string			true	"User ID"
+//	@Success		200	{array}	db.UserAddress	"Successfully retrieved user addresses"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/{id}/addresses [get]
 func (server *Server) getUserAddresses(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
 	addresses, err := server.dbStore.GetUserAddresses(context.Background(), userID)
 	if err != nil {
 		log.Err(err).Msg("failed to get user addresses")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(ErrInternalServer))
+		ctx.Status(http.StatusInternalServerError)
 		return
 	}
 	

@@ -15,7 +15,13 @@ type CreateUserAddressTxParams struct {
 	IsPrimary           bool   `json:"is_primary"`
 }
 
-func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) error {
+type CreateUserAddressTxResult struct {
+	UserAddress
+}
+
+func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (CreateUserAddressTxResult, error) {
+	var result CreateUserAddressTxResult
+	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		// First, unset the existing primary address if the new address is primary
 		if arg.IsPrimary {
@@ -26,7 +32,7 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 		}
 		
 		// Second, insert new address
-		err := qTx.CreateUserAddress(ctx, CreateUserAddressParams{
+		address, err := qTx.CreateUserAddress(ctx, CreateUserAddressParams{
 			UserID:              arg.UserID,
 			ReceiverName:        arg.ReceiverName,
 			ReceiverPhoneNumber: arg.ReceiverPhoneNumber,
@@ -36,9 +42,13 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 			Detail:              arg.Detail,
 			IsPrimary:           arg.IsPrimary,
 		})
+		if err != nil {
+			return err
+		}
+		result.UserAddress = address
 		
-		return err
+		return nil
 	})
 	
-	return err
+	return result, err
 }

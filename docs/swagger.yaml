@@ -1,0 +1,1004 @@
+basePath: /v1
+definitions:
+  api.GenerateOTPRequest:
+    properties:
+      phone_number:
+        type: string
+    required:
+    - phone_number
+    type: object
+  api.GenerateOTPResponse:
+    properties:
+      can_resend_in:
+        type: string
+      expires_at:
+        type: string
+      otp_code:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - can_resend_in
+    - expires_at
+    - otp_code
+    - phone_number
+    type: object
+  api.VerifyOTPRequest:
+    properties:
+      otp_code:
+        type: string
+      phone_number:
+        type: string
+      user_id:
+        type: string
+    required:
+    - otp_code
+    - phone_number
+    - user_id
+    type: object
+  api.addCartItemRequest:
+    properties:
+      gundam_id:
+        type: integer
+    required:
+    - gundam_id
+    type: object
+  api.createUserAddressRequest:
+    properties:
+      detail:
+        type: string
+      district_name:
+        type: string
+      is_primary:
+        type: boolean
+      province_name:
+        type: string
+      receiver_name:
+        type: string
+      receiver_phone_number:
+        type: string
+      ward_name:
+        type: string
+    required:
+    - detail
+    - district_name
+    - is_primary
+    - province_name
+    - receiver_name
+    - receiver_phone_number
+    - ward_name
+    type: object
+  api.createUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  api.loginUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  api.loginUserResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expires_at:
+        type: string
+      user:
+        $ref: '#/definitions/db.User'
+    required:
+    - access_token
+    - access_token_expires_at
+    - user
+    type: object
+  api.loginUserWithGoogleRequest:
+    properties:
+      id_token:
+        type: string
+    required:
+    - id_token
+    type: object
+  api.updateAvatarResponse:
+    properties:
+      avatar_url:
+        type: string
+    required:
+    - avatar_url
+    type: object
+  api.updateUserRequest:
+    properties:
+      full_name:
+        type: string
+    required:
+    - full_name
+    type: object
+  api.verifyAccessTokenRequest:
+    properties:
+      access_token:
+        type: string
+    required:
+    - access_token
+    type: object
+  db.AddCartItemRow:
+    properties:
+      cart_item_id:
+        type: string
+      gundam_id:
+        type: integer
+      gundam_image_url:
+        type: string
+      gundam_name:
+        type: string
+      gundam_price:
+        type: integer
+      seller_avatar_url:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+      seller_id:
+        type: string
+      seller_name:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+    required:
+    - cart_item_id
+    - gundam_id
+    - gundam_image_url
+    - gundam_name
+    - gundam_price
+    - seller_avatar_url
+    - seller_id
+    - seller_name
+    type: object
+  db.CreateUserAddressTxResult:
+    properties:
+      created_at:
+        type: string
+      detail:
+        type: string
+      district_name:
+        type: string
+      id:
+        type: integer
+      is_pickup_address:
+        type: boolean
+      is_primary:
+        type: boolean
+      province_name:
+        type: string
+      receiver_name:
+        type: string
+      receiver_phone_number:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      ward_name:
+        type: string
+    required:
+    - created_at
+    - detail
+    - district_name
+    - id
+    - is_pickup_address
+    - is_primary
+    - province_name
+    - receiver_name
+    - receiver_phone_number
+    - updated_at
+    - user_id
+    - ward_name
+    type: object
+  db.GetGundamBySlugRow:
+    properties:
+      condition:
+        $ref: '#/definitions/db.GundamCondition'
+      created_at:
+        type: string
+      description:
+        type: string
+      grade:
+        type: string
+      id:
+        type: integer
+      image_urls:
+        items:
+          type: string
+        type: array
+      manufacturer:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      price:
+        type: integer
+      scale:
+        $ref: '#/definitions/db.GundamScale'
+      slug:
+        type: string
+      status:
+        $ref: '#/definitions/db.GundamStatus'
+      updated_at:
+        type: string
+    required:
+    - condition
+    - created_at
+    - description
+    - grade
+    - id
+    - image_urls
+    - manufacturer
+    - name
+    - owner_id
+    - price
+    - scale
+    - slug
+    - status
+    - updated_at
+    type: object
+  db.GundamCondition:
+    enum:
+    - mint
+    - near mint
+    - good
+    - moderate wear
+    - heavily damaged
+    type: string
+    x-enum-varnames:
+    - GundamConditionMint
+    - GundamConditionNearmint
+    - GundamConditionGood
+    - GundamConditionModeratewear
+    - GundamConditionHeavilydamaged
+  db.GundamGrade:
+    properties:
+      created_at:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+    required:
+    - created_at
+    - display_name
+    - id
+    - name
+    - slug
+    type: object
+  db.GundamScale:
+    enum:
+    - 1/144
+    - 1/100
+    - 1/60
+    - 1/48
+    type: string
+    x-enum-varnames:
+    - GundamScale1144
+    - GundamScale1100
+    - GundamScale160
+    - GundamScale148
+  db.GundamStatus:
+    enum:
+    - available
+    - selling
+    - auction
+    - exchange
+    type: string
+    x-enum-varnames:
+    - GundamStatusAvailable
+    - GundamStatusSelling
+    - GundamStatusAuction
+    - GundamStatusExchange
+  db.ListCartItemsWithDetailsRow:
+    properties:
+      cart_item_id:
+        type: string
+      gundam_id:
+        type: integer
+      gundam_image_url:
+        type: string
+      gundam_name:
+        type: string
+      gundam_price:
+        type: integer
+      seller_avatar_url:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+      seller_id:
+        type: string
+      seller_name:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+    required:
+    - cart_item_id
+    - gundam_id
+    - gundam_image_url
+    - gundam_name
+    - gundam_price
+    - seller_avatar_url
+    - seller_id
+    - seller_name
+    type: object
+  db.ListGundamsWithFiltersRow:
+    properties:
+      condition:
+        $ref: '#/definitions/db.GundamCondition'
+      created_at:
+        type: string
+      description:
+        type: string
+      grade:
+        type: string
+      id:
+        type: integer
+      image_urls:
+        items:
+          type: string
+        type: array
+      manufacturer:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      price:
+        type: integer
+      scale:
+        $ref: '#/definitions/db.GundamScale'
+      slug:
+        type: string
+      status:
+        $ref: '#/definitions/db.GundamStatus'
+      updated_at:
+        type: string
+    required:
+    - condition
+    - created_at
+    - description
+    - grade
+    - id
+    - image_urls
+    - manufacturer
+    - name
+    - owner_id
+    - price
+    - scale
+    - slug
+    - status
+    - updated_at
+    type: object
+  db.User:
+    properties:
+      avatar_url:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      full_name:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+      id:
+        type: string
+      phone_number:
+        allOf:
+        - $ref: '#/definitions/pgtype.Text'
+        x-nullable: true
+      phone_number_verified:
+        type: boolean
+      role:
+        $ref: '#/definitions/db.UserRole'
+      updated_at:
+        type: string
+    required:
+    - avatar_url
+    - created_at
+    - email
+    - email_verified
+    - full_name
+    - id
+    - phone_number
+    - phone_number_verified
+    - role
+    - updated_at
+    type: object
+  db.UserAddress:
+    properties:
+      created_at:
+        type: string
+      detail:
+        type: string
+      district_name:
+        type: string
+      id:
+        type: integer
+      is_pickup_address:
+        type: boolean
+      is_primary:
+        type: boolean
+      province_name:
+        type: string
+      receiver_name:
+        type: string
+      receiver_phone_number:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      ward_name:
+        type: string
+    required:
+    - created_at
+    - detail
+    - district_name
+    - id
+    - is_pickup_address
+    - is_primary
+    - province_name
+    - receiver_name
+    - receiver_phone_number
+    - updated_at
+    - user_id
+    - ward_name
+    type: object
+  db.UserRole:
+    enum:
+    - buyer
+    - seller
+    - moderator
+    - admin
+    type: string
+    x-enum-varnames:
+    - UserRoleBuyer
+    - UserRoleSeller
+    - UserRoleModerator
+    - UserRoleAdmin
+  pgtype.Text:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API documentation for Gundam Platform application
+  title: Gundam Platform API
+  version: 1.0.0
+paths:
+  /auth/google-login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user using Google ID token. If the user doesn't
+        exist, a new user will be created.
+      parameters:
+      - description: Google ID Token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.loginUserWithGoogleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in
+          schema:
+            $ref: '#/definitions/api.loginUserResponse'
+        "400":
+          description: Invalid request body
+        "401":
+          description: Invalid Google ID token
+        "500":
+          description: Internal server error
+      summary: Login or register a user with Google account
+      tags:
+      - authentication
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and return access token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.loginUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.loginUserResponse'
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Incorrect password
+        "404":
+          description: Email not found
+        "500":
+          description: Internal server error
+      summary: Login user
+      tags:
+      - authentication
+  /cart/items:
+    get:
+      description: Retrieves all items in the user's shopping cart with detailed information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved cart items
+          schema:
+            items:
+              $ref: '#/definitions/db.ListCartItemsWithDetailsRow'
+            type: array
+        "500":
+          description: Internal Server Error - Failed to retrieve cart items
+      security:
+      - accessToken: []
+      summary: List Cart Items
+      tags:
+      - cart
+    post:
+      consumes:
+      - application/json
+      description: Adds a Gundam model to the user's shopping cart
+      parameters:
+      - description: Gundam to add to cart
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.addCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully added item to cart
+          schema:
+            $ref: '#/definitions/db.AddCartItemRow'
+        "400":
+          description: Bad Request - Invalid input
+        "401":
+          description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error - Failed to add cart item
+      security:
+      - accessToken: []
+      summary: Add Item to Cart
+      tags:
+      - cart
+  /cart/items/{id}:
+    delete:
+      description: Removes a specific item from the user's shopping cart
+      parameters:
+      - description: Cart Item ID to delete
+        example: "1"
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Successfully deleted cart item
+        "400":
+          description: Bad Request - Invalid cart item ID
+        "500":
+          description: Internal Server Error - Failed to delete cart item
+      security:
+      - accessToken: []
+      summary: Delete Cart Item
+      tags:
+      - cart
+  /grades:
+    get:
+      description: Retrieves a list of all available Gundam model grades
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved list of Gundam grades
+          schema:
+            items:
+              $ref: '#/definitions/db.GundamGrade'
+            type: array
+        "500":
+          description: Internal Server Error - Failed to retrieve Gundam grades
+      summary: List Gundam Grades
+      tags:
+      - gundams
+  /gundams:
+    get:
+      description: Retrieves a list of Gundams, optionally filtered by grade
+      parameters:
+      - description: Filter by Gundam grade slug
+        example: master-grade
+        in: query
+        name: grade
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved list of Gundams
+          schema:
+            items:
+              $ref: '#/definitions/db.ListGundamsWithFiltersRow'
+            type: array
+        "400":
+          description: Bad Request - Invalid query parameters
+        "500":
+          description: Internal Server Error - Failed to retrieve Gundams
+      summary: List Gundams
+      tags:
+      - gundams
+  /gundams/{slug}:
+    get:
+      description: Retrieves a specific Gundam model by its unique slug
+      parameters:
+      - description: Gundam model slug
+        example: rx-78-2-gundam
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved Gundam details
+          schema:
+            $ref: '#/definitions/db.GetGundamBySlugRow'
+        "404":
+          description: Not Found - Gundam with specified slug does not exist
+        "500":
+          description: Internal Server Error - Failed to retrieve Gundam
+      summary: Get Gundam by Slug
+      tags:
+      - gundams
+  /otp/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generates and sends an OTP to the specified phone number
+      parameters:
+      - description: OTP Generation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.GenerateOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP generated successfully
+          schema:
+            $ref: '#/definitions/api.GenerateOTPResponse'
+        "400":
+          description: Bad Request - Invalid input
+        "429":
+          description: Too Many Requests - OTP request rate limit exceeded
+        "500":
+          description: Internal Server Error
+      summary: Generate a One-Time Password (OTP)
+      tags:
+      - authentication
+  /seed:
+    post:
+      description: You should call this endpoint only once to seed data for development
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Seed data successfully
+        "500":
+          description: Internal server error
+      summary: Seed data for development
+      tags:
+      - other
+  /sellers/{id}:
+    get:
+      description: Get detailed information about a specific seller
+      parameters:
+      - description: Seller ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved seller
+          schema:
+            $ref: '#/definitions/db.User'
+        "500":
+          description: Internal server error
+      summary: Retrieve a seller by ID
+      tags:
+      - sellers
+  /tokens/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a JWT access token and returns the associated user
+      parameters:
+      - description: Token verification request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.verifyAccessTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User information
+          schema:
+            $ref: '#/definitions/db.User'
+        "400":
+          description: Invalid request format
+        "401":
+          description: Invalid or expired token
+      summary: Verify access token
+      tags:
+      - authentication
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with email and password
+      parameters:
+      - description: User creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created user
+          schema:
+            $ref: '#/definitions/db.User'
+        "400":
+          description: Invalid request body
+        "409":
+          description: Email already exists
+        "422":
+          description: Validation error
+        "500":
+          description: Internal server error
+      summary: Create a new user
+      tags:
+      - authentication
+  /users/{id}:
+    get:
+      description: Get detailed information about a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user
+          schema:
+            $ref: '#/definitions/db.User'
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+      summary: Retrieve a user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update specific user details by user ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated user
+          schema:
+            $ref: '#/definitions/db.User'
+        "400":
+          description: Invalid request body
+        "500":
+          description: Internal server error
+      summary: Update a user's information
+      tags:
+      - users
+  /users/{id}/addresses:
+    get:
+      description: Get all addresses for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user addresses
+          schema:
+            items:
+              $ref: '#/definitions/db.UserAddress'
+            type: array
+        "500":
+          description: Internal server error
+      summary: Retrieve user addresses
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Add a new address for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address creation request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/api.createUserAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Address created successfully
+          schema:
+            $ref: '#/definitions/db.CreateUserAddressTxResult'
+        "400":
+          description: Invalid request body
+        "500":
+          description: Internal server error
+      summary: Create a new user address
+      tags:
+      - users
+  /users/{id}/avatar:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Upload and update a user's profile avatar
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Avatar image file
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated avatar
+          schema:
+            $ref: '#/definitions/api.updateAvatarResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+      summary: Update user avatar
+      tags:
+      - users
+  /users/by-phone:
+    get:
+      description: Get user details using a phone number as a query parameter
+      parameters:
+      - description: Phone Number
+        in: query
+        name: phone_number
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user
+          schema:
+            $ref: '#/definitions/db.User'
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+      summary: Retrieve a user by phone number
+      tags:
+      - users
+  /verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's phone number and updates the
+        user's phone number if valid
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified successfully
+        "400":
+          description: Bad Request - Invalid input or OTP verification failed
+        "401":
+          description: Unauthorized - Invalid OTP code
+        "500":
+          description: Internal Server Error - Failed to update user information
+      summary: Verify One-Time Password (OTP)
+      tags:
+      - authentication
+schemes:
+- http
+- https
+securityDefinitions:
+  accessToken:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

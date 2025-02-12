@@ -13,6 +13,8 @@ import (
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"google.golang.org/api/idtoken"
 )
 
@@ -71,9 +73,8 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Serv
 func (server *Server) setupRouter() {
 	gin.ForceConsoleColor()
 	router := gin.Default()
-	fmt.Println("Allowed origins:", server.config.AllowedOrigins)
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     server.config.AllowedOrigins, // "http://localhost:3000"
+		AllowOrigins:     server.config.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -83,6 +84,7 @@ func (server *Server) setupRouter() {
 		c.Header("Cross-Origin-Embedder-Policy", "unsafe-none")
 		c.Next()
 	})
+	
 	v1 := router.Group("/v1")
 	
 	v1.POST("/tokens/verify", server.verifyAccessToken)
@@ -125,6 +127,8 @@ func (server *Server) setupRouter() {
 	}
 	
 	v1.POST("/seed", server.seedData)
+	
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
 }

@@ -12,6 +12,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//	@Summary		Seed data for development
+//	@Description	You should call this endpoint only once to seed data for development
+//	@Tags			other
+//	@Produce		plain
+//	@Success		200	"Seed data successfully"
+//	@Failure		500	"Internal server error"
+//	@Router			/seed [post]
 func (server *Server) seedData(ctx *gin.Context) {
 	// Create seller accounts:
 	sellerInfos := []map[string]any{
@@ -80,7 +87,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		
 		sellers = append(sellers, user)
 		
-		err = server.dbStore.CreateUserAddress(context.Background(), db.CreateUserAddressParams{
+		_, err = server.dbStore.CreateUserAddress(context.Background(), db.CreateUserAddressParams{
 			UserID:              user.ID,
 			ReceiverName:        seller["full_name"].(string),
 			ReceiverPhoneNumber: seller["phone_number"].(string),
@@ -270,5 +277,5 @@ func (server *Server) seedData(ctx *gin.Context) {
 		}
 	}
 	
-	ctx.String(http.StatusOK, "Seed data successfully")
+	ctx.String(http.StatusOK, "Data seeded successfully")
 }

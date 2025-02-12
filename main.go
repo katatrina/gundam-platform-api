@@ -12,8 +12,22 @@ import (
 	"github.com/rs/zerolog"
 	
 	"github.com/rs/zerolog/log"
+	
+	_ "github.com/katatrina/gundam-BE/docs"
 )
 
+//	@title			Gundam Platform API
+//	@version		1.0.0
+//	@description	API documentation for Gundam Platform application
+
+//	@host		localhost:8080
+//	@BasePath	/v1
+//	@schemes	http https
+
+//	@securityDefinitions.apikey	accessToken
+//	@in							header
+//	@name						Authorization
+//	@description				Type "Bearer" followed by a space and JWT token.
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	
@@ -23,7 +37,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load config file 😣")
 	}
 	
-	log.Info().Msg("configurations loaded successfully 😎")
+	log.Info().Msg("configurations loaded successfully ✅")
 	
 	// Create connection pool
 	connPool, err := pgxpool.New(context.Background(), config.DatabaseURL)
@@ -35,7 +49,7 @@ func main() {
 	if pingErr != nil {
 		log.Fatal().Err(pingErr).Msg("failed to connect to db 😣")
 	}
-	log.Info().Msg("connected to db 😎")
+	log.Info().Msg("connected to db ✅")
 	
 	store := db.NewStore(connPool)
 	

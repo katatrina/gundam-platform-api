@@ -1,13 +1,7 @@
 package api
 
 import (
-	"errors"
-	
 	"github.com/gin-gonic/gin"
-)
-
-var (
-	ErrInternalServer = errors.New("internal server error; cannot process request")
 )
 
 type FailedValidationResponse struct {

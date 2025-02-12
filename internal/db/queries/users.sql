@@ -29,10 +29,10 @@ SET full_name    = COALESCE(sqlc.narg('full_name'), full_name),
     updated_at   = now()
 WHERE id = sqlc.arg('user_id') RETURNING *;
 
--- name: CreateUserAddress :exec
+-- name: CreateUserAddress :one
 INSERT INTO user_addresses (user_id, receiver_name, receiver_phone_number, province_name, district_name, ward_name,
                             detail, is_primary, is_pickup_address)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
 
 -- name: GetUserAddresses :many
 SELECT * FROM user_addresses
