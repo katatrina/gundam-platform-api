@@ -359,22 +359,42 @@ const docTemplate = `{
                 }
             }
         },
-        "/seed": {
+        "/otp/verify": {
             "post": {
-                "description": "You should call this endpoint only once to seed data for development",
+                "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
-                    "text/plain"
+                    "application/json"
                 ],
                 "tags": [
-                    "other"
+                    "authentication"
                 ],
-                "summary": "Seed data for development",
+                "summary": "Verify One-Time Password (OTP)",
+                "parameters": [
+                    {
+                        "description": "OTP Verification Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.VerifyOTPRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Seed data successfully"
+                        "description": "OTP verified successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input or OTP verification failed"
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid OTP code"
                     },
                     "500": {
-                        "description": "Internal server error"
+                        "description": "Internal Server Error - Failed to update user information"
                     }
                 }
             }
@@ -738,46 +758,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/verify-otp": {
-            "post": {
-                "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authentication"
-                ],
-                "summary": "Verify One-Time Password (OTP)",
-                "parameters": [
-                    {
-                        "description": "OTP Verification Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.VerifyOTPRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OTP verified successfully"
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid input or OTP verification failed"
-                    },
-                    "401": {
-                        "description": "Unauthorized - Invalid OTP code"
-                    },
-                    "500": {
-                        "description": "Internal Server Error - Failed to update user information"
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -850,10 +830,13 @@ const docTemplate = `{
             "required": [
                 "detail",
                 "district_name",
+                "full_name",
+                "ghn_district_id",
+                "ghn_ward_code",
+                "is_pickup_address",
                 "is_primary",
+                "phone_number",
                 "province_name",
-                "receiver_name",
-                "receiver_phone_number",
                 "ward_name"
             ],
             "properties": {
@@ -863,16 +846,25 @@ const docTemplate = `{
                 "district_name": {
                     "type": "string"
                 },
+                "full_name": {
+                    "type": "string"
+                },
+                "ghn_district_id": {
+                    "type": "integer"
+                },
+                "ghn_ward_code": {
+                    "type": "string"
+                },
+                "is_pickup_address": {
+                    "type": "boolean"
+                },
                 "is_primary": {
                     "type": "boolean"
                 },
+                "phone_number": {
+                    "type": "string"
+                },
                 "province_name": {
-                    "type": "string"
-                },
-                "receiver_name": {
-                    "type": "string"
-                },
-                "receiver_phone_number": {
                     "type": "string"
                 },
                 "ward_name": {
@@ -1028,12 +1020,14 @@ const docTemplate = `{
                 "created_at",
                 "detail",
                 "district_name",
+                "full_name",
+                "ghn_district_id",
+                "ghn_ward_code",
                 "id",
                 "is_pickup_address",
                 "is_primary",
+                "phone_number",
                 "province_name",
-                "receiver_name",
-                "receiver_phone_number",
                 "updated_at",
                 "user_id",
                 "ward_name"
@@ -1048,6 +1042,15 @@ const docTemplate = `{
                 "district_name": {
                     "type": "string"
                 },
+                "full_name": {
+                    "type": "string"
+                },
+                "ghn_district_id": {
+                    "type": "integer"
+                },
+                "ghn_ward_code": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -1057,13 +1060,10 @@ const docTemplate = `{
                 "is_primary": {
                     "type": "boolean"
                 },
+                "phone_number": {
+                    "type": "string"
+                },
                 "province_name": {
-                    "type": "string"
-                },
-                "receiver_name": {
-                    "type": "string"
-                },
-                "receiver_phone_number": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -1146,18 +1146,14 @@ const docTemplate = `{
         "db.GundamCondition": {
             "type": "string",
             "enum": [
-                "mint",
-                "near mint",
-                "good",
-                "moderate wear",
-                "heavily damaged"
+                "new",
+                "open box",
+                "second hand"
             ],
             "x-enum-varnames": [
-                "GundamConditionMint",
-                "GundamConditionNearmint",
-                "GundamConditionGood",
-                "GundamConditionModeratewear",
-                "GundamConditionHeavilydamaged"
+                "GundamConditionNew",
+                "GundamConditionOpenbox",
+                "GundamConditionSecondhand"
             ]
         },
         "db.GundamGrade": {
@@ -1400,12 +1396,14 @@ const docTemplate = `{
                 "created_at",
                 "detail",
                 "district_name",
+                "full_name",
+                "ghn_district_id",
+                "ghn_ward_code",
                 "id",
                 "is_pickup_address",
                 "is_primary",
+                "phone_number",
                 "province_name",
-                "receiver_name",
-                "receiver_phone_number",
                 "updated_at",
                 "user_id",
                 "ward_name"
@@ -1420,6 +1418,15 @@ const docTemplate = `{
                 "district_name": {
                     "type": "string"
                 },
+                "full_name": {
+                    "type": "string"
+                },
+                "ghn_district_id": {
+                    "type": "integer"
+                },
+                "ghn_ward_code": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -1429,13 +1436,10 @@ const docTemplate = `{
                 "is_primary": {
                     "type": "boolean"
                 },
+                "phone_number": {
+                    "type": "string"
+                },
                 "province_name": {
-                    "type": "string"
-                },
-                "receiver_name": {
-                    "type": "string"
-                },
-                "receiver_phone_number": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -1452,13 +1456,13 @@ const docTemplate = `{
         "db.UserRole": {
             "type": "string",
             "enum": [
-                "buyer",
+                "member",
                 "seller",
                 "moderator",
                 "admin"
             ],
             "x-enum-varnames": [
-                "UserRoleBuyer",
+                "UserRoleMember",
                 "UserRoleSeller",
                 "UserRoleModerator",
                 "UserRoleAdmin"

@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS "some_fucking_random_table";

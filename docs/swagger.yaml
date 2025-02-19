@@ -49,23 +49,32 @@ definitions:
         type: string
       district_name:
         type: string
+      full_name:
+        type: string
+      ghn_district_id:
+        type: integer
+      ghn_ward_code:
+        type: string
+      is_pickup_address:
+        type: boolean
       is_primary:
         type: boolean
+      phone_number:
+        type: string
       province_name:
-        type: string
-      receiver_name:
-        type: string
-      receiver_phone_number:
         type: string
       ward_name:
         type: string
     required:
     - detail
     - district_name
+    - full_name
+    - ghn_district_id
+    - ghn_ward_code
+    - is_pickup_address
     - is_primary
+    - phone_number
     - province_name
-    - receiver_name
-    - receiver_phone_number
     - ward_name
     type: object
   api.createUserRequest:
@@ -169,17 +178,21 @@ definitions:
         type: string
       district_name:
         type: string
+      full_name:
+        type: string
+      ghn_district_id:
+        type: integer
+      ghn_ward_code:
+        type: string
       id:
         type: integer
       is_pickup_address:
         type: boolean
       is_primary:
         type: boolean
+      phone_number:
+        type: string
       province_name:
-        type: string
-      receiver_name:
-        type: string
-      receiver_phone_number:
         type: string
       updated_at:
         type: string
@@ -191,12 +204,14 @@ definitions:
     - created_at
     - detail
     - district_name
+    - full_name
+    - ghn_district_id
+    - ghn_ward_code
     - id
     - is_pickup_address
     - is_primary
+    - phone_number
     - province_name
-    - receiver_name
-    - receiver_phone_number
     - updated_at
     - user_id
     - ward_name
@@ -251,18 +266,14 @@ definitions:
     type: object
   db.GundamCondition:
     enum:
-    - mint
-    - near mint
-    - good
-    - moderate wear
-    - heavily damaged
+    - new
+    - open box
+    - second hand
     type: string
     x-enum-varnames:
-    - GundamConditionMint
-    - GundamConditionNearmint
-    - GundamConditionGood
-    - GundamConditionModeratewear
-    - GundamConditionHeavilydamaged
+    - GundamConditionNew
+    - GundamConditionOpenbox
+    - GundamConditionSecondhand
   db.GundamGrade:
     properties:
       created_at:
@@ -434,17 +445,21 @@ definitions:
         type: string
       district_name:
         type: string
+      full_name:
+        type: string
+      ghn_district_id:
+        type: integer
+      ghn_ward_code:
+        type: string
       id:
         type: integer
       is_pickup_address:
         type: boolean
       is_primary:
         type: boolean
+      phone_number:
+        type: string
       province_name:
-        type: string
-      receiver_name:
-        type: string
-      receiver_phone_number:
         type: string
       updated_at:
         type: string
@@ -456,25 +471,27 @@ definitions:
     - created_at
     - detail
     - district_name
+    - full_name
+    - ghn_district_id
+    - ghn_ward_code
     - id
     - is_pickup_address
     - is_primary
+    - phone_number
     - province_name
-    - receiver_name
-    - receiver_phone_number
     - updated_at
     - user_id
     - ward_name
     type: object
   db.UserRole:
     enum:
-    - buyer
+    - member
     - seller
     - moderator
     - admin
     type: string
     x-enum-varnames:
-    - UserRoleBuyer
+    - UserRoleMember
     - UserRoleSeller
     - UserRoleModerator
     - UserRoleAdmin
@@ -715,19 +732,33 @@ paths:
       summary: Generate a One-Time Password (OTP)
       tags:
       - authentication
-  /seed:
+  /otp/verify:
     post:
-      description: You should call this endpoint only once to seed data for development
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's phone number and updates the
+        user's phone number if valid
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.VerifyOTPRequest'
       produces:
-      - text/plain
+      - application/json
       responses:
         "200":
-          description: Seed data successfully
+          description: OTP verified successfully
+        "400":
+          description: Bad Request - Invalid input or OTP verification failed
+        "401":
+          description: Unauthorized - Invalid OTP code
         "500":
-          description: Internal server error
-      summary: Seed data for development
+          description: Internal Server Error - Failed to update user information
+      summary: Verify One-Time Password (OTP)
       tags:
-      - other
+      - authentication
   /sellers/{id}:
     get:
       description: Get detailed information about a specific seller
@@ -965,33 +996,6 @@ paths:
       summary: Retrieve a user by phone number
       tags:
       - users
-  /verify-otp:
-    post:
-      consumes:
-      - application/json
-      description: Verifies the OTP sent to a user's phone number and updates the
-        user's phone number if valid
-      parameters:
-      - description: OTP Verification Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/api.VerifyOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OTP verified successfully
-        "400":
-          description: Bad Request - Invalid input or OTP verification failed
-        "401":
-          description: Unauthorized - Invalid OTP code
-        "500":
-          description: Internal Server Error - Failed to update user information
-      summary: Verify One-Time Password (OTP)
-      tags:
-      - authentication
 schemes:
 - http
 - https

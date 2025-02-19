@@ -14,13 +14,13 @@ type Store interface {
 
 type SQLStore struct {
 	*Queries
-	connPool *pgxpool.Pool
+	ConnPool *pgxpool.Pool
 }
 
 // NewStore creates a new Store.
 func NewStore(db *pgxpool.Pool) Store {
 	return &SQLStore{
 		Queries:  New(db),
-		connPool: db,
+		ConnPool: db,
 	}
 }

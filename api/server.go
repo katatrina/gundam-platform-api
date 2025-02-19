@@ -126,8 +126,6 @@ func (server *Server) setupRouter() {
 		otpGroup.POST("/verify", server.verifyOTP)
 	}
 	
-	v1.POST("/seed", server.seedData)
-	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
