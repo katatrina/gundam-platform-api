@@ -29,12 +29,14 @@ func (server *Server) seedData(ctx *gin.Context) {
 			"role":         db.UserRoleSeller,
 			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738543861/6498a96ff70d54a01c2138bea8270363_kooii9.png",
 			"addresses": map[string]any{
-				"receiver_name":         "Nguyễn Văn Tuấn",
-				"receiver_phone_number": "0394231235",
-				"province_name":         "Hồ Chí Minh",
-				"district_name":         "Quận Tân Bình",
-				"ward_name":             "Phường 2",
-				"detail":                "18 Trường Sơn",
+				"full_name":       "Nguyễn Văn Tuấn",
+				"phone_number":    "0394231235",
+				"province_name":   "Hồ Chí Minh",
+				"district_name":   "Quận Tân Bình",
+				"GHN_district_id": int64(1443),
+				"ward_name":       "Phường 2",
+				"GHN_ward_code":   "21582",
+				"detail":          "18 Trường Sơn",
 			},
 		},
 		{
@@ -44,12 +46,14 @@ func (server *Server) seedData(ctx *gin.Context) {
 			"role":         db.UserRoleSeller,
 			"avatar_url":   "https://res.cloudinary.com/cvp/image/upload/v1738543918/f19fcef473da0837d575d5bf02564a62_thp5l3.png",
 			"addresses": map[string]any{
-				"receiver_name":         "Trần Thị Thanh",
-				"receiver_phone_number": "0394263125",
-				"province_name":         "Hồ Chí Minh",
-				"district_name":         "Quận 10",
-				"ward_name":             "Phường 12",
-				"detail":                "11 Sư Vạn Hạnh",
+				"full_name":       "Trần Thị Thanh",
+				"phone_number":    "0394263125",
+				"province_name":   "Hồ Chí Minh",
+				"district_name":   "Quận 10",
+				"GHN_district_id": int64(1446),
+				"ward_name":       "Phường 12",
+				"GHN_ward_code":   "21585",
+				"detail":          "11 Sư Vạn Hạnh",
 			},
 		},
 	}
@@ -88,15 +92,17 @@ func (server *Server) seedData(ctx *gin.Context) {
 		sellers = append(sellers, user)
 		
 		_, err = server.dbStore.CreateUserAddress(context.Background(), db.CreateUserAddressParams{
-			UserID:              user.ID,
-			ReceiverName:        seller["full_name"].(string),
-			ReceiverPhoneNumber: seller["phone_number"].(string),
-			ProvinceName:        seller["addresses"].(map[string]any)["province_name"].(string),
-			DistrictName:        seller["addresses"].(map[string]any)["district_name"].(string),
-			WardName:            seller["addresses"].(map[string]any)["ward_name"].(string),
-			Detail:              seller["addresses"].(map[string]any)["detail"].(string),
-			IsPrimary:           true,
-			IsPickupAddress:     true,
+			UserID:          user.ID,
+			FullName:        seller["full_name"].(string),
+			PhoneNumber:     seller["phone_number"].(string),
+			ProvinceName:    seller["addresses"].(map[string]any)["province_name"].(string),
+			DistrictName:    seller["addresses"].(map[string]any)["district_name"].(string),
+			GhnDistrictID:   seller["addresses"].(map[string]any)["GHN_district_id"].(int64),
+			WardName:        seller["addresses"].(map[string]any)["ward_name"].(string),
+			GhnWardCode:     seller["addresses"].(map[string]any)["GHN_ward_code"].(string),
+			Detail:          seller["addresses"].(map[string]any)["detail"].(string),
+			IsPrimary:       true,
+			IsPickupAddress: true,
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create address")
@@ -118,7 +124,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		{
 			"name":         "Gundam EG LAH",
 			"grade_id":     grades[0].ID,
-			"condition":    db.GundamConditionGood,
+			"condition":    db.GundamConditionNew,
 			"manufacturer": "Bandai",
 			"scale":        db.GundamScale1144,
 			"description":  "Gundam EG LAH là mô hình Entry Grade, tỉ lệ 1/144, thuộc dòng sản phẩm Gundam mới của Bandai, với thiết kế đơn giản nhưng chi tiết, dễ lắp ráp, phù hợp cho người mới bắt đầu. Mô hình này mang đến một bản sao của Mobile Suit với các khớp cơ bản, màu sắc tươi sáng và chi tiết vừa phải.",
@@ -149,7 +155,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		{
 			"name":         "Gundam EG RX-93FF NU - Fukuoka Limited",
 			"grade_id":     grades[0].ID,
-			"condition":    db.GundamConditionGood,
+			"condition":    db.GundamConditionNew,
 			"manufacturer": "Bandai",
 			"scale":        db.GundamScale1144,
 			"description":  "Gundam EG RX-93FF Nu - Fukuoka Limited là phiên bản đặc biệt của mô hình Entry Grade tỉ lệ 1/144, được phát hành giới hạn tại Fukuoka, Nhật Bản. Mô hình này tái hiện RX-93FF Nu Gundam với các chi tiết sắc nét, dễ lắp ráp và màu sắc nổi bật, đồng thời mang đến một bản sao giản đơn nhưng tinh tế của Mobile Suit trong Gundam: Char's Counterattack.",
@@ -182,7 +188,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		{
 			"name":         "Gundam HG GN-005 Virtue Bandai",
 			"grade_id":     grades[1].ID,
-			"condition":    db.GundamConditionGood,
+			"condition":    db.GundamConditionNew,
 			"manufacturer": "Bandai",
 			"scale":        db.GundamScale1144,
 			"description":  "Gundam HG GN-005 Virtue của Bandai là mô hình High Grade tỉ lệ 1/144, tái hiện Mobile Suit Virtue từ Gundam 00, nổi bật với thiết kế mạnh mẽ, bộ giáp dày đặc và các chi tiết mô phỏng chính xác. Mô hình này đi kèm với vũ khí như GN Bazooka và khả năng tạo dáng đơn giản nhưng vẫn giữ được sự ấn tượng.",
@@ -213,7 +219,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 		{
 			"name":         "Cherudim Gundam Saga Type.GBF",
 			"grade_id":     grades[1].ID,
-			"condition":    db.GundamConditionMint,
+			"condition":    db.GundamConditionNew,
 			"manufacturer": "Bandai",
 			"scale":        db.GundamScale1144,
 			"description":  "Phiên bản màu đen vàng đặc biệt.",
@@ -251,6 +257,7 @@ func (server *Server) seedData(ctx *gin.Context) {
 			GradeID:      gundam["grade_id"].(int64),
 			Condition:    gundam["condition"].(db.GundamCondition),
 			Manufacturer: gundam["manufacturer"].(string),
+			Weight:       1000,
 			Scale:        gundam["scale"].(db.GundamScale),
 			Description:  gundam["description"].(string),
 			Price:        gundam["price"].(int64),

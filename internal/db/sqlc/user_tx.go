@@ -5,14 +5,17 @@ import (
 )
 
 type CreateUserAddressTxParams struct {
-	UserID              string `json:"user_id"`
-	ReceiverName        string `json:"receiver_name"`
-	ReceiverPhoneNumber string `json:"receiver_phone_number"`
-	ProvinceName        string `json:"province_name"`
-	DistrictName        string `json:"district_name"`
-	WardName            string `json:"ward_name"`
-	Detail              string `json:"detail"`
-	IsPrimary           bool   `json:"is_primary"`
+	UserID          string
+	FullName        string
+	PhoneNumber     string
+	ProvinceName    string
+	DistrictName    string
+	GHNDistrictID   int64
+	WardName        string
+	GHNWardCode     string
+	Detail          string
+	IsPrimary       bool
+	IsPickupAddress bool
 }
 
 type CreateUserAddressTxResult struct {
@@ -31,16 +34,27 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 			}
 		}
 		
-		// Second, insert new address
+		// Then, unset the existing pickup address if the new address is a pickup address
+		if arg.IsPickupAddress {
+			err := qTx.UnsetPickupAddress(ctx, arg.UserID)
+			if err != nil {
+				return err
+			}
+		}
+		
+		// Finally, create the new address
 		address, err := qTx.CreateUserAddress(ctx, CreateUserAddressParams{
-			UserID:              arg.UserID,
-			ReceiverName:        arg.ReceiverName,
-			ReceiverPhoneNumber: arg.ReceiverPhoneNumber,
-			ProvinceName:        arg.ProvinceName,
-			DistrictName:        arg.DistrictName,
-			WardName:            arg.WardName,
-			Detail:              arg.Detail,
-			IsPrimary:           arg.IsPrimary,
+			UserID:          arg.UserID,
+			FullName:        arg.FullName,
+			PhoneNumber:     arg.PhoneNumber,
+			ProvinceName:    arg.ProvinceName,
+			DistrictName:    arg.DistrictName,
+			GhnDistrictID:   arg.GHNDistrictID,
+			WardName:        arg.WardName,
+			GhnWardCode:     arg.GHNWardCode,
+			Detail:          arg.Detail,
+			IsPrimary:       arg.IsPrimary,
+			IsPickupAddress: arg.IsPickupAddress,
 		})
 		if err != nil {
 			return err

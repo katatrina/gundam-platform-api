@@ -29,6 +29,7 @@ type Querier interface {
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
+	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

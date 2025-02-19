@@ -71,7 +71,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 			String: "",
 		},
 		PhoneNumberVerified: false,
-		Role:                db.UserRoleBuyer,
+		Role:                db.UserRoleMember,
 		AvatarUrl: pgtype.Text{
 			Valid:  false,
 			String: "",
@@ -463,13 +463,16 @@ func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 
 // CreateUserAddressRequest represents the input for creating a user address
 type createUserAddressRequest struct {
-	ReceiverName        string `json:"receiver_name" binding:"required"`
-	ReceiverPhoneNumber string `json:"receiver_phone_number" binding:"required"`
-	ProvinceName        string `json:"province_name" binding:"required"`
-	DistrictName        string `json:"district_name" binding:"required"`
-	WardName            string `json:"ward_name" binding:"required"`
-	Detail              string `json:"detail" binding:"required"`
-	IsPrimary           bool   `json:"is_primary"`
+	FullName        string `json:"full_name" binding:"required"`
+	PhoneNumber     string `json:"phone_number" binding:"required"`
+	ProvinceName    string `json:"province_name" binding:"required"`
+	DistrictName    string `json:"district_name" binding:"required"`
+	GHNDistrictID   int64  `json:"ghn_district_id" binding:"required"`
+	WardName        string `json:"ward_name" binding:"required"`
+	GHNWardCode     string `json:"ghn_ward_code" binding:"required"`
+	Detail          string `json:"detail" binding:"required"`
+	IsPrimary       bool   `json:"is_primary"`
+	IsPickupAddress bool   `json:"is_pickup_address"`
 }
 
 //	@Summary		Create a new user address
@@ -493,14 +496,17 @@ func (server *Server) createUserAddress(ctx *gin.Context) {
 	}
 	
 	arg := db.CreateUserAddressTxParams{
-		UserID:              userID,
-		ReceiverName:        req.ReceiverName,
-		ReceiverPhoneNumber: req.ReceiverPhoneNumber,
-		ProvinceName:        req.ProvinceName,
-		DistrictName:        req.DistrictName,
-		WardName:            req.WardName,
-		Detail:              req.Detail,
-		IsPrimary:           req.IsPrimary,
+		UserID:          userID,
+		FullName:        req.FullName,
+		PhoneNumber:     req.PhoneNumber,
+		ProvinceName:    req.ProvinceName,
+		DistrictName:    req.DistrictName,
+		GHNDistrictID:   req.GHNDistrictID,
+		WardName:        req.WardName,
+		GHNWardCode:     req.GHNWardCode,
+		Detail:          req.Detail,
+		IsPrimary:       req.IsPrimary,
+		IsPickupAddress: req.IsPickupAddress,
 	}
 	
 	result, err := server.dbStore.CreateUserAddressTx(context.Background(), arg)

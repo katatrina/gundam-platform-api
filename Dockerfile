@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.4-alpine3.21 AS builder
+FROM golang:1.24.0-alpine3.21 AS builder
 WORKDIR /app
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change

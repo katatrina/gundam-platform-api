@@ -1,6 +1,6 @@
 module github.com/katatrina/gundam-BE
 
-go 1.23.1
+go 1.24.0
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1

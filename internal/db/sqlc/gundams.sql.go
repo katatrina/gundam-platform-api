@@ -13,8 +13,8 @@ import (
 )
 
 const createGundam = `-- name: CreateGundam :one
-INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, scale, description, price, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, owner_id, name, slug, grade_id, condition, manufacturer, scale, description, price, status, created_at, updated_at, deleted_at
+INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, weight, scale, description, price, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, length, width, height, scale, description, price, status, created_at, updated_at, deleted_at
 `
 
 type CreateGundamParams struct {
@@ -24,6 +24,7 @@ type CreateGundamParams struct {
 	GradeID      int64           `json:"grade_id"`
 	Condition    GundamCondition `json:"condition"`
 	Manufacturer string          `json:"manufacturer"`
+	Weight       int64           `json:"weight"`
 	Scale        GundamScale     `json:"scale"`
 	Description  string          `json:"description"`
 	Price        int64           `json:"price"`
@@ -38,6 +39,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		arg.GradeID,
 		arg.Condition,
 		arg.Manufacturer,
+		arg.Weight,
 		arg.Scale,
 		arg.Description,
 		arg.Price,
@@ -51,7 +53,12 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.Slug,
 		&i.GradeID,
 		&i.Condition,
+		&i.ConditionDescription,
 		&i.Manufacturer,
+		&i.Weight,
+		&i.Length,
+		&i.Width,
+		&i.Height,
 		&i.Scale,
 		&i.Description,
 		&i.Price,

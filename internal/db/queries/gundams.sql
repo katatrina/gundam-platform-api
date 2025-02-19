@@ -1,6 +1,6 @@
 -- name: CreateGundam :one
-INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, scale, description, price, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *;
+INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, weight, scale, description, price, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *;
 
 -- name: ListGundamsWithFilters :many
 SELECT g.id,

@@ -78,7 +78,7 @@ type VerifyOTPRequest struct {
 //	@Failure		400		"Bad Request - Invalid input or OTP verification failed"
 //	@Failure		401		"Unauthorized - Invalid OTP code"
 //	@Failure		500		"Internal Server Error - Failed to update user information"
-//	@Router			/verify-otp [post]
+//	@Router			/otp/verify [post]
 func (server *Server) verifyOTP(c *gin.Context) {
 	req := new(VerifyOTPRequest)
 	if err := c.ShouldBindJSON(&req); err != nil {

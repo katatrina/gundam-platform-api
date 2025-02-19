@@ -15,11 +15,9 @@ import (
 type GundamCondition string
 
 const (
-	GundamConditionMint           GundamCondition = "mint"
-	GundamConditionNearmint       GundamCondition = "near mint"
-	GundamConditionGood           GundamCondition = "good"
-	GundamConditionModeratewear   GundamCondition = "moderate wear"
-	GundamConditionHeavilydamaged GundamCondition = "heavily damaged"
+	GundamConditionNew        GundamCondition = "new"
+	GundamConditionOpenbox    GundamCondition = "open box"
+	GundamConditionSecondhand GundamCondition = "second hand"
 )
 
 func (e *GundamCondition) Scan(src interface{}) error {
@@ -148,7 +146,7 @@ func (ns NullGundamStatus) Value() (driver.Value, error) {
 type UserRole string
 
 const (
-	UserRoleBuyer     UserRole = "buyer"
+	UserRoleMember    UserRole = "member"
 	UserRoleSeller    UserRole = "seller"
 	UserRoleModerator UserRole = "moderator"
 	UserRoleAdmin     UserRole = "admin"
@@ -205,20 +203,33 @@ type CartItem struct {
 }
 
 type Gundam struct {
-	ID           int64              `json:"id"`
-	OwnerID      string             `json:"owner_id"`
-	Name         string             `json:"name"`
-	Slug         string             `json:"slug"`
-	GradeID      int64              `json:"grade_id"`
-	Condition    GundamCondition    `json:"condition"`
-	Manufacturer string             `json:"manufacturer"`
-	Scale        GundamScale        `json:"scale"`
-	Description  string             `json:"description"`
-	Price        int64              `json:"price"`
-	Status       GundamStatus       `json:"status"`
-	CreatedAt    time.Time          `json:"created_at"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	ID                   int64              `json:"id"`
+	OwnerID              string             `json:"owner_id"`
+	Name                 string             `json:"name"`
+	Slug                 string             `json:"slug"`
+	GradeID              int64              `json:"grade_id"`
+	Condition            GundamCondition    `json:"condition"`
+	ConditionDescription pgtype.Text        `json:"condition_description"`
+	Manufacturer         string             `json:"manufacturer"`
+	Weight               int64              `json:"weight"`
+	Length               pgtype.Int8        `json:"length"`
+	Width                pgtype.Int8        `json:"width"`
+	Height               pgtype.Int8        `json:"height"`
+	Scale                GundamScale        `json:"scale"`
+	Description          string             `json:"description"`
+	Price                int64              `json:"price"`
+	Status               GundamStatus       `json:"status"`
+	CreatedAt            time.Time          `json:"created_at"`
+	UpdatedAt            time.Time          `json:"updated_at"`
+	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type GundamAccessory struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	GundamID  int64     `json:"gundam_id"`
+	Quantity  int64     `json:"quantity"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type GundamGrade struct {
@@ -282,18 +293,20 @@ type User struct {
 }
 
 type UserAddress struct {
-	ID                  int64     `json:"id"`
-	UserID              string    `json:"user_id"`
-	ReceiverName        string    `json:"receiver_name"`
-	ReceiverPhoneNumber string    `json:"receiver_phone_number"`
-	ProvinceName        string    `json:"province_name"`
-	DistrictName        string    `json:"district_name"`
-	WardName            string    `json:"ward_name"`
-	Detail              string    `json:"detail"`
-	IsPrimary           bool      `json:"is_primary"`
-	IsPickupAddress     bool      `json:"is_pickup_address"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	ID              int64     `json:"id"`
+	UserID          string    `json:"user_id"`
+	FullName        string    `json:"full_name"`
+	PhoneNumber     string    `json:"phone_number"`
+	ProvinceName    string    `json:"province_name"`
+	DistrictName    string    `json:"district_name"`
+	GhnDistrictID   int64     `json:"ghn_district_id"`
+	WardName        string    `json:"ward_name"`
+	GhnWardCode     string    `json:"ghn_ward_code"`
+	Detail          string    `json:"detail"`
+	IsPrimary       bool      `json:"is_primary"`
+	IsPickupAddress bool      `json:"is_pickup_address"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type Wallet struct {
