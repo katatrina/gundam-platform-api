@@ -34,4 +34,3 @@ swagger: swag-fmt swag-init
 
 dump-db:
 	docker exec -it gundam_platform-postgres-1 pg_dump -U root -a gundam_platform --insert > data.sql
-	docker cp gundam_platform-postgres-1:/data.sql data.sql
