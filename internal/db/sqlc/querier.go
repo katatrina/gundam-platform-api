@@ -21,17 +21,18 @@ type Querier interface {
 	GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
-	GetUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
+	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -1,0 +1,153 @@
+package api
+
+import (
+	"context"
+	"net/http"
+	
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
+	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/rs/zerolog/log"
+)
+
+// CreateUserAddressRequest represents the input for creating a user address
+type createUserAddressRequest struct {
+	FullName        string `json:"full_name" binding:"required"`
+	PhoneNumber     string `json:"phone_number" binding:"required"`
+	ProvinceName    string `json:"province_name" binding:"required"`
+	DistrictName    string `json:"district_name" binding:"required"`
+	GHNDistrictID   int64  `json:"ghn_district_id" binding:"required"`
+	WardName        string `json:"ward_name" binding:"required"`
+	GHNWardCode     string `json:"ghn_ward_code" binding:"required"`
+	Detail          string `json:"detail" binding:"required"`
+	IsPrimary       bool   `json:"is_primary"`
+	IsPickupAddress bool   `json:"is_pickup_address"`
+}
+
+//	@Summary		Create a new user address
+//	@Description	Add a new address for a specific user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string							true	"User ID"
+//	@Param			request	body		createUserAddressRequest		false	"Address creation request"
+//	@Success		201		{object}	db.CreateUserAddressTxResult	"Address created successfully"
+//	@Failure		400		"Invalid request body"
+//	@Failure		500		"Internal server error"
+//	@Router			/users/{id}/addresses [post]
+func (server *Server) createUserAddress(ctx *gin.Context) {
+	userID := ctx.Param("id")
+	
+	req := new(createUserAddressRequest)
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	
+	arg := db.CreateUserAddressTxParams{
+		UserID:          userID,
+		FullName:        req.FullName,
+		PhoneNumber:     req.PhoneNumber,
+		ProvinceName:    req.ProvinceName,
+		DistrictName:    req.DistrictName,
+		GHNDistrictID:   req.GHNDistrictID,
+		WardName:        req.WardName,
+		GHNWardCode:     req.GHNWardCode,
+		Detail:          req.Detail,
+		IsPrimary:       req.IsPrimary,
+		IsPickupAddress: req.IsPickupAddress,
+	}
+	
+	result, err := server.dbStore.CreateUserAddressTx(context.Background(), arg)
+	if err != nil {
+		log.Err(err).Msg("failed to create address")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusCreated, result)
+}
+
+//	@Summary		Retrieve user addresses
+//	@Description	Get all addresses for a specific user
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path	string			true	"User ID"
+//	@Success		200	{array}	db.UserAddress	"Successfully retrieved user addresses"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/{id}/addresses [get]
+func (server *Server) getUserAddresses(ctx *gin.Context) {
+	userID := ctx.Param("id")
+	
+	addresses, err := server.dbStore.ListUserAddresses(context.Background(), userID)
+	if err != nil {
+		log.Err(err).Msg("failed to get user addresses")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, addresses)
+}
+
+type updateUserAddressRequest struct {
+	IsPrimary *bool `json:"is_primary"`
+}
+
+type updateUserAddressPathParams struct {
+	UserID    string `uri:"id" binding:"required"`
+	AddressID int64  `uri:"address_id" binding:"required"`
+}
+
+func (req *updateUserAddressRequest) GetIsPrimary() bool {
+	if req == nil || req.IsPrimary == nil {
+		return false
+	}
+	
+	return *req.IsPrimary
+}
+
+//	@Summary		Update user address
+//	@Description	Update an existing address information for a specific user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path	string						true	"User ID"
+//	@Param			address_id	path	integer						true	"Address ID"
+//	@Param			request		body	updateUserAddressRequest	true	"Address information to update"
+//	@Success		200			"Address updated successfully"
+//	@Failure		400			"Invalid request parameters"
+//	@Failure		500			"Internal server error"
+//	@Router			/users/{id}/addresses/{address_id} [put]
+func (server *Server) updateUserAddress(ctx *gin.Context) {
+	params := new(updateUserAddressPathParams)
+	if err := ctx.ShouldBindUri(params); err != nil {
+		log.Err(err).Msg("failed to bind uri")
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	
+	req := new(updateUserAddressRequest)
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		log.Err(err).Msg("failed to bind json")
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	
+	arg := db.UpdateUserAddressTxParams{
+		IsPrimary: pgtype.Bool{
+			Bool:  req.GetIsPrimary(),
+			Valid: req.IsPrimary != nil,
+		},
+		AddressID: params.AddressID,
+		UserID:    params.UserID,
+	}
+	
+	err := server.dbStore.UpdateUserAddressTx(context.Background(), arg)
+	if err != nil {
+		log.Err(err).Msg("failed to update address")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "address updated successfully"})
+}

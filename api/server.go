@@ -101,6 +101,7 @@ func (server *Server) setupRouter() {
 		userGroup.PATCH(":id/avatar", server.updateAvatar)
 		userGroup.GET(":id/addresses", server.getUserAddresses)
 		userGroup.POST(":id/addresses", server.createUserAddress)
+		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)

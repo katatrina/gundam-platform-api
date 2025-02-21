@@ -56,61 +56,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const createUserAddress = `-- name: CreateUserAddress :one
-INSERT INTO user_addresses (user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name,
-                            ghn_ward_code,
-                            detail, is_primary, is_pickup_address)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
-`
-
-type CreateUserAddressParams struct {
-	UserID          string `json:"user_id"`
-	FullName        string `json:"full_name"`
-	PhoneNumber     string `json:"phone_number"`
-	ProvinceName    string `json:"province_name"`
-	DistrictName    string `json:"district_name"`
-	GhnDistrictID   int64  `json:"ghn_district_id"`
-	WardName        string `json:"ward_name"`
-	GhnWardCode     string `json:"ghn_ward_code"`
-	Detail          string `json:"detail"`
-	IsPrimary       bool   `json:"is_primary"`
-	IsPickupAddress bool   `json:"is_pickup_address"`
-}
-
-func (q *Queries) CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error) {
-	row := q.db.QueryRow(ctx, createUserAddress,
-		arg.UserID,
-		arg.FullName,
-		arg.PhoneNumber,
-		arg.ProvinceName,
-		arg.DistrictName,
-		arg.GhnDistrictID,
-		arg.WardName,
-		arg.GhnWardCode,
-		arg.Detail,
-		arg.IsPrimary,
-		arg.IsPickupAddress,
-	)
-	var i UserAddress
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.FullName,
-		&i.PhoneNumber,
-		&i.ProvinceName,
-		&i.DistrictName,
-		&i.GhnDistrictID,
-		&i.WardName,
-		&i.GhnWardCode,
-		&i.Detail,
-		&i.IsPrimary,
-		&i.IsPickupAddress,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createUserWithGoogleAccount = `-- name: CreateUserWithGoogleAccount :one
 INSERT INTO users (id, full_name, email, email_verified, avatar_url)
 VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
@@ -147,48 +92,6 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getUserAddresses = `-- name: GetUserAddresses :many
-SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
-FROM user_addresses
-WHERE user_id = $1
-ORDER BY is_primary DESC, created_at DESC
-`
-
-func (q *Queries) GetUserAddresses(ctx context.Context, userID string) ([]UserAddress, error) {
-	rows, err := q.db.Query(ctx, getUserAddresses, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []UserAddress{}
-	for rows.Next() {
-		var i UserAddress
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.FullName,
-			&i.PhoneNumber,
-			&i.ProvinceName,
-			&i.DistrictName,
-			&i.GhnDistrictID,
-			&i.WardName,
-			&i.GhnWardCode,
-			&i.Detail,
-			&i.IsPrimary,
-			&i.IsPickupAddress,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -264,30 +167,6 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.T
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const unsetPickupAddress = `-- name: UnsetPickupAddress :exec
-UPDATE user_addresses
-SET is_pickup_address = false
-WHERE user_id = $1
-  AND is_pickup_address = true
-`
-
-func (q *Queries) UnsetPickupAddress(ctx context.Context, userID string) error {
-	_, err := q.db.Exec(ctx, unsetPickupAddress, userID)
-	return err
-}
-
-const unsetPrimaryAddress = `-- name: UnsetPrimaryAddress :exec
-UPDATE user_addresses
-SET is_primary = false
-WHERE user_id = $1
-  AND is_primary = true
-`
-
-func (q *Queries) UnsetPrimaryAddress(ctx context.Context, userID string) error {
-	_, err := q.db.Exec(ctx, unsetPrimaryAddress, userID)
-	return err
 }
 
 const updateUser = `-- name: UpdateUser :one

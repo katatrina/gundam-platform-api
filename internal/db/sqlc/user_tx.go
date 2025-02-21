@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CreateUserAddressTxParams struct {
@@ -65,4 +67,31 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 	})
 	
 	return result, err
+}
+
+type UpdateUserAddressTxParams struct {
+	UserID    string
+	AddressID int64
+	IsPrimary pgtype.Bool
+}
+
+func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressTxParams) error {
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// First, unset the existing primary address if the new address is primary
+		if arg.IsPrimary.Bool {
+			err := qTx.UnsetPrimaryAddress(ctx, arg.UserID)
+			if err != nil {
+				return err
+			}
+		}
+		
+		err := store.UpdateUserAddress(ctx, UpdateUserAddressParams{
+			IsPrimary: arg.IsPrimary,
+			AddressID: arg.AddressID,
+		})
+		
+		return err
+	})
+	
+	return err
 }

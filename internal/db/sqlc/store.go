@@ -10,6 +10,7 @@ import (
 type Store interface {
 	Querier
 	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (CreateUserAddressTxResult, error)
+	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressTxParams) error
 }
 
 type SQLStore struct {

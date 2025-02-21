@@ -124,6 +124,13 @@ definitions:
     required:
     - avatar_url
     type: object
+  api.updateUserAddressRequest:
+    properties:
+      is_primary:
+        type: boolean
+    required:
+    - is_primary
+    type: object
   api.updateUserRequest:
     properties:
       full_name:
@@ -939,6 +946,40 @@ paths:
         "500":
           description: Internal server error
       summary: Create a new user address
+      tags:
+      - users
+  /users/{id}/addresses/{address_id}:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing address information for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address ID
+        in: path
+        name: address_id
+        required: true
+        type: integer
+      - description: Address information to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateUserAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Address updated successfully
+        "400":
+          description: Invalid request parameters
+        "500":
+          description: Internal server error
+      summary: Update user address
       tags:
       - users
   /users/{id}/avatar:

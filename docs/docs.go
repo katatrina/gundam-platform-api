@@ -711,6 +711,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{id}/addresses/{address_id}": {
+            "put": {
+                "description": "Update an existing address information for a specific user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user address",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Address ID",
+                        "name": "address_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Address information to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.updateUserAddressRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Address updated successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request parameters"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/users/{id}/avatar": {
             "patch": {
                 "description": "Upload and update a user's profile avatar",
@@ -940,6 +991,17 @@ const docTemplate = `{
             "properties": {
                 "avatar_url": {
                     "type": "string"
+                }
+            }
+        },
+        "api.updateUserAddressRequest": {
+            "type": "object",
+            "required": [
+                "is_primary"
+            ],
+            "properties": {
+                "is_primary": {
+                    "type": "boolean"
                 }
             }
         },
