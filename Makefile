@@ -15,7 +15,7 @@ sqlc:
 compose:
 	docker compose down
 	docker rmi -f gundam_platform-api:latest
-	docker compose up --build -d
+	docker compose up --build
 
 swag-fmt:
 	swag fmt

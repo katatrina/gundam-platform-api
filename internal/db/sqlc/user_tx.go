@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CreateUserAddressTxParams struct {
@@ -70,9 +68,8 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 }
 
 type UpdateUserAddressTxParams struct {
-	UserID    string
-	AddressID int64
-	IsPrimary pgtype.Bool
+	UserID string
+	UpdateUserAddressParams
 }
 
 func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressTxParams) error {
@@ -85,12 +82,14 @@ func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAd
 			}
 		}
 		
-		err := store.UpdateUserAddress(ctx, UpdateUserAddressParams{
-			IsPrimary: arg.IsPrimary,
-			AddressID: arg.AddressID,
-		})
+		// Second unset the existing pickup address if the new address is a pickup address
+		err := qTx.UnsetPickupAddress(ctx, arg.UserID)
+		if err != nil {
+			return err
+		}
 		
-		return err
+		// Finally, update the address
+		return qTx.UpdateUserAddress(ctx, arg.UpdateUserAddressParams)
 	})
 	
 	return err

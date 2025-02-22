@@ -90,7 +90,16 @@ func (server *Server) getUserAddresses(ctx *gin.Context) {
 }
 
 type updateUserAddressRequest struct {
-	IsPrimary *bool `json:"is_primary"`
+	FullName        *string `json:"full_name"`
+	PhoneNumber     *string `json:"phone_number"`
+	ProvinceName    *string `json:"province_name"`
+	DistrictName    *string `json:"district_name"`
+	GHNDistrictID   *int64  `json:"ghn_district_id"`
+	WardName        *string `json:"ward_name"`
+	GHNWardCode     *string `json:"ghn_ward_code"`
+	Detail          *string `json:"detail"`
+	IsPrimary       *bool   `json:"is_primary"`
+	IsPickupAddress *bool   `json:"is_pickup_address"`
 }
 
 type updateUserAddressPathParams struct {
@@ -98,12 +107,69 @@ type updateUserAddressPathParams struct {
 	AddressID int64  `uri:"address_id" binding:"required"`
 }
 
-func (req *updateUserAddressRequest) GetIsPrimary() bool {
-	if req == nil || req.IsPrimary == nil {
-		return false
+func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressTxParams) {
+	if req.FullName != nil {
+		arg.FullName = pgtype.Text{
+			String: *req.FullName,
+			Valid:  true,
+		}
+	}
+	if req.PhoneNumber != nil {
+		arg.PhoneNumber = pgtype.Text{
+			String: *req.PhoneNumber,
+			Valid:  true,
+		}
+	}
+	if req.ProvinceName != nil {
+		arg.ProvinceName = pgtype.Text{
+			String: *req.ProvinceName,
+			Valid:  true,
+		}
+	}
+	if req.DistrictName != nil {
+		arg.DistrictName = pgtype.Text{
+			String: *req.DistrictName,
+			Valid:  true,
+		}
+	}
+	if req.GHNDistrictID != nil {
+		arg.GhnDistrictID = pgtype.Int8{
+			Int64: *req.GHNDistrictID,
+			Valid: true,
+		}
+	}
+	if req.WardName != nil {
+		arg.WardName = pgtype.Text{
+			String: *req.WardName,
+			Valid:  true,
+		}
+	}
+	if req.GHNWardCode != nil {
+		arg.GhnWardCode = pgtype.Text{
+			String: *req.GHNWardCode,
+			Valid:  true,
+		}
+	}
+	if req.Detail != nil {
+		arg.Detail = pgtype.Text{
+			String: *req.Detail,
+			Valid:  true,
+		}
+	}
+	if req.IsPrimary != nil {
+		arg.IsPrimary = pgtype.Bool{
+			Bool:  *req.IsPrimary,
+			Valid: true,
+		}
+	}
+	if req.IsPickupAddress != nil {
+		arg.IsPickupAddress = pgtype.Bool{
+			Bool:  *req.IsPickupAddress,
+			Valid: true,
+		}
 	}
 	
-	return *req.IsPrimary
+	return arg
 }
 
 //	@Summary		Update user address
@@ -133,18 +199,12 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 		return
 	}
 	
-	arg := db.UpdateUserAddressTxParams{
-		IsPrimary: pgtype.Bool{
-			Bool:  req.GetIsPrimary(),
-			Valid: req.IsPrimary != nil,
-		},
-		AddressID: params.AddressID,
-		UserID:    params.UserID,
-	}
+	arg := req.validate()
+	arg.UserID = params.UserID
+	arg.AddressID = params.AddressID
 	
 	err := server.dbStore.UpdateUserAddressTx(context.Background(), arg)
 	if err != nil {
-		log.Err(err).Msg("failed to update address")
 		ctx.Status(http.StatusInternalServerError)
 		return
 	}

@@ -997,11 +997,47 @@ const docTemplate = `{
         "api.updateUserAddressRequest": {
             "type": "object",
             "required": [
-                "is_primary"
+                "detail",
+                "district_name",
+                "full_name",
+                "ghn_district_id",
+                "ghn_ward_code",
+                "is_pickup_address",
+                "is_primary",
+                "phone_number",
+                "province_name",
+                "ward_name"
             ],
             "properties": {
+                "detail": {
+                    "type": "string"
+                },
+                "district_name": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "ghn_district_id": {
+                    "type": "integer"
+                },
+                "ghn_ward_code": {
+                    "type": "string"
+                },
+                "is_pickup_address": {
+                    "type": "boolean"
+                },
                 "is_primary": {
                     "type": "boolean"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "province_name": {
+                    "type": "string"
+                },
+                "ward_name": {
+                    "type": "string"
                 }
             }
         },
