@@ -17,10 +17,12 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
+	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
+	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)

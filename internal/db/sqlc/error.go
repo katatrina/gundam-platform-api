@@ -2,29 +2,45 @@ package db
 
 import (
 	"errors"
-	"fmt"
 	
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// PostgreSQL error codes
 const (
 	UniqueViolationCode = "23505"
+	RaiseExceptionCode  = "P0001"
 )
 
+// Constraint names
 const (
 	UniqueEmailConstraint = "users_email_key"
 )
 
-var ErrRecordNotFound = pgx.ErrNoRows
+// Common errors
+var (
+	ErrRecordNotFound         = pgx.ErrNoRows
+	ErrPrimaryAddressDeletion = errors.New("primary address cannot be deleted")
+	ErrPickupAddressDeletion  = errors.New("pickup address cannot be deleted")
+)
 
-// ErrorDescription returns the error code and constraint name from a Postgres error.
-func ErrorDescription(err error) (errCode string, constraintName string) {
+// PgError represents a PostgreSQL error with its code, message and constraint name
+type PgError struct {
+	Code           string
+	Message        string
+	ConstraintName string
+}
+
+// ErrorDescription returns details about a PostgreSQL error if present
+func ErrorDescription(err error) *PgError {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		fmt.Println("pgErr: ", pgErr)
-		return pgErr.Code, pgErr.ConstraintName
+		return &PgError{
+			Code:           pgErr.Code,
+			Message:        pgErr.Message,
+			ConstraintName: pgErr.ConstraintName,
+		}
 	}
-	
-	return
+	return nil
 }

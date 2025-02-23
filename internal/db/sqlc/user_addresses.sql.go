@@ -66,11 +66,62 @@ func (q *Queries) CreateUserAddress(ctx context.Context, arg CreateUserAddressPa
 	return i, err
 }
 
+const deleteUserAddress = `-- name: DeleteUserAddress :exec
+DELETE
+FROM user_addresses
+WHERE id = $1
+  AND user_id = $2
+`
+
+type DeleteUserAddressParams struct {
+	AddressID int64  `json:"address_id"`
+	UserID    string `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error {
+	_, err := q.db.Exec(ctx, deleteUserAddress, arg.AddressID, arg.UserID)
+	return err
+}
+
+const getUserAddressForUpdate = `-- name: GetUserAddressForUpdate :one
+SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
+FROM user_addresses
+WHERE id = $1
+  AND user_id = $2 FOR UPDATE
+`
+
+type GetUserAddressForUpdateParams struct {
+	AddressID int64  `json:"address_id"`
+	UserID    string `json:"user_id"`
+}
+
+func (q *Queries) GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error) {
+	row := q.db.QueryRow(ctx, getUserAddressForUpdate, arg.AddressID, arg.UserID)
+	var i UserAddress
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.ProvinceName,
+		&i.DistrictName,
+		&i.GhnDistrictID,
+		&i.WardName,
+		&i.GhnWardCode,
+		&i.Detail,
+		&i.IsPrimary,
+		&i.IsPickupAddress,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listUserAddresses = `-- name: ListUserAddresses :many
 SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
 FROM user_addresses
 WHERE user_id = $1
-ORDER BY is_primary DESC, created_at DESC
+ORDER BY is_primary DESC, is_pickup_address DESC, created_at DESC
 `
 
 func (q *Queries) ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error) {
@@ -110,8 +161,7 @@ func (q *Queries) ListUserAddresses(ctx context.Context, userID string) ([]UserA
 
 const unsetPickupAddress = `-- name: UnsetPickupAddress :exec
 UPDATE user_addresses
-SET is_pickup_address = false,
-    updated_at        = now()
+SET is_pickup_address = false
 WHERE user_id = $1
   AND is_pickup_address = true
 `
@@ -123,8 +173,7 @@ func (q *Queries) UnsetPickupAddress(ctx context.Context, userID string) error {
 
 const unsetPrimaryAddress = `-- name: UnsetPrimaryAddress :exec
 UPDATE user_addresses
-SET is_primary = false,
-    updated_at = now()
+SET is_primary = false
 WHERE user_id = $1
   AND is_primary = true
 `
@@ -136,18 +185,18 @@ func (q *Queries) UnsetPrimaryAddress(ctx context.Context, userID string) error 
 
 const updateUserAddress = `-- name: UpdateUserAddress :exec
 UPDATE user_addresses
-SET full_name = COALESCE($1, full_name),
-    phone_number = COALESCE($2, phone_number),
-    province_name = COALESCE($3, province_name),
-    district_name = COALESCE($4, district_name),
-    ghn_district_id = COALESCE($5, ghn_district_id),
-    ward_name = COALESCE($6, ward_name),
-    ghn_ward_code = COALESCE($7, ghn_ward_code),
-    detail = COALESCE($8, detail),
-    is_primary = COALESCE($9, is_primary),
-    is_pickup_address = COALESCE($10, is_pickup_address),
-    updated_at = now()
+SET full_name         = COALESCE($1, full_name),
+    phone_number      = COALESCE($2, phone_number),
+    province_name     = COALESCE($3, province_name),
+    district_name     = COALESCE($4, district_name),
+    ghn_district_id   = COALESCE($5, ghn_district_id),
+    ward_name         = COALESCE($6, ward_name),
+    ghn_ward_code     = COALESCE($7, ghn_ward_code),
+    detail            = COALESCE($8, detail),
+    is_primary        = COALESCE($9, is_primary),
+    is_pickup_address = COALESCE($10, is_pickup_address)
 WHERE id = $11
+  AND user_id = $12
 `
 
 type UpdateUserAddressParams struct {
@@ -162,6 +211,7 @@ type UpdateUserAddressParams struct {
 	IsPrimary       pgtype.Bool `json:"is_primary"`
 	IsPickupAddress pgtype.Bool `json:"is_pickup_address"`
 	AddressID       int64       `json:"address_id"`
+	UserID          string      `json:"user_id"`
 }
 
 func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) error {
@@ -177,6 +227,7 @@ func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressPa
 		arg.IsPrimary,
 		arg.IsPickupAddress,
 		arg.AddressID,
+		arg.UserID,
 	)
 	return err
 }

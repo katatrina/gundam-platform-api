@@ -80,16 +80,18 @@ func (server *Server) createUser(ctx *gin.Context) {
 	
 	user, err := server.dbStore.CreateUser(context.Background(), arg)
 	if err != nil {
-		errCode, constraintName := db.ErrorDescription(err)
-		switch {
-		case errCode == db.UniqueViolationCode && constraintName == db.UniqueEmailConstraint:
-			ctx.Status(http.StatusConflict)
+		if pgErr := db.ErrorDescription(err); pgErr != nil {
+			switch {
+			case pgErr.Code == db.UniqueViolationCode && pgErr.ConstraintName == db.UniqueEmailConstraint:
+				err = errors.New("email already exists")
+				ctx.JSON(http.StatusConflict, errorResponse(err))
+				return
+			}
+			
+			log.Err(err).Msg("failed to create user")
+			ctx.Status(http.StatusInternalServerError)
 			return
 		}
-		
-		log.Err(err).Msg("failed to create user")
-		ctx.Status(http.StatusInternalServerError)
-		return
 	}
 	
 	ctx.JSON(http.StatusCreated, user)

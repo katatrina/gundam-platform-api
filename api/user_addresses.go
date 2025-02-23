@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
@@ -107,7 +108,7 @@ type updateUserAddressPathParams struct {
 	AddressID int64  `uri:"address_id" binding:"required"`
 }
 
-func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressTxParams) {
+func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressParams) {
 	if req.FullName != nil {
 		arg.FullName = pgtype.Text{
 			String: *req.FullName,
@@ -210,4 +211,52 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, gin.H{"message": "address updated successfully"})
+}
+
+type deleteUserAddressPathParams struct {
+	UserID    string `uri:"id" binding:"required"`
+	AddressID int64  `uri:"address_id" binding:"required"`
+}
+
+// @Summary Delete user address
+// @Description Delete an address of a user
+// @Tags users
+// @Param id path string true "User ID"
+// @Param address_id path integer true "Address ID"
+// @Success 204 "Address deleted successfully"
+// @Failure 400  "Invalid request"
+// @Failure 404  "Address not found"
+// @Failure 409  "Cannot delete primary or pickup address"
+// @Failure 500  "Internal server error"
+// @Router /users/{id}/addresses/{address_id} [delete]
+func (server *Server) deleteUserAddress(ctx *gin.Context) {
+	params := new(deleteUserAddressPathParams)
+	
+	if err := ctx.ShouldBindUri(params); err != nil {
+		log.Err(err).Msg("failed to bind uri")
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	
+	err := server.dbStore.DeleteUserAddressTx(ctx, db.DeleteUserAddressParams{
+		AddressID: params.AddressID,
+		UserID:    params.UserID,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrRecordNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "address not found"})
+		case errors.Is(err, db.ErrPrimaryAddressDeletion):
+			ctx.JSON(http.StatusConflict, gin.H{"error": "primary address cannot be deleted"})
+		case errors.Is(err, db.ErrPickupAddressDeletion):
+			ctx.JSON(http.StatusConflict, gin.H{"error": "pickup address cannot be deleted"})
+		default:
+			log.Err(err).Msg("failed to delete address")
+			ctx.Status(http.StatusInternalServerError)
+		}
+		
+		return
+	}
+	
+	ctx.Status(http.StatusNoContent)
 }
