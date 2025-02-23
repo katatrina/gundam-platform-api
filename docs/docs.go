@@ -699,7 +699,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Address created successfully",
                         "schema": {
-                            "$ref": "#/definitions/db.CreateUserAddressTxResult"
+                            "$ref": "#/definitions/db.UserAddress"
                         }
                     },
                     "400": {
@@ -755,6 +755,49 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request parameters"
+                    },
+                    "404": {
+                        "description": "Address not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an address of a user",
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user address",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Address ID",
+                        "name": "address_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Address deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "404": {
+                        "description": "Address not found"
+                    },
+                    "409": {
+                        "description": "Cannot delete primary or pickup address"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -1109,69 +1152,6 @@ const docTemplate = `{
                         }
                     ],
                     "x-nullable": true
-                }
-            }
-        },
-        "db.CreateUserAddressTxResult": {
-            "type": "object",
-            "required": [
-                "created_at",
-                "detail",
-                "district_name",
-                "full_name",
-                "ghn_district_id",
-                "ghn_ward_code",
-                "id",
-                "is_pickup_address",
-                "is_primary",
-                "phone_number",
-                "province_name",
-                "updated_at",
-                "user_id",
-                "ward_name"
-            ],
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "detail": {
-                    "type": "string"
-                },
-                "district_name": {
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
-                },
-                "ghn_district_id": {
-                    "type": "integer"
-                },
-                "ghn_ward_code": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_pickup_address": {
-                    "type": "boolean"
-                },
-                "is_primary": {
-                    "type": "boolean"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
-                "province_name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "string"
-                },
-                "ward_name": {
-                    "type": "string"
                 }
             }
         },

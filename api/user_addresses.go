@@ -30,9 +30,9 @@ type createUserAddressRequest struct {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string							true	"User ID"
-//	@Param			request	body		createUserAddressRequest		false	"Address creation request"
-//	@Success		201		{object}	db.CreateUserAddressTxResult	"Address created successfully"
+//	@Param			id		path		string						true	"User ID"
+//	@Param			request	body		createUserAddressRequest	false	"Address creation request"
+//	@Success		201		{object}	db.UserAddress				"Address created successfully"
 //	@Failure		400		"Invalid request body"
 //	@Failure		500		"Internal server error"
 //	@Router			/users/{id}/addresses [post]
@@ -183,6 +183,7 @@ func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressParams)
 //	@Param			request		body	updateUserAddressRequest	true	"Address information to update"
 //	@Success		200			"Address updated successfully"
 //	@Failure		400			"Invalid request parameters"
+//	@Failure		404			"Address not found"
 //	@Failure		500			"Internal server error"
 //	@Router			/users/{id}/addresses/{address_id} [put]
 func (server *Server) updateUserAddress(ctx *gin.Context) {
@@ -206,6 +207,12 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 	
 	err := server.dbStore.UpdateUserAddressTx(context.Background(), arg)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "address not found"})
+			return
+		}
+		
+		log.Err(err).Msg("failed to update address")
 		ctx.Status(http.StatusInternalServerError)
 		return
 	}
@@ -218,17 +225,17 @@ type deleteUserAddressPathParams struct {
 	AddressID int64  `uri:"address_id" binding:"required"`
 }
 
-// @Summary Delete user address
-// @Description Delete an address of a user
-// @Tags users
-// @Param id path string true "User ID"
-// @Param address_id path integer true "Address ID"
-// @Success 204 "Address deleted successfully"
-// @Failure 400  "Invalid request"
-// @Failure 404  "Address not found"
-// @Failure 409  "Cannot delete primary or pickup address"
-// @Failure 500  "Internal server error"
-// @Router /users/{id}/addresses/{address_id} [delete]
+//	@Summary		Delete user address
+//	@Description	Delete an address of a user
+//	@Tags			users
+//	@Param			id			path	string	true	"User ID"
+//	@Param			address_id	path	integer	true	"Address ID"
+//	@Success		204			"Address deleted successfully"
+//	@Failure		400			"Invalid request"
+//	@Failure		404			"Address not found"
+//	@Failure		409			"Cannot delete primary or pickup address"
+//	@Failure		500			"Internal server error"
+//	@Router			/users/{id}/addresses/{address_id} [delete]
 func (server *Server) deleteUserAddress(ctx *gin.Context) {
 	params := new(deleteUserAddressPathParams)
 	

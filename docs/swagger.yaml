@@ -204,52 +204,6 @@ definitions:
     - seller_id
     - seller_name
     type: object
-  db.CreateUserAddressTxResult:
-    properties:
-      created_at:
-        type: string
-      detail:
-        type: string
-      district_name:
-        type: string
-      full_name:
-        type: string
-      ghn_district_id:
-        type: integer
-      ghn_ward_code:
-        type: string
-      id:
-        type: integer
-      is_pickup_address:
-        type: boolean
-      is_primary:
-        type: boolean
-      phone_number:
-        type: string
-      province_name:
-        type: string
-      updated_at:
-        type: string
-      user_id:
-        type: string
-      ward_name:
-        type: string
-    required:
-    - created_at
-    - detail
-    - district_name
-    - full_name
-    - ghn_district_id
-    - ghn_ward_code
-    - id
-    - is_pickup_address
-    - is_primary
-    - phone_number
-    - province_name
-    - updated_at
-    - user_id
-    - ward_name
-    type: object
   db.GetGundamBySlugRow:
     properties:
       condition:
@@ -967,7 +921,7 @@ paths:
         "201":
           description: Address created successfully
           schema:
-            $ref: '#/definitions/db.CreateUserAddressTxResult'
+            $ref: '#/definitions/db.UserAddress'
         "400":
           description: Invalid request body
         "500":
@@ -976,6 +930,33 @@ paths:
       tags:
       - users
   /users/{id}/addresses/{address_id}:
+    delete:
+      description: Delete an address of a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Address ID
+        in: path
+        name: address_id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Address deleted successfully
+        "400":
+          description: Invalid request
+        "404":
+          description: Address not found
+        "409":
+          description: Cannot delete primary or pickup address
+        "500":
+          description: Internal server error
+      summary: Delete user address
+      tags:
+      - users
     put:
       consumes:
       - application/json
@@ -1004,6 +985,8 @@ paths:
           description: Address updated successfully
         "400":
           description: Invalid request parameters
+        "404":
+          description: Address not found
         "500":
           description: Internal server error
       summary: Update user address
