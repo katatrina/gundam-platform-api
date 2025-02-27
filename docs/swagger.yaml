@@ -668,6 +668,94 @@ paths:
       summary: List Gundams
       tags:
       - gundams
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new Gundam model with images and accessories
+      parameters:
+      - description: Gundam name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Gundam grade ID
+        in: formData
+        name: grade_id
+        required: true
+        type: integer
+      - description: Condition of the Gundam
+        enum:
+        - new
+        - open box
+        - second hand
+        in: formData
+        name: condition
+        required: true
+        type: string
+      - description: Manufacturer name
+        in: formData
+        name: manufacturer
+        required: true
+        type: string
+      - description: Gundam scale
+        enum:
+        - 1/144
+        - 1/100
+        - 1/60
+        in: formData
+        name: scale
+        required: true
+        type: string
+      - description: Weight in grams
+        in: formData
+        name: weight
+        required: true
+        type: integer
+      - description: Detailed description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: Price in VND
+        in: formData
+        name: price
+        required: true
+        type: integer
+      - description: Primary image of the Gundam
+        in: formData
+        name: primary_image
+        required: true
+        type: file
+      - description: Secondary images of the Gundam
+        in: formData
+        name: secondary_images
+        required: true
+        type: file
+      - description: Additional details about condition
+        in: formData
+        name: condition_description
+        type: string
+      - description: Accessory as JSON object. Add multiple accessories by repeating
+          this field with different values.
+        in: formData
+        name: accessory
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Gundam created successfully'
+        "400":
+          description: error details
+        "401":
+          description: unauthorized
+        "500":
+          description: internal server error
+      security:
+      - accessToken: []
+      summary: Create a new Gundam model
+      tags:
+      - gundams
   /gundams/{slug}:
     get:
       description: Retrieves a specific Gundam model by its unique slug

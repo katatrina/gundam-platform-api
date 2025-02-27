@@ -113,6 +113,14 @@ func (server *Server) setupRouter() {
 	{
 		gundamGroup.GET("", server.listGundams)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
+		
+		// Nhóm các endpoint cần xác thực
+		authGundamGroup := gundamGroup.Group("", authMiddleware(server.tokenMaker))
+		{
+			authGundamGroup.POST("", server.createGundam)
+			// authGundamGroup.PUT(":id", server.updateGundam)
+			// authGundamGroup.DELETE(":id", server.deleteGundam)
+		}
 	}
 	
 	cartGroup := v1.Group("/cart", authMiddleware(server.tokenMaker))
@@ -131,6 +139,15 @@ func (server *Server) setupRouter() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
+}
+
+type CreateParams struct {
+	Person []Person `form:"person" binding:"dive"`
+}
+
+type Person struct {
+	Firstname string `json:"firstname" binding:"required"`
+	Lastname  string `json:"lastname"`
 }
 
 // Start runs the HTTP server on a specific address.

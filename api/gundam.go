@@ -2,11 +2,14 @@ package api
 
 import (
 	"errors"
+	"mime/multipart"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -98,4 +101,91 @@ func (server *Server) getGundamBySlug(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, gundam)
+}
+
+type createGundamRequest struct {
+	Name                 string                  `form:"name" binding:"required"`
+	GradeID              int64                   `form:"grade_id" binding:"required"`
+	Condition            string                  `form:"condition" binding:"required"`
+	Manufacturer         string                  `form:"manufacturer" binding:"required"`
+	Scale                string                  `form:"scale" binding:"required"`
+	Weight               int64                   `form:"weight" binding:"required"`
+	Description          string                  `form:"description" binding:"required"`
+	Price                int64                   `form:"price" binding:"required"`
+	PrimaryImage         *multipart.FileHeader   `form:"primary_image" binding:"required"`
+	SecondaryImages      []*multipart.FileHeader `form:"secondary_images" binding:"required"`
+	ConditionDescription *string                 `form:"condition_description"`
+	Accessories          []db.GundamAccessory    `form:"accessory"`
+}
+
+func (req *createGundamRequest) getConditionDescription() string {
+	if req.ConditionDescription == nil {
+		return ""
+	}
+	
+	return *req.ConditionDescription
+}
+
+//	@Summary		Create a new Gundam model
+//	@Description	Create a new Gundam model with images and accessories
+//	@Tags			gundams
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Param			name					formData	string	true	"Gundam name"
+//	@Param			grade_id				formData	integer	true	"Gundam grade ID"
+//	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, second hand)
+//	@Param			manufacturer			formData	string	true	"Manufacturer name"
+//	@Param			scale					formData	string	true	"Gundam scale"	Enums(1/144, 1/100, 1/60)
+//	@Param			weight					formData	integer	true	"Weight in grams"
+//	@Param			description				formData	string	true	"Detailed description"
+//	@Param			price					formData	integer	true	"Price in VND"
+//	@Param			primary_image			formData	file	true	"Primary image of the Gundam"
+//	@Param			secondary_images		formData	file	true	"Secondary images of the Gundam"
+//	@Param			condition_description	formData	string	false	"Additional details about condition"
+//	@Param			accessory				formData	string	false	"Accessory as JSON object. Add multiple accessories by repeating this field with different values."
+//	@Security		accessToken
+//	@Success		200	"message: Gundam created successfully"
+//	@Failure		400	"error details"
+//	@Failure		401	"unauthorized"
+//	@Failure		500	"internal server error"
+//	@Router			/gundams [post]
+func (server *Server) createGundam(ctx *gin.Context) {
+	req := new(createGundamRequest)
+	
+	if err := ctx.ShouldBind(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	
+	arg := db.CreateGundamTxParams{
+		OwnerID:   ownerID,
+		Name:      req.Name,
+		Slug:      util.GenerateRandomSlug(req.Name),
+		GradeID:   req.GradeID,
+		Condition: db.GundamCondition(req.Condition),
+		ConditionDescription: pgtype.Text{
+			String: req.getConditionDescription(),
+			Valid:  req.ConditionDescription != nil,
+		},
+		Manufacturer:     req.Manufacturer,
+		Weight:           req.Weight,
+		Scale:            db.GundamScale(req.Scale),
+		Description:      req.Description,
+		Price:            req.Price,
+		Accessories:      req.Accessories,
+		PrimaryImage:     req.PrimaryImage,
+		SecondaryImages:  req.SecondaryImages,
+		UploadImagesFunc: server.uploadFileToCloudinary,
+	}
+	
+	err := server.dbStore.CreateGundamTx(ctx, arg)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create gundam")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "Gundam created successfully"})
 }

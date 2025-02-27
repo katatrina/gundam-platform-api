@@ -25,6 +25,20 @@ CREATE TYPE "gundam_status" AS ENUM (
   'exchange'
 );
 
+CREATE TYPE "order_status" AS ENUM (
+  'pending',
+  'packaging',
+  'delivering',
+  'successful',
+  'failed',
+  'canceled'
+);
+
+CREATE TYPE "payment_method" AS ENUM (
+  'cod',
+  'wallet'
+);
+
 CREATE TABLE "users"
 (
     "id"                    text PRIMARY KEY     DEFAULT (gen_random_uuid()),
@@ -69,9 +83,6 @@ CREATE TABLE "gundams"
     "condition_description" text,
     "manufacturer"          text             NOT NULL,
     "weight"                bigint           NOT NULL,
-    "length"                bigint,
-    "width"                 bigint,
-    "height"                bigint,
     "scale"                 gundam_scale     NOT NULL,
     "description"           text             NOT NULL,
     "price"                 bigint           NOT NULL,
@@ -127,13 +138,16 @@ CREATE TABLE "cart_items"
 
 CREATE TABLE "orders"
 (
-    "id"          bigserial PRIMARY KEY,
-    "buyer_id"    text        NOT NULL,
-    "seller_id"   text        NOT NULL,
-    "total_price" bigint      NOT NULL,
-    "status"      text        NOT NULL DEFAULT 'pending',
-    "created_at"  timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"  timestamptz NOT NULL DEFAULT (now())
+    "id"             bigserial PRIMARY KEY,
+    "buyer_id"       text           NOT NULL,
+    "seller_id"      text           NOT NULL,
+    "total_price"    bigint         NOT NULL,
+    "status"         order_status   NOT NULL DEFAULT 'pending',
+    "payment_method" payment_method NOT NULL,
+    "note"           text,
+    "cancel_reason"  text,
+    "created_at"     timestamptz    NOT NULL DEFAULT (now()),
+    "updated_at"     timestamptz    NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "order_items"
@@ -181,6 +195,8 @@ CREATE TABLE "wallet_transactions"
 );
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");
+
+CREATE INDEX ON "user_addresses" ("user_id", "is_pickup_address");
 
 CREATE UNIQUE INDEX ON "cart_items" ("cart_id", "gundam_id");
 

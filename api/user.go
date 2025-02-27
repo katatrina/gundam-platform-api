@@ -393,7 +393,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	fileName := fmt.Sprintf("user_%s_%d", userID, time.Now().Unix())
 	
 	// Upload new avatar to cloudinary
-	uploadedFileURL, err := server.fileStore.UploadFile(fileBytes, fileName, FolderAvatars)
+	uploadedFileURL, err := server.fileStore.UploadFile(fileBytes, fileName, util.FolderAvatars)
 	if err != nil {
 		log.Err(err).Msg("failed to upload file")
 		ctx.Status(http.StatusInternalServerError)
@@ -411,7 +411,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	user, err = server.dbStore.UpdateUser(ctx, arg)
 	if err != nil {
 		// Delete newly uploaded avatar if update fails
-		if deleteErr := server.fileStore.DeleteFile(fileName, FolderAvatars); deleteErr != nil {
+		if deleteErr := server.fileStore.DeleteFile(fileName, util.FolderAvatars); deleteErr != nil {
 			log.Err(deleteErr).Msg("failed to delete new avatar after update failure")
 		}
 		

@@ -12,8 +12,9 @@ import (
 
 type Querier interface {
 	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
+	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
-	CreateGundamImage(ctx context.Context, arg CreateGundamImageParams) error
+	CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
@@ -31,6 +32,7 @@ type Querier interface {
 	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
+	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)

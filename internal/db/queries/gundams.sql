@@ -1,6 +1,28 @@
 -- name: CreateGundam :one
-INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, weight, scale, description, price, status)
+INSERT INTO gundams (owner_id,
+                     name,
+                     slug,
+                     grade_id,
+                     condition,
+                     condition_description,
+                     manufacturer,
+                     weight,
+                     scale,
+                     description,
+                     price)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *;
+
+-- name: StoreGundamImageURL :exec
+INSERT INTO gundam_images (gundam_id,
+                           url,
+                           is_primary)
+VALUES ($1, $2, $3);
+
+-- name: CreateGundamAccessory :one
+INSERT INTO gundam_accessories (name,
+                                gundam_id,
+                                quantity)
+VALUES ($1, $2, $3) RETURNING *;
 
 -- name: ListGundamsWithFilters :many
 SELECT g.id,
@@ -47,3 +69,9 @@ FROM gundams g
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE g.slug = $1
 ORDER BY g.created_at DESC;
+
+-- name: CreateAccessory :exec
+INSERT INTO gundam_accessories (gundam_id,
+                                name,
+                                quantity)
+VALUES ($1, $2, $3);

@@ -12,23 +12,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createAccessory = `-- name: CreateAccessory :exec
+INSERT INTO gundam_accessories (gundam_id,
+                                name,
+                                quantity)
+VALUES ($1, $2, $3)
+`
+
+type CreateAccessoryParams struct {
+	GundamID int64  `json:"gundam_id"`
+	Name     string `json:"name"`
+	Quantity int64  `json:"quantity"`
+}
+
+func (q *Queries) CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error {
+	_, err := q.db.Exec(ctx, createAccessory, arg.GundamID, arg.Name, arg.Quantity)
+	return err
+}
+
 const createGundam = `-- name: CreateGundam :one
-INSERT INTO gundams (owner_id, name, slug, grade_id, condition, manufacturer, weight, scale, description, price, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, length, width, height, scale, description, price, status, created_at, updated_at, deleted_at
+INSERT INTO gundams (owner_id,
+                     name,
+                     slug,
+                     grade_id,
+                     condition,
+                     condition_description,
+                     manufacturer,
+                     weight,
+                     scale,
+                     description,
+                     price)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
 `
 
 type CreateGundamParams struct {
-	OwnerID      string          `json:"owner_id"`
-	Name         string          `json:"name"`
-	Slug         string          `json:"slug"`
-	GradeID      int64           `json:"grade_id"`
-	Condition    GundamCondition `json:"condition"`
-	Manufacturer string          `json:"manufacturer"`
-	Weight       int64           `json:"weight"`
-	Scale        GundamScale     `json:"scale"`
-	Description  string          `json:"description"`
-	Price        int64           `json:"price"`
-	Status       GundamStatus    `json:"status"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	GradeID              int64           `json:"grade_id"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription pgtype.Text     `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Weight               int64           `json:"weight"`
+	Scale                GundamScale     `json:"scale"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
 }
 
 func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error) {
@@ -38,12 +66,12 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		arg.Slug,
 		arg.GradeID,
 		arg.Condition,
+		arg.ConditionDescription,
 		arg.Manufacturer,
 		arg.Weight,
 		arg.Scale,
 		arg.Description,
 		arg.Price,
-		arg.Status,
 	)
 	var i Gundam
 	err := row.Scan(
@@ -56,9 +84,6 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.ConditionDescription,
 		&i.Manufacturer,
 		&i.Weight,
-		&i.Length,
-		&i.Width,
-		&i.Height,
 		&i.Scale,
 		&i.Description,
 		&i.Price,
@@ -66,6 +91,32 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const createGundamAccessory = `-- name: CreateGundamAccessory :one
+INSERT INTO gundam_accessories (name,
+                                gundam_id,
+                                quantity)
+VALUES ($1, $2, $3) RETURNING id, name, gundam_id, quantity, created_at
+`
+
+type CreateGundamAccessoryParams struct {
+	Name     string `json:"name"`
+	GundamID int64  `json:"gundam_id"`
+	Quantity int64  `json:"quantity"`
+}
+
+func (q *Queries) CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error) {
+	row := q.db.QueryRow(ctx, createGundamAccessory, arg.Name, arg.GundamID, arg.Quantity)
+	var i GundamAccessory
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.GundamID,
+		&i.Quantity,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -207,4 +258,22 @@ func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.T
 		return nil, err
 	}
 	return items, nil
+}
+
+const storeGundamImageURL = `-- name: StoreGundamImageURL :exec
+INSERT INTO gundam_images (gundam_id,
+                           url,
+                           is_primary)
+VALUES ($1, $2, $3)
+`
+
+type StoreGundamImageURLParams struct {
+	GundamID  int64  `json:"gundam_id"`
+	Url       string `json:"url"`
+	IsPrimary bool   `json:"is_primary"`
+}
+
+func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error {
+	_, err := q.db.Exec(ctx, storeGundamImageURL, arg.GundamID, arg.Url, arg.IsPrimary)
+	return err
 }

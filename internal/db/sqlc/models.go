@@ -143,6 +143,94 @@ func (ns NullGundamStatus) Value() (driver.Value, error) {
 	return string(ns.GundamStatus), nil
 }
 
+type OrderStatus string
+
+const (
+	OrderStatusPending    OrderStatus = "pending"
+	OrderStatusPackaging  OrderStatus = "packaging"
+	OrderStatusDelivering OrderStatus = "delivering"
+	OrderStatusSuccessful OrderStatus = "successful"
+	OrderStatusFailed     OrderStatus = "failed"
+	OrderStatusCanceled   OrderStatus = "canceled"
+)
+
+func (e *OrderStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrderStatus(s)
+	case string:
+		*e = OrderStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrderStatus: %T", src)
+	}
+	return nil
+}
+
+type NullOrderStatus struct {
+	OrderStatus OrderStatus `json:"order_status"`
+	Valid       bool        `json:"valid"` // Valid is true if OrderStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrderStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrderStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrderStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrderStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrderStatus), nil
+}
+
+type PaymentMethod string
+
+const (
+	PaymentMethodCod    PaymentMethod = "cod"
+	PaymentMethodWallet PaymentMethod = "wallet"
+)
+
+func (e *PaymentMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentMethod(s)
+	case string:
+		*e = PaymentMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentMethod: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentMethod struct {
+	PaymentMethod PaymentMethod `json:"payment_method"`
+	Valid         bool          `json:"valid"` // Valid is true if PaymentMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentMethod), nil
+}
+
 type UserRole string
 
 const (
@@ -212,9 +300,6 @@ type Gundam struct {
 	ConditionDescription pgtype.Text        `json:"condition_description"`
 	Manufacturer         string             `json:"manufacturer"`
 	Weight               int64              `json:"weight"`
-	Length               pgtype.Int8        `json:"length"`
-	Width                pgtype.Int8        `json:"width"`
-	Height               pgtype.Int8        `json:"height"`
 	Scale                GundamScale        `json:"scale"`
 	Description          string             `json:"description"`
 	Price                int64              `json:"price"`
@@ -249,13 +334,16 @@ type GundamImage struct {
 }
 
 type Order struct {
-	ID         int64     `json:"id"`
-	BuyerID    string    `json:"buyer_id"`
-	SellerID   string    `json:"seller_id"`
-	TotalPrice int64     `json:"total_price"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID            int64         `json:"id"`
+	BuyerID       string        `json:"buyer_id"`
+	SellerID      string        `json:"seller_id"`
+	TotalPrice    int64         `json:"total_price"`
+	Status        OrderStatus   `json:"status"`
+	PaymentMethod PaymentMethod `json:"payment_method"`
+	Note          pgtype.Text   `json:"note"`
+	CancelReason  pgtype.Text   `json:"cancel_reason"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
 }
 
 type OrderItem struct {

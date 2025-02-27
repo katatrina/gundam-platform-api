@@ -12,6 +12,7 @@ type Store interface {
 	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (UserAddress, error)
 	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) error
 	DeleteUserAddressTx(ctx context.Context, arg DeleteUserAddressParams) error
+	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) error
 }
 
 type SQLStore struct {
