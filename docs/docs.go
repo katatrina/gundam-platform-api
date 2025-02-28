@@ -278,132 +278,6 @@ const docTemplate = `{
                         "description": "Internal Server Error - Failed to retrieve Gundams"
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Create a new Gundam model with images and accessories",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "gundams"
-                ],
-                "summary": "Create a new Gundam model",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Gundam name",
-                        "name": "name",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Gundam grade ID",
-                        "name": "grade_id",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "new",
-                            "open box",
-                            "second hand"
-                        ],
-                        "type": "string",
-                        "description": "Condition of the Gundam",
-                        "name": "condition",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Manufacturer name",
-                        "name": "manufacturer",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "1/144",
-                            "1/100",
-                            "1/60"
-                        ],
-                        "type": "string",
-                        "description": "Gundam scale",
-                        "name": "scale",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Weight in grams",
-                        "name": "weight",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Detailed description",
-                        "name": "description",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Price in VND",
-                        "name": "price",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Primary image of the Gundam",
-                        "name": "primary_image",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Secondary images of the Gundam",
-                        "name": "secondary_images",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Additional details about condition",
-                        "name": "condition_description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Accessory as JSON object. Add multiple accessories by repeating this field with different values.",
-                        "name": "accessory",
-                        "in": "formData"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "message: Gundam created successfully"
-                    },
-                    "400": {
-                        "description": "error details"
-                    },
-                    "401": {
-                        "description": "unauthorized"
-                    },
-                    "500": {
-                        "description": "internal server error"
-                    }
-                }
             }
         },
         "/gundams/{slug}": {
@@ -639,6 +513,134 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/users/:id/gundams": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new Gundam model with images and accessories",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Create a new Gundam model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gundam name",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Gundam grade ID",
+                        "name": "grade_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "new",
+                            "open box",
+                            "second hand"
+                        ],
+                        "type": "string",
+                        "description": "Condition of the Gundam",
+                        "name": "condition",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Manufacturer name",
+                        "name": "manufacturer",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "1/144",
+                            "1/100",
+                            "1/60"
+                        ],
+                        "type": "string",
+                        "description": "Gundam scale",
+                        "name": "scale",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Weight in grams",
+                        "name": "weight",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Detailed description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Price in VND",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Primary image of the Gundam",
+                        "name": "primary_image",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Secondary images of the Gundam",
+                        "name": "secondary_images",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Additional details about condition",
+                        "name": "condition_description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Accessory as JSON object. Add multiple accessories by repeating this field with different values.",
+                        "name": "accessory",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Gundam created successfully"
+                    },
+                    "400": {
+                        "description": "error details"
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    },
+                    "500": {
+                        "description": "internal server error"
                     }
                 }
             }

@@ -103,6 +103,11 @@ func (server *Server) setupRouter() {
 		userGroup.POST(":id/addresses", server.createUserAddress)
 		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
+		
+		gundamGroup := userGroup.Group("/:id/gundams", authMiddleware(server.tokenMaker))
+		{
+			gundamGroup.POST("", server.createGundam)
+		}
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)
@@ -113,14 +118,6 @@ func (server *Server) setupRouter() {
 	{
 		gundamGroup.GET("", server.listGundams)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
-		
-		// Nhóm các endpoint cần xác thực
-		authGundamGroup := gundamGroup.Group("", authMiddleware(server.tokenMaker))
-		{
-			authGundamGroup.POST("", server.createGundam)
-			// authGundamGroup.PUT(":id", server.updateGundam)
-			// authGundamGroup.DELETE(":id", server.deleteGundam)
-		}
 	}
 	
 	cartGroup := v1.Group("/cart", authMiddleware(server.tokenMaker))

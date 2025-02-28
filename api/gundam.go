@@ -148,7 +148,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Failure		400	"error details"
 //	@Failure		401	"unauthorized"
 //	@Failure		500	"internal server error"
-//	@Router			/gundams [post]
+//	@Router			/users/:id/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
 	req := new(createGundamRequest)
 	
@@ -157,7 +157,12 @@ func (server *Server) createGundam(ctx *gin.Context) {
 		return
 	}
 	
+	userID := ctx.Param("id")
 	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	if userID != ownerID {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "cannot create gundam for another user"})
+		return
+	}
 	
 	arg := db.CreateGundamTxParams{
 		OwnerID:   ownerID,
