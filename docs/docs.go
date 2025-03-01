@@ -518,6 +518,53 @@ const docTemplate = `{
             }
         },
         "/users/:id/gundams": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get all gundams that belong to the specified seller ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "List all gundams for a specific seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Gundam"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -536,6 +583,13 @@ const docTemplate = `{
                 ],
                 "summary": "Create a new Gundam model",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "Gundam name",
@@ -636,8 +690,8 @@ const docTemplate = `{
                     "400": {
                         "description": "error details"
                     },
-                    "401": {
-                        "description": "unauthorized"
+                    "403": {
+                        "description": "cannot create gundam for another user"
                     },
                     "500": {
                         "description": "internal server error"
@@ -1349,6 +1403,77 @@ const docTemplate = `{
                 }
             }
         },
+        "db.Gundam": {
+            "type": "object",
+            "required": [
+                "condition",
+                "condition_description",
+                "created_at",
+                "deleted_at",
+                "description",
+                "grade_id",
+                "id",
+                "manufacturer",
+                "name",
+                "owner_id",
+                "price",
+                "scale",
+                "slug",
+                "status",
+                "updated_at",
+                "weight"
+            ],
+            "properties": {
+                "condition": {
+                    "$ref": "#/definitions/db.GundamCondition"
+                },
+                "condition_description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "grade_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "manufacturer": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "$ref": "#/definitions/db.GundamScale"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.GundamStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
         "db.GundamCondition": {
             "type": "string",
             "enum": [
@@ -1674,10 +1799,41 @@ const docTemplate = `{
                 "UserRoleAdmin"
             ]
         },
+        "gin.H": {
+            "type": "object",
+            "additionalProperties": {}
+        },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
         "pgtype.Text": {
             "type": "object",
             "properties": {
                 "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinity_modifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
                     "type": "string"
                 },
                 "valid": {

@@ -107,6 +107,7 @@ func (server *Server) setupRouter() {
 		gundamGroup := userGroup.Group("/:id/gundams", authMiddleware(server.tokenMaker))
 		{
 			gundamGroup.POST("", server.createGundam)
+			gundamGroup.GET("", server.listGundamsBySeller)
 		}
 	}
 	

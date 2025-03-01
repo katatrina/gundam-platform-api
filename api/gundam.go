@@ -131,6 +131,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Tags			gundams
 //	@Accept			multipart/form-data
 //	@Produce		json
+//	@Param			id						path		string	true	"User ID"
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, second hand)
@@ -146,7 +147,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Security		accessToken
 //	@Success		200	"message: Gundam created successfully"
 //	@Failure		400	"error details"
-//	@Failure		401	"unauthorized"
+//	@Failure		403	"cannot create gundam for another user"
 //	@Failure		500	"internal server error"
 //	@Router			/users/:id/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
@@ -160,7 +161,7 @@ func (server *Server) createGundam(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	if userID != ownerID {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "cannot create gundam for another user"})
+		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot create gundam for another user"})
 		return
 	}
 	

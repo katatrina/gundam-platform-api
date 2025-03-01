@@ -33,3 +33,47 @@ func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
 	)
 	return i, err
 }
+
+const listGundamsBySellerID = `-- name: ListGundamsBySellerID :many
+SELECT id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+FROM gundams
+WHERE owner_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListGundamsBySellerID(ctx context.Context, ownerID string) ([]Gundam, error) {
+	rows, err := q.db.Query(ctx, listGundamsBySellerID, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Gundam{}
+	for rows.Next() {
+		var i Gundam
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Name,
+			&i.Slug,
+			&i.GradeID,
+			&i.Condition,
+			&i.ConditionDescription,
+			&i.Manufacturer,
+			&i.Weight,
+			&i.Scale,
+			&i.Description,
+			&i.Price,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
