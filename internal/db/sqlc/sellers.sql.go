@@ -7,12 +7,16 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getSellerByID = `-- name: GetSellerByID :one
 SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 FROM users
-WHERE id = $1 AND role = 'seller'
+WHERE id = $1
+  AND role = 'seller'
 `
 
 func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
@@ -35,38 +39,79 @@ func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
 }
 
 const listGundamsBySellerID = `-- name: ListGundamsBySellerID :many
-SELECT id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
-FROM gundams
+SELECT g.id,
+       g.owner_id,
+       g.name,
+       g.slug,
+       gg.display_name             AS grade,
+       g.condition,
+       g.condition_description,
+       g.manufacturer,
+       g.scale,
+       g.description,
+       g.price,
+       g.status,
+       g.created_at,
+       g.updated_at,
+       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
+        FROM gundam_images gi
+        WHERE gi.gundam_id = g.id) AS image_urls
+FROM gundams g
+         JOIN users u ON g.owner_id = u.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE owner_id = $1
-ORDER BY created_at DESC
+  AND ($2::text IS NULL OR name ILIKE concat('%', $2::text, '%'))
+ORDER BY g.created_at DESC
 `
 
-func (q *Queries) ListGundamsBySellerID(ctx context.Context, ownerID string) ([]Gundam, error) {
-	rows, err := q.db.Query(ctx, listGundamsBySellerID, ownerID)
+type ListGundamsBySellerIDParams struct {
+	OwnerID string      `json:"owner_id"`
+	Name    pgtype.Text `json:"name"`
+}
+
+type ListGundamsBySellerIDRow struct {
+	ID                   int64           `json:"id"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	Grade                string          `json:"grade"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription pgtype.Text     `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Scale                GundamScale     `json:"scale"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
+	Status               GundamStatus    `json:"status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	ImageURLs            []string        `json:"image_urls"`
+}
+
+func (q *Queries) ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error) {
+	rows, err := q.db.Query(ctx, listGundamsBySellerID, arg.OwnerID, arg.Name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Gundam{}
+	items := []ListGundamsBySellerIDRow{}
 	for rows.Next() {
-		var i Gundam
+		var i ListGundamsBySellerIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OwnerID,
 			&i.Name,
 			&i.Slug,
-			&i.GradeID,
+			&i.Grade,
 			&i.Condition,
 			&i.ConditionDescription,
 			&i.Manufacturer,
-			&i.Weight,
 			&i.Scale,
 			&i.Description,
 			&i.Price,
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.DeletedAt,
+			&i.ImageURLs,
 		); err != nil {
 			return nil, err
 		}

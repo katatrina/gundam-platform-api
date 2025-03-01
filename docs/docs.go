@@ -542,6 +542,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam name to filter by",
+                        "name": "name",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1597,6 +1603,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "condition",
+                "condition_description",
                 "created_at",
                 "description",
                 "grade",
@@ -1614,6 +1621,9 @@ const docTemplate = `{
             "properties": {
                 "condition": {
                     "$ref": "#/definitions/db.GundamCondition"
+                },
+                "condition_description": {
+                    "$ref": "#/definitions/pgtype.Text"
                 },
                 "created_at": {
                     "type": "string"

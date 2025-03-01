@@ -4,6 +4,8 @@ import (
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
+	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/rs/zerolog/log"
 )
@@ -29,12 +31,25 @@ func (server *Server) getSeller(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, seller)
 }
 
+type listGundamsBySellerRequest struct {
+	Name *string `form:"name"`
+}
+
+func (req *listGundamsBySellerRequest) getName() string {
+	if req == nil || req.Name == nil {
+		return ""
+	}
+	
+	return *req.Name
+}
+
 //	@Summary		List all gundams for a specific seller
 //	@Description	Get all gundams that belong to the specified seller ID
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path	string	true	"Seller ID"
+//	@Param			id		path	string	true	"Seller ID"
+//	@Param			name	query	string	false	"Gundam name to filter by"
 //	@Security		accessToken
 //	@Success		200	{array}		db.Gundam
 //	@Failure		403	{object}	gin.H
@@ -48,7 +63,21 @@ func (server *Server) listGundamsBySeller(ctx *gin.Context) {
 		return
 	}
 	
-	gundams, err := server.dbStore.ListGundamsBySellerID(ctx, sellerID)
+	req := new(listGundamsBySellerRequest)
+	if err := ctx.ShouldBindQuery(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	arg := db.ListGundamsBySellerIDParams{
+		OwnerID: sellerID,
+		Name: pgtype.Text{
+			String: req.getName(),
+			Valid:  req.Name != nil,
+		},
+	}
+	
+	gundams, err := server.dbStore.ListGundamsBySellerID(ctx, arg)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list gundams by seller")
 		ctx.Status(http.StatusInternalServerError)

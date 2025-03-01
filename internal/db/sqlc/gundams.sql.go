@@ -191,6 +191,7 @@ SELECT g.id,
        g.slug,
        gg.display_name             AS grade,
        g.condition,
+       g.condition_description,
        g.manufacturer,
        g.scale,
        g.description,
@@ -209,20 +210,21 @@ ORDER BY g.created_at DESC
 `
 
 type ListGundamsWithFiltersRow struct {
-	ID           int64           `json:"id"`
-	OwnerID      string          `json:"owner_id"`
-	Name         string          `json:"name"`
-	Slug         string          `json:"slug"`
-	Grade        string          `json:"grade"`
-	Condition    GundamCondition `json:"condition"`
-	Manufacturer string          `json:"manufacturer"`
-	Scale        GundamScale     `json:"scale"`
-	Description  string          `json:"description"`
-	Price        int64           `json:"price"`
-	Status       GundamStatus    `json:"status"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
-	ImageURLs    []string        `json:"image_urls"`
+	ID                   int64           `json:"id"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	Grade                string          `json:"grade"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription pgtype.Text     `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Scale                GundamScale     `json:"scale"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
+	Status               GundamStatus    `json:"status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	ImageURLs            []string        `json:"image_urls"`
 }
 
 func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error) {
@@ -241,6 +243,7 @@ func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.T
 			&i.Slug,
 			&i.Grade,
 			&i.Condition,
+			&i.ConditionDescription,
 			&i.Manufacturer,
 			&i.Scale,
 			&i.Description,

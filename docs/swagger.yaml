@@ -393,6 +393,8 @@ definitions:
     properties:
       condition:
         $ref: '#/definitions/db.GundamCondition'
+      condition_description:
+        $ref: '#/definitions/pgtype.Text'
       created_at:
         type: string
       description:
@@ -423,6 +425,7 @@ definitions:
         type: string
     required:
     - condition
+    - condition_description
     - created_at
     - description
     - grade
@@ -908,6 +911,10 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: Gundam name to filter by
+        in: query
+        name: name
         type: string
       produces:
       - application/json

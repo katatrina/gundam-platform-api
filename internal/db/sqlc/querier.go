@@ -29,7 +29,7 @@ type Querier interface {
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
-	ListGundamsBySellerID(ctx context.Context, ownerID string) ([]Gundam, error)
+	ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error)
 	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
