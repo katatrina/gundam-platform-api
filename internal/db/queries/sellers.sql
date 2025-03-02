@@ -26,5 +26,5 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE owner_id = $1
-  AND (sqlc.narg('name')::text IS NULL OR name ILIKE concat('%', sqlc.narg('name')::text, '%'))
+  AND (sqlc.narg('name')::text IS NULL OR g.name ILIKE concat('%', sqlc.narg('name')::text, '%'))
 ORDER BY g.created_at DESC;

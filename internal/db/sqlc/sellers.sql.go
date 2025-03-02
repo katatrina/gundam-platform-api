@@ -60,7 +60,7 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE owner_id = $1
-  AND ($2::text IS NULL OR name ILIKE concat('%', $2::text, '%'))
+  AND ($2::text IS NULL OR g.name ILIKE concat('%', $2::text, '%'))
 ORDER BY g.created_at DESC
 `
 
