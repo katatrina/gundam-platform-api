@@ -10,7 +10,6 @@ import (
 // PostgreSQL error codes
 const (
 	UniqueViolationCode = "23505"
-	RaiseExceptionCode  = "P0001"
 )
 
 // Constraint names

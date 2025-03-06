@@ -106,7 +106,7 @@ CREATE TABLE "gundam_grades"
     "id"           bigserial PRIMARY KEY,
     "name"         text        NOT NULL,
     "display_name" text        NOT NULL,
-    "slug"         text        NOT NULL UNIQUE,
+    "slug"         text UNIQUE NOT NULL,
     "created_at"   timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -134,6 +134,32 @@ CREATE TABLE "cart_items"
     "gundam_id"  bigint      NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "subscription_plans"
+(
+    "id"                bigserial PRIMARY KEY,
+    "name"              text        NOT NULL,
+    "duration_days"     bigint,
+    "max_listings"      bigint,
+    "max_open_auctions" bigint,
+    "is_unlimited"      bool        NOT NULL DEFAULT false,
+    "price"             bigint      NOT NULL,
+    "created_at"        timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "user_subscriptions"
+(
+    "id"                 bigserial PRIMARY KEY,
+    "user_id"            text        NOT NULL,
+    "plan_id"            bigint      NOT NULL,
+    "start_date"         timestamptz NOT NULL DEFAULT (now()),
+    "end_date"           timestamptz,
+    "listings_used"      bigint      NOT NULL DEFAULT 0,
+    "open_auctions_used" bigint      NOT NULL DEFAULT 0,
+    "is_active"          bool        NOT NULL DEFAULT true,
+    "created_at"         timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"         timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "orders"
@@ -200,6 +226,8 @@ CREATE INDEX ON "user_addresses" ("user_id", "is_pickup_address");
 
 CREATE UNIQUE INDEX ON "cart_items" ("cart_id", "gundam_id");
 
+CREATE INDEX "idx_user_active_subscription" ON "user_subscriptions" ("user_id", "is_active");
+
 CREATE INDEX ON "wallets" ("user_id");
 
 CREATE INDEX ON "wallet_transactions" ("wallet_id");
@@ -227,6 +255,12 @@ ALTER TABLE "cart_items"
 
 ALTER TABLE "cart_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "user_subscriptions"
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "user_subscriptions"
+    ADD FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("id");
 
 ALTER TABLE "orders"
     ADD FOREIGN KEY ("buyer_id") REFERENCES "users" ("id");

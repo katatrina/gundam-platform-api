@@ -125,3 +125,30 @@ func (store *SQLStore) DeleteUserAddressTx(ctx context.Context, arg DeleteUserAd
 	
 	return err
 }
+
+func (store *SQLStore) BecomeSellerTx(ctx context.Context, userID string) (User, error) {
+	var seller User
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		userUpdated, err := qTx.UpdateUser(ctx, UpdateUserParams{
+			UserID: userID,
+			Role: NullUserRole{
+				UserRole: UserRoleSeller,
+				Valid:    true,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		seller = userUpdated
+		
+		err = qTx.CreateTrialSubscription(ctx, userUpdated.ID)
+		if err != nil {
+			return err
+		}
+		
+		return nil
+	})
+	
+	return seller, err
+}

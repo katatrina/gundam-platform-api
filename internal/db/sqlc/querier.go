@@ -15,6 +15,7 @@ type Querier interface {
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
 	CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error)
+	CreateTrialSubscription(ctx context.Context, userID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)

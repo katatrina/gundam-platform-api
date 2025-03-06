@@ -712,7 +712,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Upgrade the user's role to seller",
+                "description": "Upgrade the user's role to seller and create the trial subscription",
                 "consumes": [
                     "application/json"
                 ],

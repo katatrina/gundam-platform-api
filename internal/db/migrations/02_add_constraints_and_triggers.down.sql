@@ -1,11 +1,12 @@
--- Drop triggers trước
-DROP TRIGGER IF EXISTS enforce_max_addresses ON user_addresses;
-DROP TRIGGER IF EXISTS prevent_delete_important_address ON user_addresses;
+-- Drop the triggers first
+DROP TRIGGER IF EXISTS update_timestamp_trigger ON users;
+DROP TRIGGER IF EXISTS update_timestamp_trigger ON user_addresses;
+DROP TRIGGER IF EXISTS update_timestamp_trigger ON gundams;
+DROP TRIGGER IF EXISTS update_timestamp_trigger ON user_subscriptions;
+DROP TRIGGER IF EXISTS update_timestamp_trigger ON orders;
 
--- Drop functions
-DROP FUNCTION IF EXISTS check_max_addresses;
-DROP FUNCTION IF EXISTS prevent_delete_important_address;
+-- Drop the helper function that created the triggers
+DROP FUNCTION IF EXISTS create_timestamp_triggers();
 
--- Drop indexes
-DROP INDEX IF EXISTS unique_primary_address;
-DROP INDEX IF EXISTS unique_pickup_address;
+-- Drop the update_timestamp function
+DROP FUNCTION IF EXISTS update_timestamp();

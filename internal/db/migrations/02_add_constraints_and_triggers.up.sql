@@ -21,6 +21,7 @@ SELECT unnest(ARRAY[
                   'users',
               'user_addresses',
               'gundams',
+              'user_subscriptions',
               'orders'
                   ])
            LOOP EXECUTE format('

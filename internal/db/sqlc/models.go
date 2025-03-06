@@ -8,7 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
-
+	
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -366,6 +366,17 @@ type Shipment struct {
 	UpdatedAt       time.Time   `json:"updated_at"`
 }
 
+type SubscriptionPlan struct {
+	ID              int64       `json:"id"`
+	Name            string      `json:"name"`
+	DurationDays    pgtype.Int8 `json:"duration_days"`
+	MaxListings     pgtype.Int8 `json:"max_listings"`
+	MaxOpenAuctions pgtype.Int8 `json:"max_open_auctions"`
+	IsUnlimited     bool        `json:"is_unlimited"`
+	Price           int64       `json:"price"`
+	CreatedAt       time.Time   `json:"created_at"`
+}
+
 type User struct {
 	ID                  string      `json:"id"`
 	FullName            pgtype.Text `extensions:"x-nullable" json:"full_name"`
@@ -395,6 +406,19 @@ type UserAddress struct {
 	IsPickupAddress bool      `json:"is_pickup_address"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type UserSubscription struct {
+	ID               int64              `json:"id"`
+	UserID           string             `json:"user_id"`
+	PlanID           int64              `json:"plan_id"`
+	StartDate        time.Time          `json:"start_date"`
+	EndDate          pgtype.Timestamptz `json:"end_date"`
+	ListingsUsed     int64              `json:"listings_used"`
+	OpenAuctionsUsed int64              `json:"open_auctions_used"`
+	IsActive         bool               `json:"is_active"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
 }
 
 type Wallet struct {

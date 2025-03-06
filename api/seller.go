@@ -11,24 +11,29 @@ import (
 )
 
 //	@Summary		Become a seller
-//	@Description	Upgrade the user's role to seller
+//	@Description	Upgrade the user's role to seller and create the trial subscription
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
 //	@Success		200	{object}	db.User	"Successfully became seller"
+//	@Failure		409	"User is already a seller"
 //	@Failure		500	"Internal server error"
 //	@Router			/users/become-seller [post]
 func (server *Server) becomeSeller(ctx *gin.Context) {
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	user, err := server.dbStore.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	if user.Role == db.UserRoleSeller {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "user is already a seller"})
+		return
+	}
 	
-	seller, err := server.dbStore.UpdateUser(ctx, db.UpdateUserParams{
-		UserID: userID,
-		Role: db.NullUserRole{
-			UserRole: db.UserRoleSeller,
-			Valid:    true,
-		},
-	})
+	seller, err := server.dbStore.BecomeSellerTx(ctx, userID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to become seller")
 		ctx.Status(http.StatusInternalServerError)
