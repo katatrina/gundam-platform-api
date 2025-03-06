@@ -87,6 +87,17 @@ definitions:
     - email
     - password
     type: object
+  api.getGundamBySlugResponse:
+    properties:
+      accessories:
+        items:
+          $ref: '#/definitions/db.GundamAccessory'
+        type: array
+      gundam:
+        $ref: '#/definitions/db.GetGundamBySlugRow'
+    required:
+    - accessories
+    type: object
   api.loginUserRequest:
     properties:
       email:
@@ -236,6 +247,8 @@ definitions:
         $ref: '#/definitions/db.GundamStatus'
       updated_at:
         type: string
+      weight:
+        type: integer
     required:
     - condition
     - created_at
@@ -251,6 +264,7 @@ definitions:
     - slug
     - status
     - updated_at
+    - weight
     type: object
   db.Gundam:
     properties:
@@ -303,6 +317,25 @@ definitions:
     - status
     - updated_at
     - weight
+    type: object
+  db.GundamAccessory:
+    properties:
+      created_at:
+        type: string
+      gundam_id:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - created_at
+    - gundam_id
+    - id
+    - name
+    - quantity
     type: object
   db.GundamCondition:
     enum:
@@ -761,7 +794,7 @@ paths:
         "200":
           description: Successfully retrieved Gundam details
           schema:
-            $ref: '#/definitions/db.GetGundamBySlugRow'
+            $ref: '#/definitions/api.getGundamBySlugResponse'
         "404":
           description: Not Found - Gundam with specified slug does not exist
         "500":
@@ -1188,6 +1221,8 @@ paths:
       responses:
         "200":
           description: Address updated successfully
+          schema:
+            $ref: '#/definitions/db.UserAddress'
         "400":
           description: Invalid request parameters
         "404":
@@ -1195,6 +1230,29 @@ paths:
         "500":
           description: Internal server error
       summary: Update user address
+      tags:
+      - users
+  /users/{id}/addresses/pickup:
+    get:
+      description: Get the pickup address of a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user pickup address
+          schema:
+            $ref: '#/definitions/db.UserAddress'
+        "404":
+          description: Pickup address not found
+        "500":
+          description: Internal server error
+      summary: Get user pickup address
       tags:
       - users
   /users/{id}/avatar:
@@ -1229,6 +1287,25 @@ paths:
       summary: Update user avatar
       tags:
       - users
+  /users/become-seller:
+    post:
+      consumes:
+      - application/json
+      description: Upgrade the user's role to seller
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully became seller
+          schema:
+            $ref: '#/definitions/db.User'
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Become a seller
+      tags:
+      - sellers
   /users/by-phone:
     get:
       description: Get user details using a phone number as a query parameter

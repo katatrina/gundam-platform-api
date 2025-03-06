@@ -27,5 +27,6 @@ UPDATE users
 SET full_name    = COALESCE(sqlc.narg('full_name'), full_name),
     avatar_url   = COALESCE(sqlc.narg('avatar_url'), avatar_url),
     phone_number = COALESCE(sqlc.narg('phone_number'), phone_number),
+    role         = COALESCE(sqlc.narg('role'), role),
     updated_at   = now()
 WHERE id = sqlc.arg('user_id') RETURNING *;

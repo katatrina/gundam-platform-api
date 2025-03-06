@@ -1,3 +1,7 @@
+-- name: ListGundamGrades :many
+SELECT *
+FROM gundam_grades;
+
 -- name: CreateGundam :one
 INSERT INTO gundams (owner_id,
                      name,
@@ -57,14 +61,15 @@ SELECT g.id,
        g.condition,
        g.manufacturer,
        g.scale,
+       g.weight,
        g.description,
        g.price,
        g.status,
-       g.created_at,
-       g.updated_at,
        (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
         FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls
+        WHERE gi.gundam_id = g.id) AS image_urls,
+       g.created_at,
+       g.updated_at
 FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
@@ -76,3 +81,8 @@ INSERT INTO gundam_accessories (gundam_id,
                                 name,
                                 quantity)
 VALUES ($1, $2, $3);
+
+-- name: GetGundamAccessories :many
+SELECT *
+FROM gundam_accessories
+WHERE gundam_id = $1;

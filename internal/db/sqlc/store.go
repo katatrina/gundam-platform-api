@@ -10,7 +10,7 @@ import (
 type Store interface {
 	Querier
 	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (UserAddress, error)
-	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) error
+	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	DeleteUserAddressTx(ctx context.Context, arg DeleteUserAddressParams) error
 	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) error
 }

@@ -28,7 +28,7 @@ SET is_pickup_address = false
 WHERE user_id = $1
   AND is_pickup_address = true;
 
--- name: UpdateUserAddress :exec
+-- name: UpdateUserAddress :one
 UPDATE user_addresses
 SET full_name         = COALESCE(sqlc.narg('full_name'), full_name),
     phone_number      = COALESCE(sqlc.narg('phone_number'), phone_number),
@@ -41,10 +41,17 @@ SET full_name         = COALESCE(sqlc.narg('full_name'), full_name),
     is_primary        = COALESCE(sqlc.narg('is_primary'), is_primary),
     is_pickup_address = COALESCE(sqlc.narg('is_pickup_address'), is_pickup_address)
 WHERE id = sqlc.arg('address_id')
-  AND user_id = sqlc.arg('user_id');
+  AND user_id = sqlc.arg('user_id')
+RETURNING *;
 
 -- name: DeleteUserAddress :exec
 DELETE
 FROM user_addresses
 WHERE id = sqlc.arg('address_id')
   AND user_id = sqlc.arg('user_id');
+
+-- name: GetUserPickupAddress :one
+SELECT *
+FROM user_addresses
+WHERE user_id = $1
+  AND is_pickup_address = true;

@@ -174,15 +174,17 @@ UPDATE users
 SET full_name    = COALESCE($1, full_name),
     avatar_url   = COALESCE($2, avatar_url),
     phone_number = COALESCE($3, phone_number),
+    role         = COALESCE($4, role),
     updated_at   = now()
-WHERE id = $4 RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+WHERE id = $5 RETURNING id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	FullName    pgtype.Text `extensions:"x-nullable" json:"full_name"`
-	AvatarUrl   pgtype.Text `extensions:"x-nullable" json:"avatar_url"`
-	PhoneNumber pgtype.Text `extensions:"x-nullable" json:"phone_number"`
-	UserID      string      `json:"user_id"`
+	FullName    pgtype.Text  `extensions:"x-nullable" json:"full_name"`
+	AvatarUrl   pgtype.Text  `extensions:"x-nullable" json:"avatar_url"`
+	PhoneNumber pgtype.Text  `extensions:"x-nullable" json:"phone_number"`
+	Role        NullUserRole `json:"role"`
+	UserID      string       `json:"user_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -190,6 +192,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.FullName,
 		arg.AvatarUrl,
 		arg.PhoneNumber,
+		arg.Role,
 		arg.UserID,
 	)
 	var i User

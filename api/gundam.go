@@ -6,6 +6,7 @@ import (
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
@@ -76,12 +77,17 @@ func (server *Server) listGundams(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, listGundamsResponse(gundams))
 }
 
+type getGundamBySlugResponse struct {
+	Gundam      db.GetGundamBySlugRow
+	Accessories []db.GundamAccessory `json:"accessories"`
+}
+
 //	@Summary		Get Gundam by Slug
 //	@Description	Retrieves a specific Gundam model by its unique slug
 //	@Tags			gundams
 //	@Produce		json
 //	@Param			slug	path		string					true	"Gundam model slug"	example(rx-78-2-gundam)
-//	@Success		200		{object}	db.GetGundamBySlugRow	"Successfully retrieved Gundam details"
+//	@Success		200		{object}	getGundamBySlugResponse	"Successfully retrieved Gundam details"
 //	@Failure		404		"Not Found - Gundam with specified slug does not exist"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundam"
 //	@Router			/gundams/{slug} [get]
@@ -100,7 +106,21 @@ func (server *Server) getGundamBySlug(ctx *gin.Context) {
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, gundam)
+	// Lấy accessories của Gundam
+	accessories, err := server.dbStore.GetGundamAccessories(ctx, gundam.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get gundam accessories")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Tạo response bao gồm cả Gundam và accessories
+	response := getGundamBySlugResponse{
+		Gundam:      gundam,
+		Accessories: accessories,
+	}
+	
+	ctx.JSON(http.StatusOK, response)
 }
 
 type createGundamRequest struct {
@@ -153,7 +173,8 @@ func (req *createGundamRequest) getConditionDescription() string {
 func (server *Server) createGundam(ctx *gin.Context) {
 	req := new(createGundamRequest)
 	
-	if err := ctx.ShouldBind(req); err != nil {
+	if err := ctx.ShouldBindWith(req, binding.FormMultipart); err != nil {
+		log.Error().Err(err).Msg("failed to bind request")
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}

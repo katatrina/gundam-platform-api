@@ -10,6 +10,34 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//	@Summary		Become a seller
+//	@Description	Upgrade the user's role to seller
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Success		200	{object}	db.User	"Successfully became seller"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/become-seller [post]
+func (server *Server) becomeSeller(ctx *gin.Context) {
+	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	
+	seller, err := server.dbStore.UpdateUser(ctx, db.UpdateUserParams{
+		UserID: userID,
+		Role: db.NullUserRole{
+			UserRole: db.UserRoleSeller,
+			Valid:    true,
+		},
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to become seller")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, seller)
+}
+
 //	@Summary		Retrieve a seller by ID
 //	@Description	Get detailed information about a specific seller
 //	@Tags			sellers

@@ -117,6 +117,35 @@ func (q *Queries) GetUserAddressForUpdate(ctx context.Context, arg GetUserAddres
 	return i, err
 }
 
+const getUserPickupAddress = `-- name: GetUserPickupAddress :one
+SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
+FROM user_addresses
+WHERE user_id = $1
+  AND is_pickup_address = true
+`
+
+func (q *Queries) GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error) {
+	row := q.db.QueryRow(ctx, getUserPickupAddress, userID)
+	var i UserAddress
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.ProvinceName,
+		&i.DistrictName,
+		&i.GhnDistrictID,
+		&i.WardName,
+		&i.GhnWardCode,
+		&i.Detail,
+		&i.IsPrimary,
+		&i.IsPickupAddress,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listUserAddresses = `-- name: ListUserAddresses :many
 SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
 FROM user_addresses
@@ -183,7 +212,7 @@ func (q *Queries) UnsetPrimaryAddress(ctx context.Context, userID string) error 
 	return err
 }
 
-const updateUserAddress = `-- name: UpdateUserAddress :exec
+const updateUserAddress = `-- name: UpdateUserAddress :one
 UPDATE user_addresses
 SET full_name         = COALESCE($1, full_name),
     phone_number      = COALESCE($2, phone_number),
@@ -197,6 +226,7 @@ SET full_name         = COALESCE($1, full_name),
     is_pickup_address = COALESCE($10, is_pickup_address)
 WHERE id = $11
   AND user_id = $12
+RETURNING id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
 `
 
 type UpdateUserAddressParams struct {
@@ -214,8 +244,8 @@ type UpdateUserAddressParams struct {
 	UserID          string      `json:"user_id"`
 }
 
-func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) error {
-	_, err := q.db.Exec(ctx, updateUserAddress,
+func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error) {
+	row := q.db.QueryRow(ctx, updateUserAddress,
 		arg.FullName,
 		arg.PhoneNumber,
 		arg.ProvinceName,
@@ -229,5 +259,22 @@ func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressPa
 		arg.AddressID,
 		arg.UserID,
 	)
-	return err
+	var i UserAddress
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.ProvinceName,
+		&i.DistrictName,
+		&i.GhnDistrictID,
+		&i.WardName,
+		&i.GhnWardCode,
+		&i.Detail,
+		&i.IsPrimary,
+		&i.IsPickupAddress,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

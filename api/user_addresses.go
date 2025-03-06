@@ -77,7 +77,7 @@ func (server *Server) createUserAddress(ctx *gin.Context) {
 //	@Success		200	{array}	db.UserAddress	"Successfully retrieved user addresses"
 //	@Failure		500	"Internal server error"
 //	@Router			/users/{id}/addresses [get]
-func (server *Server) getUserAddresses(ctx *gin.Context) {
+func (server *Server) listUserAddresses(ctx *gin.Context) {
 	userID := ctx.Param("id")
 	
 	addresses, err := server.dbStore.ListUserAddresses(context.Background(), userID)
@@ -178,10 +178,10 @@ func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressParams)
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id			path	string						true	"User ID"
-//	@Param			address_id	path	integer						true	"Address ID"
-//	@Param			request		body	updateUserAddressRequest	true	"Address information to update"
-//	@Success		200			"Address updated successfully"
+//	@Param			id			path		string						true	"User ID"
+//	@Param			address_id	path		integer						true	"Address ID"
+//	@Param			request		body		updateUserAddressRequest	true	"Address information to update"
+//	@Success		200			{object}	db.UserAddress				"Address updated successfully"
 //	@Failure		400			"Invalid request parameters"
 //	@Failure		404			"Address not found"
 //	@Failure		500			"Internal server error"
@@ -205,7 +205,7 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 	arg.UserID = params.UserID
 	arg.AddressID = params.AddressID
 	
-	err := server.dbStore.UpdateUserAddressTx(context.Background(), arg)
+	addressUpdated, err := server.dbStore.UpdateUserAddressTx(context.Background(), arg)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "address not found"})
@@ -217,7 +217,7 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, gin.H{"message": "address updated successfully"})
+	ctx.JSON(http.StatusOK, addressUpdated)
 }
 
 type deleteUserAddressPathParams struct {
@@ -266,4 +266,31 @@ func (server *Server) deleteUserAddress(ctx *gin.Context) {
 	}
 	
 	ctx.Status(http.StatusNoContent)
+}
+
+//	@Summary		Get user pickup address
+//	@Description	Get the pickup address of a specific user
+//	@Tags			users
+//	@Produce		json
+//	@Param			id	path		string			true	"User ID"
+//	@Success		200	{object}	db.UserAddress	"Successfully retrieved user pickup address"
+//	@Failure		404	"Pickup address not found"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/{id}/addresses/pickup [get]
+func (server *Server) getUserPickupAddress(ctx *gin.Context) {
+	userID := ctx.Param("id")
+	
+	address, err := server.dbStore.GetUserPickupAddress(context.Background(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "pickup address not found"})
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user pickup address")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, address)
 }

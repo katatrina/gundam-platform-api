@@ -304,7 +304,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved Gundam details",
                         "schema": {
-                            "$ref": "#/definitions/db.GetGundamBySlugRow"
+                            "$ref": "#/definitions/api.getGundamBySlugResponse"
                         }
                     },
                     "404": {
@@ -705,6 +705,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/become-seller": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Upgrade the user's role to seller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Become a seller",
+                "responses": {
+                    "200": {
+                        "description": "Successfully became seller",
+                        "schema": {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/users/by-phone": {
             "get": {
                 "description": "Get user details using a phone number as a query parameter",
@@ -899,6 +930,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{id}/addresses/pickup": {
+            "get": {
+                "description": "Get the pickup address of a specific user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user pickup address",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user pickup address",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserAddress"
+                        }
+                    },
+                    "404": {
+                        "description": "Pickup address not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/users/{id}/addresses/{address_id}": {
             "put": {
                 "description": "Update an existing address information for a specific user",
@@ -939,7 +1005,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Address updated successfully"
+                        "description": "Address updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserAddress"
+                        }
                     },
                     "400": {
                         "description": "Invalid request parameters"
@@ -1169,6 +1238,23 @@ const docTemplate = `{
                 }
             }
         },
+        "api.getGundamBySlugResponse": {
+            "type": "object",
+            "required": [
+                "accessories"
+            ],
+            "properties": {
+                "accessories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamAccessory"
+                    }
+                },
+                "gundam": {
+                    "$ref": "#/definitions/db.GetGundamBySlugRow"
+                }
+            }
+        },
         "api.loginUserRequest": {
             "type": "object",
             "required": [
@@ -1359,7 +1445,8 @@ const docTemplate = `{
                 "scale",
                 "slug",
                 "status",
-                "updated_at"
+                "updated_at",
+                "weight"
             ],
             "properties": {
                 "condition": {
@@ -1406,6 +1493,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
                 }
             }
         },
@@ -1476,6 +1566,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "weight": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.GundamAccessory": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "gundam_id",
+                "id",
+                "name",
+                "quantity"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
                     "type": "integer"
                 }
             }

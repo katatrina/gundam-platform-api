@@ -60,9 +60,11 @@ func (store *SQLStore) CreateUserAddressTx(ctx context.Context, arg CreateUserAd
 	return result, err
 }
 
-func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) error {
+func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error) {
+	var result UserAddress
+	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
-		address, err := qTx.GetUserAddressForUpdate(ctx, GetUserAddressForUpdateParams{
+		addressUpdated, err := qTx.GetUserAddressForUpdate(ctx, GetUserAddressForUpdateParams{
 			AddressID: arg.AddressID,
 			UserID:    arg.UserID,
 		})
@@ -70,27 +72,33 @@ func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAd
 			return err
 		}
 		
-		// First unset the existing primary address if the new address is primary
+		// First unset the existing primary addressUpdated if the new addressUpdated is primary
 		if arg.IsPrimary.Bool {
-			err = qTx.UnsetPrimaryAddress(ctx, address.UserID)
+			err = qTx.UnsetPrimaryAddress(ctx, addressUpdated.UserID)
 			if err != nil {
 				return err
 			}
 		}
 		
-		// Second unset the existing pickup address if the new address is a pickup address
+		// Second unset the existing pickup addressUpdated if the new addressUpdated is a pickup addressUpdated
 		if arg.IsPickupAddress.Bool {
-			err = qTx.UnsetPickupAddress(ctx, address.UserID)
+			err = qTx.UnsetPickupAddress(ctx, addressUpdated.UserID)
 			if err != nil {
 				return err
 			}
 		}
 		
 		// Finally, update the address
-		return qTx.UpdateUserAddress(ctx, arg)
+		addressUpdated, err = qTx.UpdateUserAddress(ctx, arg)
+		if err != nil {
+			return err
+		}
+		result = addressUpdated
+		
+		return nil
 	})
 	
-	return err
+	return result, err
 }
 
 func (store *SQLStore) DeleteUserAddressTx(ctx context.Context, arg DeleteUserAddressParams) error {

@@ -99,7 +99,8 @@ func (server *Server) setupRouter() {
 		userGroup.PUT(":id", server.updateUser)
 		userGroup.GET("by-phone", server.getUserByPhoneNumber)
 		userGroup.PATCH(":id/avatar", server.updateAvatar)
-		userGroup.GET(":id/addresses", server.getUserAddresses)
+		userGroup.GET(":id/addresses/pickup", server.getUserPickupAddress)
+		userGroup.GET(":id/addresses", server.listUserAddresses)
 		userGroup.POST(":id/addresses", server.createUserAddress)
 		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
@@ -109,6 +110,8 @@ func (server *Server) setupRouter() {
 			gundamGroup.POST("", server.createGundam)
 			gundamGroup.GET("", server.listGundamsBySeller)
 		}
+		
+		userGroup.POST("become-seller", authMiddleware(server.tokenMaker), server.becomeSeller)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)

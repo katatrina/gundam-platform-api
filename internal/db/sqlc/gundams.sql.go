@@ -121,6 +121,38 @@ func (q *Queries) CreateGundamAccessory(ctx context.Context, arg CreateGundamAcc
 	return i, err
 }
 
+const getGundamAccessories = `-- name: GetGundamAccessories :many
+SELECT id, name, gundam_id, quantity, created_at
+FROM gundam_accessories
+WHERE gundam_id = $1
+`
+
+func (q *Queries) GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error) {
+	rows, err := q.db.Query(ctx, getGundamAccessories, gundamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GundamAccessory{}
+	for rows.Next() {
+		var i GundamAccessory
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.GundamID,
+			&i.Quantity,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGundamBySlug = `-- name: GetGundamBySlug :one
 SELECT g.id,
        g.owner_id,
@@ -130,14 +162,15 @@ SELECT g.id,
        g.condition,
        g.manufacturer,
        g.scale,
+       g.weight,
        g.description,
        g.price,
        g.status,
-       g.created_at,
-       g.updated_at,
        (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
         FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls
+        WHERE gi.gundam_id = g.id) AS image_urls,
+       g.created_at,
+       g.updated_at
 FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
@@ -154,12 +187,13 @@ type GetGundamBySlugRow struct {
 	Condition    GundamCondition `json:"condition"`
 	Manufacturer string          `json:"manufacturer"`
 	Scale        GundamScale     `json:"scale"`
+	Weight       int64           `json:"weight"`
 	Description  string          `json:"description"`
 	Price        int64           `json:"price"`
 	Status       GundamStatus    `json:"status"`
+	ImageURLs    []string        `json:"image_urls"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
-	ImageURLs    []string        `json:"image_urls"`
 }
 
 func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error) {
@@ -174,14 +208,46 @@ func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBy
 		&i.Condition,
 		&i.Manufacturer,
 		&i.Scale,
+		&i.Weight,
 		&i.Description,
 		&i.Price,
 		&i.Status,
+		&i.ImageURLs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.ImageURLs,
 	)
 	return i, err
+}
+
+const listGundamGrades = `-- name: ListGundamGrades :many
+SELECT id, name, display_name, slug, created_at
+FROM gundam_grades
+`
+
+func (q *Queries) ListGundamGrades(ctx context.Context) ([]GundamGrade, error) {
+	rows, err := q.db.Query(ctx, listGundamGrades)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GundamGrade{}
+	for rows.Next() {
+		var i GundamGrade
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.DisplayName,
+			&i.Slug,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
