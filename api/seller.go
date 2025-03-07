@@ -47,12 +47,12 @@ func (server *Server) becomeSeller(ctx *gin.Context) {
 //	@Description	Get detailed information about a specific seller
 //	@Tags			sellers
 //	@Produce		json
-//	@Param			id	path		string	true	"Seller ID"
-//	@Success		200	{object}	db.User	"Successfully retrieved seller"
-//	@Failure		500	"Internal server error"
+//	@Param			sellerID	path		string	true	"Seller ID"
+//	@Success		200			{object}	db.User	"Successfully retrieved seller"
+//	@Failure		500			"Internal server error"
 //	@Router			/sellers/{id} [get]
 func (server *Server) getSeller(ctx *gin.Context) {
-	sellerID := ctx.Param("id")
+	sellerID := ctx.Param("sellerID")
 	
 	seller, err := server.dbStore.GetSellerByID(ctx, sellerID)
 	if err != nil {
@@ -81,15 +81,15 @@ func (req *listGundamsBySellerRequest) getName() string {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path	string	true	"Seller ID"
-//	@Param			name	query	string	false	"Gundam name to filter by"
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			name		query	string	false	"Gundam name to filter by"
 //	@Security		accessToken
-//	@Success		200	{array}		db.Gundam
-//	@Failure		403	{object}	gin.H
-//	@Failure		500	{object}	nil
-//	@Router			/sellers/:id/gundams [get]
+//	@Success		200	{array}		db.Gundam	"Successfully retrieved list of gundams"
+//	@Failure		403	{object}	gin.H		"seller can only view their own gundams"
+//	@Failure		500	{object}	nil			"Internal server error"
+//	@Router			/sellers/:sellerID/gundams [get]
 func (server *Server) listGundamsBySeller(ctx *gin.Context) {
-	sellerID := ctx.Param("id")
+	sellerID := ctx.Param("sellerID")
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	if sellerID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "seller can only view their own gundams"})

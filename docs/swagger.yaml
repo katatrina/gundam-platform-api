@@ -857,7 +857,7 @@ paths:
       summary: Verify One-Time Password (OTP) via phone number
       tags:
       - authentication
-  /sellers/:id/gundams:
+  /sellers/:sellerID/gundams:
     get:
       consumes:
       - application/json
@@ -865,7 +865,7 @@ paths:
       parameters:
       - description: Seller ID
         in: path
-        name: id
+        name: sellerID
         required: true
         type: string
       - description: Gundam name to filter by
@@ -876,17 +876,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Successfully retrieved list of gundams
           schema:
             items:
               $ref: '#/definitions/db.Gundam'
             type: array
         "403":
-          description: Forbidden
+          description: seller can only view their own gundams
           schema:
             $ref: '#/definitions/gin.H'
         "500":
-          description: Internal Server Error
+          description: Internal server error
       security:
       - accessToken: []
       summary: List all gundams for a specific seller
@@ -899,7 +899,7 @@ paths:
       parameters:
       - description: User ID
         in: path
-        name: id
+        name: sellerID
         required: true
         type: string
       - description: Gundam name
@@ -991,7 +991,7 @@ paths:
       parameters:
       - description: Seller ID
         in: path
-        name: id
+        name: sellerID
         required: true
         type: string
       produces:

@@ -151,7 +151,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Tags			sellers
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			id						path		string	true	"User ID"
+//	@Param			sellerID				path		string	true	"User ID"
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, second hand)
@@ -169,7 +169,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Failure		400	"error details"
 //	@Failure		403	"cannot create gundam for another user"
 //	@Failure		500	"internal server error"
-//	@Router			/sellers/:id/gundams [post]
+//	@Router			/sellers/:sellerID/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
 	req := new(createGundamRequest)
 	

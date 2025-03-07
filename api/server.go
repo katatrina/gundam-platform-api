@@ -110,8 +110,8 @@ func (server *Server) setupRouter() {
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
-	v1.GET("/sellers/:id", server.getSeller)
-	sellerGroup := v1.Group("/sellers/:id", authMiddleware(server.tokenMaker))
+	v1.GET("/sellers/:sellerID", server.getSeller)
+	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker))
 	{
 		gundamGroup := sellerGroup.Group("gundams")
 		{

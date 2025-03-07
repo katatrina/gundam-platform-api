@@ -397,7 +397,7 @@
                 }
             }
         },
-        "/sellers/:id/gundams": {
+        "/sellers/:sellerID/gundams": {
             "get": {
                 "security": [
                     {
@@ -419,7 +419,7 @@
                     {
                         "type": "string",
                         "description": "Seller ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
@@ -432,7 +432,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successfully retrieved list of gundams",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -441,13 +441,13 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "seller can only view their own gundams",
                         "schema": {
                             "$ref": "#/definitions/gin.H"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             },
@@ -472,7 +472,7 @@
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
@@ -599,7 +599,7 @@
                     {
                         "type": "string",
                         "description": "Seller ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     }

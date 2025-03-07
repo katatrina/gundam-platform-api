@@ -399,7 +399,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/:id/gundams": {
+        "/sellers/:sellerID/gundams": {
             "get": {
                 "security": [
                     {
@@ -421,7 +421,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Seller ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
@@ -434,7 +434,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successfully retrieved list of gundams",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -443,13 +443,13 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "seller can only view their own gundams",
                         "schema": {
                             "$ref": "#/definitions/gin.H"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             },
@@ -474,7 +474,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
@@ -601,7 +601,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Seller ID",
-                        "name": "id",
+                        "name": "sellerID",
                         "in": "path",
                         "required": true
                     }
