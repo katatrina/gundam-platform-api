@@ -1307,7 +1307,7 @@ paths:
       - accessToken: []
       summary: Become a seller
       tags:
-      - sellers
+      - users
   /users/by-phone:
     get:
       description: Get user details using a phone number as a query parameter

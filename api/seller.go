@@ -12,7 +12,7 @@ import (
 
 //	@Summary		Become a seller
 //	@Description	Upgrade the user's role to seller and create the trial subscription
-//	@Tags			sellers
+//	@Tags			users
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken

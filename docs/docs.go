@@ -720,7 +720,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "sellers"
+                    "users"
                 ],
                 "summary": "Become a seller",
                 "responses": {
