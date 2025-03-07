@@ -35,7 +35,7 @@ type GeneratePhoneOTPResponse struct {
 //	@Failure		400		"Bad Request - Invalid input"
 //	@Failure		429		"Too Many Requests - OTP request rate limit exceeded"
 //	@Failure		500		"Internal Server Error"
-//	@Router			/otp/phone/generate [get]
+//	@Router			/otp/phone/generate [post]
 func (server *Server) generatePhoneOTP(c *gin.Context) {
 	var req GeneratePhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

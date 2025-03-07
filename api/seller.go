@@ -87,7 +87,7 @@ func (req *listGundamsBySellerRequest) getName() string {
 //	@Success		200	{array}		db.Gundam
 //	@Failure		403	{object}	gin.H
 //	@Failure		500	{object}	nil
-//	@Router			/users/:id/gundams [get]
+//	@Router			/sellers/:id/gundams [get]
 func (server *Server) listGundamsBySeller(ctx *gin.Context) {
 	sellerID := ctx.Param("id")
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject

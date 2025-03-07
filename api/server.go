@@ -105,18 +105,20 @@ func (server *Server) setupRouter() {
 		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
 		
-		gundamGroup := userGroup.Group("/:id/gundams", authMiddleware(server.tokenMaker))
-		{
-			gundamGroup.POST("", server.createGundam)
-			gundamGroup.GET("", server.listGundamsBySeller)
-		}
-		
 		userGroup.POST("become-seller", authMiddleware(server.tokenMaker), server.becomeSeller)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
 	v1.GET("/sellers/:id", server.getSeller)
+	sellerGroup := v1.Group("/sellers/:id", authMiddleware(server.tokenMaker))
+	{
+		gundamGroup := sellerGroup.Group("gundams")
+		{
+			gundamGroup.POST("", server.createGundam)
+			gundamGroup.GET("", server.listGundamsBySeller)
+		}
+	}
 	
 	gundamGroup := v1.Group("/gundams")
 	{
@@ -133,7 +135,7 @@ func (server *Server) setupRouter() {
 	
 	otpGroup := v1.Group("/otp")
 	{
-		otpGroup.GET("/phone/generate", server.generatePhoneOTP)
+		otpGroup.POST("/phone/generate", server.generatePhoneOTP)
 		otpGroup.POST("/phone/verify", server.verifyPhoneOTP)
 		
 		// otpGroup.GET("/email/generate", server.generateEmailOTP)

@@ -148,7 +148,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 
 //	@Summary		Create a new Gundam model
 //	@Description	Create a new Gundam model with images and accessories
-//	@Tags			gundams
+//	@Tags			sellers
 //	@Accept			multipart/form-data
 //	@Produce		json
 //	@Param			id						path		string	true	"User ID"
@@ -169,7 +169,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Failure		400	"error details"
 //	@Failure		403	"cannot create gundam for another user"
 //	@Failure		500	"internal server error"
-//	@Router			/users/:id/gundams [post]
+//	@Router			/sellers/:id/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
 	req := new(createGundamRequest)
 	
