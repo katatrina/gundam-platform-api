@@ -133,8 +133,11 @@ func (server *Server) setupRouter() {
 	
 	otpGroup := v1.Group("/otp")
 	{
-		otpGroup.POST("/generate", server.generateOTP)
-		otpGroup.POST("/verify", server.verifyOTP)
+		otpGroup.GET("/phone/generate", server.generatePhoneOTP)
+		otpGroup.POST("/phone/verify", server.verifyPhoneOTP)
+		
+		// otpGroup.GET("/email/generate", server.generateEmailOTP)
+		// otpGroup.POST("/email/verify", server.verifyEmailOTP)
 	}
 	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

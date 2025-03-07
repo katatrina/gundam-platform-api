@@ -316,8 +316,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/generate": {
-            "post": {
+        "/otp/phone/generate": {
+            "get": {
                 "description": "Generates and sends an OTP to the specified phone number",
                 "consumes": [
                     "application/json"
@@ -328,7 +328,7 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Generate a One-Time Password (OTP)",
+                "summary": "Generate a One-Time Password (OTP) for phone number",
                 "parameters": [
                     {
                         "description": "OTP Generation Request",
@@ -336,7 +336,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.GenerateOTPRequest"
+                            "$ref": "#/definitions/api.GeneratePhoneOTPRequest"
                         }
                     }
                 ],
@@ -344,7 +344,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OTP generated successfully",
                         "schema": {
-                            "$ref": "#/definitions/api.GenerateOTPResponse"
+                            "$ref": "#/definitions/api.GeneratePhoneOTPResponse"
                         }
                     },
                     "400": {
@@ -359,7 +359,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/verify": {
+        "/otp/phone/verify": {
             "post": {
                 "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
                 "consumes": [
@@ -371,7 +371,7 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Verify One-Time Password (OTP)",
+                "summary": "Verify One-Time Password (OTP) via phone number",
                 "parameters": [
                     {
                         "description": "OTP Verification Request",
@@ -379,7 +379,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.VerifyOTPRequest"
+                            "$ref": "#/definitions/api.VerifyPhoneOTPRequest"
                         }
                     }
                 ],
@@ -729,6 +729,9 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.User"
                         }
+                    },
+                    "409": {
+                        "description": "User is already a seller"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -1112,7 +1115,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api.GenerateOTPRequest": {
+        "api.GeneratePhoneOTPRequest": {
             "type": "object",
             "required": [
                 "phone_number"
@@ -1123,7 +1126,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api.GenerateOTPResponse": {
+        "api.GeneratePhoneOTPResponse": {
             "type": "object",
             "required": [
                 "can_resend_in",
@@ -1146,7 +1149,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api.VerifyOTPRequest": {
+        "api.VerifyPhoneOTPRequest": {
             "type": "object",
             "required": [
                 "otp_code",

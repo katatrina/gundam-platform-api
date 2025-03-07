@@ -1,13 +1,13 @@
 basePath: /v1
 definitions:
-  api.GenerateOTPRequest:
+  api.GeneratePhoneOTPRequest:
     properties:
       phone_number:
         type: string
     required:
     - phone_number
     type: object
-  api.GenerateOTPResponse:
+  api.GeneratePhoneOTPResponse:
     properties:
       can_resend_in:
         type: string
@@ -23,7 +23,7 @@ definitions:
     - otp_code
     - phone_number
     type: object
-  api.VerifyOTPRequest:
+  api.VerifyPhoneOTPRequest:
     properties:
       otp_code:
         type: string
@@ -802,8 +802,8 @@ paths:
       summary: Get Gundam by Slug
       tags:
       - gundams
-  /otp/generate:
-    post:
+  /otp/phone/generate:
+    get:
       consumes:
       - application/json
       description: Generates and sends an OTP to the specified phone number
@@ -813,24 +813,24 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/api.GenerateOTPRequest'
+          $ref: '#/definitions/api.GeneratePhoneOTPRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OTP generated successfully
           schema:
-            $ref: '#/definitions/api.GenerateOTPResponse'
+            $ref: '#/definitions/api.GeneratePhoneOTPResponse'
         "400":
           description: Bad Request - Invalid input
         "429":
           description: Too Many Requests - OTP request rate limit exceeded
         "500":
           description: Internal Server Error
-      summary: Generate a One-Time Password (OTP)
+      summary: Generate a One-Time Password (OTP) for phone number
       tags:
       - authentication
-  /otp/verify:
+  /otp/phone/verify:
     post:
       consumes:
       - application/json
@@ -842,7 +842,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/api.VerifyOTPRequest'
+          $ref: '#/definitions/api.VerifyPhoneOTPRequest'
       produces:
       - application/json
       responses:
@@ -854,7 +854,7 @@ paths:
           description: Unauthorized - Invalid OTP code
         "500":
           description: Internal Server Error - Failed to update user information
-      summary: Verify One-Time Password (OTP)
+      summary: Verify One-Time Password (OTP) via phone number
       tags:
       - authentication
   /sellers/{id}:
@@ -1299,6 +1299,8 @@ paths:
           description: Successfully became seller
           schema:
             $ref: '#/definitions/db.User'
+        "409":
+          description: User is already a seller
         "500":
           description: Internal server error
       security:

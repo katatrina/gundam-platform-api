@@ -12,32 +12,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// GenerateOTPRequest represents the input structure for generating an OTP
-type GenerateOTPRequest struct {
+// GeneratePhoneOTPRequest represents the input structure for generating an OTP
+type GeneratePhoneOTPRequest struct {
 	PhoneNumber string `json:"phone_number" binding:"required"`
 }
 
-// GenerateOTPResponse represents the response structure after OTP generation
-type GenerateOTPResponse struct {
+// GeneratePhoneOTPResponse represents the response structure after OTP generation
+type GeneratePhoneOTPResponse struct {
 	OTPCode     string    `json:"otp_code"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	PhoneNumber string    `json:"phone_number"`
 	CanResendIn time.Time `json:"can_resend_in"`
 }
 
-//	@Summary		Generate a One-Time Password (OTP)
+//	@Summary		Generate a One-Time Password (OTP) for phone number
 //	@Description	Generates and sends an OTP to the specified phone number
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		GenerateOTPRequest	true	"OTP Generation Request"
-//	@Success		200		{object}	GenerateOTPResponse	"OTP generated successfully"
+//	@Param			request	body		GeneratePhoneOTPRequest		true	"OTP Generation Request"
+//	@Success		200		{object}	GeneratePhoneOTPResponse	"OTP generated successfully"
 //	@Failure		400		"Bad Request - Invalid input"
 //	@Failure		429		"Too Many Requests - OTP request rate limit exceeded"
 //	@Failure		500		"Internal Server Error"
-//	@Router			/otp/generate [post]
-func (server *Server) generateOTP(c *gin.Context) {
-	var req GenerateOTPRequest
+//	@Router			/otp/phone/generate [get]
+func (server *Server) generatePhoneOTP(c *gin.Context) {
+	var req GeneratePhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -54,7 +54,7 @@ func (server *Server) generateOTP(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, GenerateOTPResponse{
+	c.JSON(http.StatusOK, GeneratePhoneOTPResponse{
 		OTPCode:     code,
 		PhoneNumber: req.PhoneNumber,
 		ExpiresAt:   time.Now().Add(10 * time.Minute),
@@ -62,25 +62,25 @@ func (server *Server) generateOTP(c *gin.Context) {
 	})
 }
 
-type VerifyOTPRequest struct {
+type VerifyPhoneOTPRequest struct {
 	UserID      string `json:"user_id" binding:"required"`
 	PhoneNumber string `json:"phone_number" binding:"required"`
 	OTPCode     string `json:"otp_code" binding:"required,len=6"`
 }
 
-//	@Summary		Verify One-Time Password (OTP)
+//	@Summary		Verify One-Time Password (OTP) via phone number
 //	@Description	Verifies the OTP sent to a user's phone number and updates the user's phone number if valid
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body	VerifyOTPRequest	true	"OTP Verification Request"
+//	@Param			request	body	VerifyPhoneOTPRequest	true	"OTP Verification Request"
 //	@Success		200		"OTP verified successfully"
 //	@Failure		400		"Bad Request - Invalid input or OTP verification failed"
 //	@Failure		401		"Unauthorized - Invalid OTP code"
 //	@Failure		500		"Internal Server Error - Failed to update user information"
-//	@Router			/otp/verify [post]
-func (server *Server) verifyOTP(c *gin.Context) {
-	req := new(VerifyOTPRequest)
+//	@Router			/otp/phone/verify [post]
+func (server *Server) verifyPhoneOTP(c *gin.Context) {
+	req := new(VerifyPhoneOTPRequest)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("failed to bind JSON")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
@@ -106,6 +106,10 @@ func (server *Server) verifyOTP(c *gin.Context) {
 		PhoneNumber: pgtype.Text{
 			String: req.PhoneNumber,
 			Valid:  true,
+		},
+		PhoneNumberVerified: pgtype.Bool{
+			Bool:  true,
+			Valid: true,
 		},
 	}
 	_, err = server.dbStore.UpdateUser(context.Background(), arg)
