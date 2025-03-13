@@ -19,8 +19,10 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
+	CreateWallet(ctx context.Context, userID string) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
+	GetCheckoutItems(ctx context.Context, itemIds []int64) ([]GetCheckoutItemsRow, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)

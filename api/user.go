@@ -78,7 +78,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 		},
 	}
 	
-	user, err := server.dbStore.CreateUser(context.Background(), arg)
+	user, err := server.dbStore.CreateUserTx(context.Background(), arg)
 	if err != nil {
 		if pgErr := db.ErrorDescription(err); pgErr != nil {
 			switch {
@@ -255,6 +255,12 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	if err != nil {
 		log.Err(err).Msg("failed to create user with google account")
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+	
+	err = server.dbStore.CreateWallet(ctx, user.ID)
+	if err != nil {
+		log.Err(err).Msg("failed to create wallet")
+		return nil, fmt.Errorf("failed to create wallet: %w", err)
 	}
 	
 	return &newUser, nil

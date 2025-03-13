@@ -4,6 +4,28 @@ import (
 	"context"
 )
 
+func (store *SQLStore) CreateUserTx(ctx context.Context, arg CreateUserParams) (User, error) {
+	var result User
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// Create the user
+		user, err := qTx.CreateUser(ctx, arg)
+		if err != nil {
+			return err
+		}
+		
+		// Create user wallet
+		err = qTx.CreateWallet(ctx, user.ID)
+		if err != nil {
+			return err
+		}
+		
+		return nil
+	})
+	
+	return result, err
+}
+
 type CreateUserAddressTxParams struct {
 	UserID          string
 	FullName        string

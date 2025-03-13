@@ -423,12 +423,13 @@ type UserAddress struct {
 }
 
 type Wallet struct {
-	ID        int64     `json:"id"`
-	UserID    string    `json:"user_id"`
-	Balance   int64     `json:"balance"`
-	Currency  string    `json:"currency"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                    int64     `json:"id"`
+	UserID                string    `json:"user_id"`
+	Balance               int64     `json:"balance"`
+	NonWithdrawableAmount int64     `json:"non_withdrawable_amount"`
+	Currency              string    `json:"currency"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 type WalletTransaction struct {

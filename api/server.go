@@ -139,6 +139,8 @@ func (server *Server) setupRouter() {
 		cartGroup.DELETE("/items/:id", server.deleteCartItem)
 	}
 	
+	v1.POST("checkout", authMiddleware(server.tokenMaker), server.checkout)
+	
 	otpGroup := v1.Group("/otp")
 	{
 		otpGroup.POST("/phone/generate", server.generatePhoneOTP)

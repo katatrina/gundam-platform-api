@@ -201,12 +201,13 @@ CREATE TABLE "shipments"
 
 CREATE TABLE "wallets"
 (
-    "id"         bigserial PRIMARY KEY,
-    "user_id"    text UNIQUE NOT NULL,
-    "balance"    bigint      NOT NULL DEFAULT 0,
-    "currency"   text        NOT NULL DEFAULT 'VND',
-    "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "updated_at" timestamptz NOT NULL DEFAULT (now())
+    "id"                      bigserial PRIMARY KEY,
+    "user_id"                 text UNIQUE NOT NULL,
+    "balance"                 bigint      NOT NULL DEFAULT 0,
+    "non_withdrawable_amount" bigint      NOT NULL DEFAULT 0,
+    "currency"                text        NOT NULL DEFAULT 'VND',
+    "created_at"              timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"              timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "wallet_transactions"
