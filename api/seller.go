@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -84,9 +85,9 @@ func (req *listGundamsBySellerRequest) getName() string {
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Param			name		query	string	false	"Gundam name to filter by"
 //	@Security		accessToken
-//	@Success		200	{array}		db.Gundam	"Successfully retrieved list of gundams"
-//	@Failure		403	{object}	gin.H		"seller can only view their own gundams"
-//	@Failure		500	{object}	nil			"Internal server error"
+//	@Success		200	"Successfully retrieved list of gundams"
+//	@Failure		403	"seller can only view their own gundams"
+//	@Failure		500	"Internal server error"
 //	@Router			/sellers/:sellerID/gundams [get]
 func (server *Server) listGundamsBySeller(ctx *gin.Context) {
 	sellerID := ctx.Param("sellerID")
@@ -118,4 +119,94 @@ func (server *Server) listGundamsBySeller(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, gundams)
+}
+
+//	@Summary		Get current active subscription
+//	@Description	Get the current active subscription for the specified seller
+//	@Tags			sellers
+//	@Produce		json
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Security		accessToken
+//	@Success		200	"Successfully retrieved current active subscription"
+//	@Failure		500	"Internal server error"
+//	@Router			/sellers/:sellerID/subscriptions/active [get]
+func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
+	sellerID := ctx.Param("sellerID")
+	
+	subscription, err := server.dbStore.GetCurrentActiveSubscriptionDetailsForSeller(ctx, sellerID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get current active subscription")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, subscription)
+}
+
+//	@Summary		Sell a gundam
+//	@Description	Start selling a gundam for the specified seller
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Param			gundamID	path	int64	true	"Gundam ID"
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Security		accessToken
+//	@Success		200	"Successfully sold gundam"
+//	@Failure		400	"Invalid gundam ID"
+//	@Failure		403	"Cannot sell gundam for another user"
+//	@Failure		409	"Subscription limit exceeded"
+//	@Failure		409	"Gundam not available for sale"
+//	@Failure		500	"Internal server error"
+//	@Router			/sellers/:sellerID/gundams/:gundamID/sell [patch]
+func (server *Server) sellGundam(ctx *gin.Context) {
+	gundamID, err := strconv.ParseInt(ctx.Param("gundamID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
+		return
+	}
+	
+	userID := ctx.Param("sellerID")
+	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	if userID != ownerID {
+		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot sell gundam for another user"})
+		return
+	}
+	
+	userSubscription, err := server.dbStore.GetCurrentActiveSubscriptionDetailsForSeller(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get current active subscription")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	if !userSubscription.IsUnlimited && userSubscription.ListingsUsed >= userSubscription.MaxListings.Int64 {
+		ctx.JSON(http.StatusConflict, errorResponse(db.ErrSubscriptionLimitExceeded))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(ctx, gundamID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get gundam")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	if gundam.Status != db.GundamStatusAvailable {
+		ctx.JSON(http.StatusConflict, errorResponse(db.ErrGundamNotAvailableForSale))
+		return
+	}
+	
+	arg := db.SellGundamTxParams{
+		GundamID:             gundam.ID,
+		SellerID:             userID,
+		ActiveSubscriptionID: userSubscription.ID,
+		ListingsUsed:         userSubscription.ListingsUsed + 1,
+	}
+	err = server.dbStore.SellGundamTx(ctx, arg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to start selling gundam")
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "gundam being sell successfully"})
 }

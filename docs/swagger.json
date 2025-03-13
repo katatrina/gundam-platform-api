@@ -242,7 +242,7 @@
         },
         "/gundams": {
             "get": {
-                "description": "Retrieves a list of Gundams, optionally filtered by grade",
+                "description": "Retrieves a list of selling Gundams, optionally filtered by grade",
                 "produces": [
                     "application/json"
                 ],
@@ -432,19 +432,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved list of gundams",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/db.Gundam"
-                            }
-                        }
+                        "description": "Successfully retrieved list of gundams"
                     },
                     "403": {
-                        "description": "seller can only view their own gundams",
-                        "schema": {
-                            "$ref": "#/definitions/gin.H"
-                        }
+                        "description": "seller can only view their own gundams"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -581,6 +572,93 @@
                     },
                     "500": {
                         "description": "internal server error"
+                    }
+                }
+            }
+        },
+        "/sellers/:sellerID/gundams/:gundamID/sell": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Start selling a gundam for the specified seller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Sell a gundam",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully sold gundam"
+                    },
+                    "400": {
+                        "description": "Invalid gundam ID"
+                    },
+                    "403": {
+                        "description": "Cannot sell gundam for another user"
+                    },
+                    "409": {
+                        "description": "Gundam not available for sale"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/sellers/:sellerID/subscriptions/active": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get the current active subscription for the specified seller",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get current active subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved current active subscription"
+                    },
+                    "500": {
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -1500,77 +1578,6 @@
                 }
             }
         },
-        "db.Gundam": {
-            "type": "object",
-            "required": [
-                "condition",
-                "condition_description",
-                "created_at",
-                "deleted_at",
-                "description",
-                "grade_id",
-                "id",
-                "manufacturer",
-                "name",
-                "owner_id",
-                "price",
-                "scale",
-                "slug",
-                "status",
-                "updated_at",
-                "weight"
-            ],
-            "properties": {
-                "condition": {
-                    "$ref": "#/definitions/db.GundamCondition"
-                },
-                "condition_description": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "grade_id": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "manufacturer": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "scale": {
-                    "$ref": "#/definitions/db.GundamScale"
-                },
-                "slug": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/db.GundamStatus"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "weight": {
-                    "type": "integer"
-                }
-            }
-        },
         "db.GundamAccessory": {
             "type": "object",
             "required": [
@@ -1603,12 +1610,12 @@
             "enum": [
                 "new",
                 "open box",
-                "second hand"
+                "used"
             ],
             "x-enum-varnames": [
                 "GundamConditionNew",
                 "GundamConditionOpenbox",
-                "GundamConditionSecondhand"
+                "GundamConditionUsed"
             ]
         },
         "db.GundamGrade": {
@@ -1658,13 +1665,15 @@
             "enum": [
                 "available",
                 "selling",
-                "auction",
+                "pending auction approval",
+                "auctioning",
                 "exchange"
             ],
             "x-enum-varnames": [
                 "GundamStatusAvailable",
                 "GundamStatusSelling",
-                "GundamStatusAuction",
+                "GundamStatusPendingauctionapproval",
+                "GundamStatusAuctioning",
                 "GundamStatusExchange"
             ]
         },
@@ -1927,41 +1936,10 @@
                 "UserRoleAdmin"
             ]
         },
-        "gin.H": {
-            "type": "object",
-            "additionalProperties": {}
-        },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "enum": [
-                1,
-                0,
-                -1
-            ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
-        },
         "pgtype.Text": {
             "type": "object",
             "properties": {
                 "string": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "pgtype.Timestamptz": {
-            "type": "object",
-            "properties": {
-                "infinity_modifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
                     "type": "string"
                 },
                 "valid": {

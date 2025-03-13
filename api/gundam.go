@@ -46,7 +46,7 @@ func (req *listGundamsRequest) getGradeSlug() string {
 }
 
 //	@Summary		List Gundams
-//	@Description	Retrieves a list of Gundams, optionally filtered by grade
+//	@Description	Retrieves a list of selling Gundams, optionally filtered by grade
 //	@Tags			gundams
 //	@Produce		json
 //	@Param			grade	query		string				false	"Filter by Gundam grade slug"	example(master-grade)
@@ -179,7 +179,7 @@ func (server *Server) createGundam(ctx *gin.Context) {
 		return
 	}
 	
-	userID := ctx.Param("id")
+	userID := ctx.Param("sellerID")
 	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	if userID != ownerID {
 		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot create gundam for another user"})

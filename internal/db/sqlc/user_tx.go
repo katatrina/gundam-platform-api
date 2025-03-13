@@ -142,7 +142,7 @@ func (store *SQLStore) BecomeSellerTx(ctx context.Context, userID string) (User,
 		}
 		seller = userUpdated
 		
-		err = qTx.CreateTrialSubscription(ctx, userUpdated.ID)
+		err = qTx.CreateTrialSubscriptionForSeller(ctx, userUpdated.ID)
 		if err != nil {
 			return err
 		}

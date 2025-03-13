@@ -15,9 +15,9 @@ import (
 type GundamCondition string
 
 const (
-	GundamConditionNew        GundamCondition = "new"
-	GundamConditionOpenbox    GundamCondition = "open box"
-	GundamConditionSecondhand GundamCondition = "second hand"
+	GundamConditionNew     GundamCondition = "new"
+	GundamConditionOpenbox GundamCondition = "open box"
+	GundamConditionUsed    GundamCondition = "used"
 )
 
 func (e *GundamCondition) Scan(src interface{}) error {
@@ -102,10 +102,11 @@ func (ns NullGundamScale) Value() (driver.Value, error) {
 type GundamStatus string
 
 const (
-	GundamStatusAvailable GundamStatus = "available"
-	GundamStatusSelling   GundamStatus = "selling"
-	GundamStatusAuction   GundamStatus = "auction"
-	GundamStatusExchange  GundamStatus = "exchange"
+	GundamStatusAvailable              GundamStatus = "available"
+	GundamStatusSelling                GundamStatus = "selling"
+	GundamStatusPendingauctionapproval GundamStatus = "pending auction approval"
+	GundamStatusAuctioning             GundamStatus = "auctioning"
+	GundamStatusExchange               GundamStatus = "exchange"
 )
 
 func (e *GundamStatus) Scan(src interface{}) error {
@@ -354,6 +355,19 @@ type OrderItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SellerSubscription struct {
+	ID               int64              `json:"id"`
+	SellerID         string             `json:"seller_id"`
+	PlanID           int64              `json:"plan_id"`
+	StartDate        time.Time          `json:"start_date"`
+	EndDate          pgtype.Timestamptz `json:"end_date"`
+	ListingsUsed     int64              `json:"listings_used"`
+	OpenAuctionsUsed int64              `json:"open_auctions_used"`
+	IsActive         bool               `json:"is_active"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+}
+
 type Shipment struct {
 	ID              int64       `json:"id"`
 	OrderID         pgtype.Int8 `json:"order_id"`
@@ -406,19 +420,6 @@ type UserAddress struct {
 	IsPickupAddress bool      `json:"is_pickup_address"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
-}
-
-type UserSubscription struct {
-	ID               int64              `json:"id"`
-	UserID           string             `json:"user_id"`
-	PlanID           int64              `json:"plan_id"`
-	StartDate        time.Time          `json:"start_date"`
-	EndDate          pgtype.Timestamptz `json:"end_date"`
-	ListingsUsed     int64              `json:"listings_used"`
-	OpenAuctionsUsed int64              `json:"open_auctions_used"`
-	IsActive         bool               `json:"is_active"`
-	CreatedAt        time.Time          `json:"created_at"`
-	UpdatedAt        time.Time          `json:"updated_at"`
 }
 
 type Wallet struct {

@@ -266,58 +266,6 @@ definitions:
     - updated_at
     - weight
     type: object
-  db.Gundam:
-    properties:
-      condition:
-        $ref: '#/definitions/db.GundamCondition'
-      condition_description:
-        $ref: '#/definitions/pgtype.Text'
-      created_at:
-        type: string
-      deleted_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      description:
-        type: string
-      grade_id:
-        type: integer
-      id:
-        type: integer
-      manufacturer:
-        type: string
-      name:
-        type: string
-      owner_id:
-        type: string
-      price:
-        type: integer
-      scale:
-        $ref: '#/definitions/db.GundamScale'
-      slug:
-        type: string
-      status:
-        $ref: '#/definitions/db.GundamStatus'
-      updated_at:
-        type: string
-      weight:
-        type: integer
-    required:
-    - condition
-    - condition_description
-    - created_at
-    - deleted_at
-    - description
-    - grade_id
-    - id
-    - manufacturer
-    - name
-    - owner_id
-    - price
-    - scale
-    - slug
-    - status
-    - updated_at
-    - weight
-    type: object
   db.GundamAccessory:
     properties:
       created_at:
@@ -341,12 +289,12 @@ definitions:
     enum:
     - new
     - open box
-    - second hand
+    - used
     type: string
     x-enum-varnames:
     - GundamConditionNew
     - GundamConditionOpenbox
-    - GundamConditionSecondhand
+    - GundamConditionUsed
   db.GundamGrade:
     properties:
       created_at:
@@ -382,13 +330,15 @@ definitions:
     enum:
     - available
     - selling
-    - auction
+    - pending auction approval
+    - auctioning
     - exchange
     type: string
     x-enum-varnames:
     - GundamStatusAvailable
     - GundamStatusSelling
-    - GundamStatusAuction
+    - GundamStatusPendingauctionapproval
+    - GundamStatusAuctioning
     - GundamStatusExchange
   db.ListCartItemsWithDetailsRow:
     properties:
@@ -571,31 +521,9 @@ definitions:
     - UserRoleSeller
     - UserRoleModerator
     - UserRoleAdmin
-  gin.H:
-    additionalProperties: {}
-    type: object
-  pgtype.InfinityModifier:
-    enum:
-    - 1
-    - 0
-    - -1
-    type: integer
-    x-enum-varnames:
-    - Infinity
-    - Finite
-    - NegativeInfinity
   pgtype.Text:
     properties:
       string:
-        type: string
-      valid:
-        type: boolean
-    type: object
-  pgtype.Timestamptz:
-    properties:
-      infinity_modifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
         type: string
       valid:
         type: boolean
@@ -755,7 +683,7 @@ paths:
       - gundams
   /gundams:
     get:
-      description: Retrieves a list of Gundams, optionally filtered by grade
+      description: Retrieves a list of selling Gundams, optionally filtered by grade
       parameters:
       - description: Filter by Gundam grade slug
         example: master-grade
@@ -877,14 +805,8 @@ paths:
       responses:
         "200":
           description: Successfully retrieved list of gundams
-          schema:
-            items:
-              $ref: '#/definitions/db.Gundam'
-            type: array
         "403":
           description: seller can only view their own gundams
-          schema:
-            $ref: '#/definitions/gin.H'
         "500":
           description: Internal server error
       security:
@@ -983,6 +905,61 @@ paths:
       security:
       - accessToken: []
       summary: Create a new Gundam model
+      tags:
+      - sellers
+  /sellers/:sellerID/gundams/:gundamID/sell:
+    patch:
+      consumes:
+      - application/json
+      description: Start selling a gundam for the specified seller
+      parameters:
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: integer
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully sold gundam
+        "400":
+          description: Invalid gundam ID
+        "403":
+          description: Cannot sell gundam for another user
+        "409":
+          description: Gundam not available for sale
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Sell a gundam
+      tags:
+      - sellers
+  /sellers/:sellerID/subscriptions/active:
+    get:
+      description: Get the current active subscription for the specified seller
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved current active subscription
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Get current active subscription
       tags:
       - sellers
   /sellers/{id}:

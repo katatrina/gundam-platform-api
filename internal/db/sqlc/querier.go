@@ -15,13 +15,15 @@ type Querier interface {
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
 	CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error)
-	CreateTrialSubscription(ctx context.Context, userID string) error
+	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
+	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
+	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
@@ -39,6 +41,8 @@ type Querier interface {
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
+	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
+	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 }

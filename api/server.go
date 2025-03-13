@@ -117,6 +117,12 @@ func (server *Server) setupRouter() {
 		{
 			gundamGroup.POST("", server.createGundam)
 			gundamGroup.GET("", server.listGundamsBySeller)
+			gundamGroup.PATCH(":gundamID/sell", server.sellGundam)
+		}
+		
+		subscriptionGroup := sellerGroup.Group("subscriptions")
+		{
+			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
 		}
 	}
 	
@@ -145,15 +151,6 @@ func (server *Server) setupRouter() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
-}
-
-type CreateParams struct {
-	Person []Person `form:"person" binding:"dive"`
-}
-
-type Person struct {
-	Firstname string `json:"firstname" binding:"required"`
-	Lastname  string `json:"lastname"`
 }
 
 // Start runs the HTTP server on a specific address.

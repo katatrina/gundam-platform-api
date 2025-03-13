@@ -8,7 +8,7 @@ CREATE TYPE "user_role" AS ENUM (
 CREATE TYPE "gundam_condition" AS ENUM (
   'new',
   'open box',
-  'second hand'
+  'used'
 );
 
 CREATE TYPE "gundam_scale" AS ENUM (
@@ -21,7 +21,8 @@ CREATE TYPE "gundam_scale" AS ENUM (
 CREATE TYPE "gundam_status" AS ENUM (
   'available',
   'selling',
-  'auction',
+  'pending auction approval',
+  'auctioning',
   'exchange'
 );
 
@@ -148,10 +149,10 @@ CREATE TABLE "subscription_plans"
     "created_at"        timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "user_subscriptions"
+CREATE TABLE "seller_subscriptions"
 (
     "id"                 bigserial PRIMARY KEY,
-    "user_id"            text        NOT NULL,
+    "seller_id"          text        NOT NULL,
     "plan_id"            bigint      NOT NULL,
     "start_date"         timestamptz NOT NULL DEFAULT (now()),
     "end_date"           timestamptz,
@@ -226,7 +227,7 @@ CREATE INDEX ON "user_addresses" ("user_id", "is_pickup_address");
 
 CREATE UNIQUE INDEX ON "cart_items" ("cart_id", "gundam_id");
 
-CREATE INDEX "idx_user_active_subscription" ON "user_subscriptions" ("user_id", "is_active");
+CREATE INDEX "idx_seller_active_subscription" ON "seller_subscriptions" ("seller_id", "is_active");
 
 CREATE INDEX ON "wallets" ("user_id");
 
@@ -256,10 +257,10 @@ ALTER TABLE "cart_items"
 ALTER TABLE "cart_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
 
-ALTER TABLE "user_subscriptions"
-    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+ALTER TABLE "seller_subscriptions"
+    ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id");
 
-ALTER TABLE "user_subscriptions"
+ALTER TABLE "seller_subscriptions"
     ADD FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("id");
 
 ALTER TABLE "orders"

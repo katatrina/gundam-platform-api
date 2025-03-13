@@ -153,6 +153,36 @@ func (q *Queries) GetGundamAccessories(ctx context.Context, gundamID int64) ([]G
 	return items, nil
 }
 
+const getGundamByID = `-- name: GetGundamByID :one
+SELECT id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+FROM gundams
+WHERE id = $1
+`
+
+func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
+	row := q.db.QueryRow(ctx, getGundamByID, id)
+	var i Gundam
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Name,
+		&i.Slug,
+		&i.GradeID,
+		&i.Condition,
+		&i.ConditionDescription,
+		&i.Manufacturer,
+		&i.Weight,
+		&i.Scale,
+		&i.Description,
+		&i.Price,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getGundamBySlug = `-- name: GetGundamBySlug :one
 SELECT g.id,
        g.owner_id,
@@ -272,6 +302,7 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE gg.slug = COALESCE($1::text, gg.slug)
+  AND g.status = 'selling'
 ORDER BY g.created_at DESC
 `
 
@@ -344,5 +375,21 @@ type StoreGundamImageURLParams struct {
 
 func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error {
 	_, err := q.db.Exec(ctx, storeGundamImageURL, arg.GundamID, arg.Url, arg.IsPrimary)
+	return err
+}
+
+const updateGundam = `-- name: UpdateGundam :exec
+UPDATE gundams
+SET status = coalesce($1, status)
+WHERE id = $2
+`
+
+type UpdateGundamParams struct {
+	Status NullGundamStatus `json:"status"`
+	ID     int64            `json:"id"`
+}
+
+func (q *Queries) UpdateGundam(ctx context.Context, arg UpdateGundamParams) error {
+	_, err := q.db.Exec(ctx, updateGundam, arg.Status, arg.ID)
 	return err
 }

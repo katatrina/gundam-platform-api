@@ -50,7 +50,13 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE gg.slug = COALESCE(sqlc.narg('grade_slug')::text, gg.slug)
+  AND g.status = 'selling'
 ORDER BY g.created_at DESC;
+
+-- name: GetGundamByID :one
+SELECT *
+FROM gundams
+WHERE id = $1;
 
 -- name: GetGundamBySlug :one
 SELECT g.id,
@@ -86,3 +92,8 @@ VALUES ($1, $2, $3);
 SELECT *
 FROM gundam_accessories
 WHERE gundam_id = $1;
+
+-- name: UpdateGundam :exec
+UPDATE gundams
+SET status = coalesce(sqlc.narg('status'), status)
+WHERE id = sqlc.arg('id');
