@@ -154,8 +154,7 @@ func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
 //	@Success		200	"Successfully sold gundam"
 //	@Failure		400	"Invalid gundam ID"
 //	@Failure		403	"Cannot sell gundam for another user"
-//	@Failure		409	"Subscription limit exceeded"
-//	@Failure		409	"Gundam not available for sale"
+//	@Failure		409	"Subscription limit exceeded<br/>Gundam not available for sale"
 //	@Failure		500	"Internal server error"
 //	@Router			/sellers/:sellerID/gundams/:gundamID/sell [patch]
 func (server *Server) sellGundam(ctx *gin.Context) {

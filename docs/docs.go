@@ -623,7 +623,7 @@ const docTemplate = `{
                         "description": "Cannot sell gundam for another user"
                     },
                     "409": {
-                        "description": "Gundam not available for sale"
+                        "description": "Subscription limit exceeded\u003cbr/\u003eGundam not available for sale"
                     },
                     "500": {
                         "description": "Internal server error"
