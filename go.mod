@@ -14,7 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/katatrina/simplebank v0.0.0-20250102102957-9f70f530aafa
 	github.com/lithammer/shortuuid/v4 v4.2.0
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/viper v1.19.0
 	github.com/swaggo/files v1.0.1
