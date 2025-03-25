@@ -22,8 +22,8 @@ var (
 	ErrRecordNotFound            = pgx.ErrNoRows
 	ErrPrimaryAddressDeletion    = errors.New("primary address cannot be deleted")
 	ErrPickupAddressDeletion     = errors.New("pickup address cannot be deleted")
-	ErrGundamNotAvailableForSale = errors.New("gundam is not available for sale")
 	ErrSubscriptionLimitExceeded = errors.New("subscription limit exceeded")
+	ErrSubscriptionExpired       = errors.New("subscription has expired")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name

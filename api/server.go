@@ -7,7 +7,8 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
-	"github.com/katatrina/gundam-BE/internal/otp"
+	"github.com/katatrina/gundam-BE/internal/mailer"
+	"github.com/katatrina/gundam-BE/internal/phone_number"
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -26,11 +27,12 @@ type Server struct {
 	config                 util.Config
 	googleIDTokenValidator *idtoken.Validator
 	redisDb                *redis.Client
-	otpService             *otp.OTPService
+	phoneNumberService     *phone_number.PhoneService
+	mailer                 *mailer.GmailSender
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer *mailer.GmailSender) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -49,11 +51,11 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Serv
 	log.Info().Msg("Cloudinary store created successfully ✅")
 	
 	// Create a new OTP service
-	otpService, err := otp.NewOTPService(config, redisDb)
+	phoneNumberService, err := phone_number.NewPhoneService(config, redisDb)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OTP service: %w", err)
+		return nil, fmt.Errorf("failed to create phone service: %w", err)
 	}
-	log.Info().Msg("OTP service created successfully ✅")
+	log.Info().Msg("Phone service created successfully ✅")
 	
 	server := &Server{
 		dbStore:                store,
@@ -61,8 +63,9 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config) (*Serv
 		config:                 config,
 		googleIDTokenValidator: googleIDTokenValidator,
 		fileStore:              fileStore,
-		otpService:             otpService,
+		phoneNumberService:     phoneNumberService,
 		redisDb:                redisDb,
+		mailer:                 mailer,
 	}
 	
 	server.setupRouter()
@@ -106,12 +109,14 @@ func (server *Server) setupRouter() {
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
 		
 		userGroup.POST("become-seller", authMiddleware(server.tokenMaker), server.becomeSeller)
+		// userGroup.GET(":id/wallet", authMiddleware(server.tokenMaker), server.getUserWallet)
+		// userGroup.PUT(":id/wallet", authMiddleware(server.tokenMaker), server.updateUserWallet)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
 	v1.GET("/sellers/:sellerID", server.getSeller)
-	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker))
+	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerOrAdminRole)
 	{
 		gundamGroup := sellerGroup.Group("gundams")
 		{
@@ -146,8 +151,8 @@ func (server *Server) setupRouter() {
 		otpGroup.POST("/phone/generate", server.generatePhoneOTP)
 		otpGroup.POST("/phone/verify", server.verifyPhoneOTP)
 		
-		// otpGroup.GET("/email/generate", server.generateEmailOTP)
-		// otpGroup.POST("/email/verify", server.verifyEmailOTP)
+		otpGroup.GET("/email/generate", server.generateEmailOTP)
+		otpGroup.POST("/email/verify", server.verifyEmailOTP)
 	}
 	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

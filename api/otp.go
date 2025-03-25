@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/rs/zerolog/log"
 )
 
@@ -25,8 +26,8 @@ type GeneratePhoneOTPResponse struct {
 	CanResendIn time.Time `json:"can_resend_in"`
 }
 
-//	@Summary		Generate a One-Time Password (OTP) for phone number
-//	@Description	Generates and sends an OTP to the specified phone number
+//	@Summary		Generate a One-Time Password (OTP) for phone_number number
+//	@Description	Generates and sends an OTP to the specified phone_number number
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
@@ -35,7 +36,7 @@ type GeneratePhoneOTPResponse struct {
 //	@Failure		400		"Bad Request - Invalid input"
 //	@Failure		429		"Too Many Requests - OTP request rate limit exceeded"
 //	@Failure		500		"Internal Server Error"
-//	@Router			/otp/phone/generate [post]
+//	@Router			/otp/phone_number/generate [post]
 func (server *Server) generatePhoneOTP(c *gin.Context) {
 	var req GeneratePhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,7 +44,7 @@ func (server *Server) generatePhoneOTP(c *gin.Context) {
 		return
 	}
 	
-	code, canSendIn, err := server.otpService.GenerateAndSendOTP(c, req.PhoneNumber)
+	code, err := server.phoneNumberService.SendOTP(c, req.PhoneNumber)
 	if err != nil {
 		if strings.Contains(err.Error(), "wait") {
 			c.JSON(http.StatusTooManyRequests, errorResponse(err))
@@ -58,7 +59,6 @@ func (server *Server) generatePhoneOTP(c *gin.Context) {
 		OTPCode:     code,
 		PhoneNumber: req.PhoneNumber,
 		ExpiresAt:   time.Now().Add(10 * time.Minute),
-		CanResendIn: canSendIn,
 	})
 }
 
@@ -68,8 +68,8 @@ type VerifyPhoneOTPRequest struct {
 	OTPCode     string `json:"otp_code" binding:"required,len=6"`
 }
 
-//	@Summary		Verify One-Time Password (OTP) via phone number
-//	@Description	Verifies the OTP sent to a user's phone number and updates the user's phone number if valid
+//	@Summary		Verify One-Time Password (OTP) via phone_number number
+//	@Description	Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
@@ -78,7 +78,7 @@ type VerifyPhoneOTPRequest struct {
 //	@Failure		400		"Bad Request - Invalid input or OTP verification failed"
 //	@Failure		401		"Unauthorized - Invalid OTP code"
 //	@Failure		500		"Internal Server Error - Failed to update user information"
-//	@Router			/otp/phone/verify [post]
+//	@Router			/otp/phone_number/verify [post]
 func (server *Server) verifyPhoneOTP(c *gin.Context) {
 	req := new(VerifyPhoneOTPRequest)
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -87,7 +87,7 @@ func (server *Server) verifyPhoneOTP(c *gin.Context) {
 		return
 	}
 	
-	valid, err := server.otpService.VerifyOTP(c, req.PhoneNumber, req.OTPCode)
+	valid, err := server.phoneNumberService.VerifyOTP(c, req.PhoneNumber, req.OTPCode)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to verify OTP")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
@@ -100,7 +100,7 @@ func (server *Server) verifyPhoneOTP(c *gin.Context) {
 		return
 	}
 	
-	// Update user's phone number
+	// Update user's phone_number number
 	arg := db.UpdateUserParams{
 		UserID: req.UserID,
 		PhoneNumber: pgtype.Text{
@@ -114,8 +114,85 @@ func (server *Server) verifyPhoneOTP(c *gin.Context) {
 	}
 	_, err = server.dbStore.UpdateUser(context.Background(), arg)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to update user's phone number")
+		log.Error().Err(err).Msg("failed to update user's phone_number number")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully"})
+}
+
+type GenerateEmailOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type GenerateEmailOTPResponse struct {
+	OTPCode     string    `json:"otp_code"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	Email       string    `json:"email"`
+	CanResendIn time.Time `json:"can_resend_in"`
+}
+
+func (server *Server) generateEmailOTP(c *gin.Context) {
+	var req GenerateEmailOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	mailHeader := mailer.EmailHeader{
+		Subject: "Your OTP Code",
+		To:      []string{req.Email},
+	}
+	code, _, expiresAt, err := server.mailer.SendOTP(mailHeader)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send OTP email")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, GenerateEmailOTPResponse{
+		OTPCode:   code,
+		Email:     req.Email,
+		ExpiresAt: expiresAt,
+	})
+}
+
+type VerifyEmailOTPRequest struct {
+	UserID  string `json:"user_id" binding:"required"`
+	Email   string `json:"email" binding:"required,email"`
+	OTPCode string `json:"otp_code" binding:"required,len=6"`
+}
+
+// 	@Summary		Verify One-Time Password (OTP) via email
+// 	@Description	Verifies the OTP sent to a user's email address and updates the user's email if valid
+// 	@Tags			authentication
+// 	@Accept			json
+// 	@Produce		json
+// 	@Param			request	body	VerifyEmailOTPRequest	true	"OTP Verification Request"
+// 	@Success		200		"OTP verified successfully"
+// 	@Failure		400		"Bad Request - Invalid input or OTP verification failed"
+// 	@Failure		401		"Unauthorized - Invalid OTP code"
+// 	@Failure		500		"Internal Server Error - Failed to update user information"
+// 	@Router			/otp/email/verify [post]
+func (server *Server) verifyEmailOTP(c *gin.Context) {
+	req := new(VerifyEmailOTPRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Error().Err(err).Msg("failed to bind JSON")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	valid, err := server.mailer.VerifyOTP(c.Request.Context(), req.Email, req.OTPCode)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to verify OTP")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	if !valid {
+		log.Error().Msg("invalid OTP code")
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid OTP code"})
 		return
 	}
 	

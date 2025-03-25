@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
@@ -59,11 +60,17 @@ func main() {
 		DB:       0,  // use default DB
 	})
 	
-	runHTTPServer(config, store, redisDb)
+	// fmt.Println(config.GmailSMTPUsername, config.GmailSMTPPassword)
+	mailService, err := mailer.NewGmailSender(config.GmailSMTPUsername, config.GmailSMTPPassword, config, redisDb)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create mailer service 😣")
+	}
+	
+	runHTTPServer(config, store, redisDb, mailService)
 }
 
-func runHTTPServer(config util.Config, store db.Store, redisDb *redis.Client) {
-	server, err := api.NewServer(store, redisDb, config)
+func runHTTPServer(config util.Config, store db.Store, redisDb *redis.Client, mailer *mailer.GmailSender) {
+	server, err := api.NewServer(store, redisDb, config, mailer)
 	
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")

@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -144,19 +145,19 @@ func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
 }
 
 //	@Summary		Sell a gundam
-//	@Description	Start selling a gundam for the specified seller
+//	@Description	Start selling a gundam for the specified seller. This endpoint checks the seller's active subscription and the gundam's status before proceeding.
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
 //	@Param			gundamID	path	int64	true	"Gundam ID"
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
-//	@Success		200	"Successfully sold gundam"
-//	@Failure		400	"Invalid gundam ID"
-//	@Failure		403	"Cannot sell gundam for another user"
-//	@Failure		409	"Subscription limit exceeded<br/>Gundam not available for sale"
-//	@Failure		500	"Internal server error"
-//	@Router			/sellers/:sellerID/gundams/:gundamID/sell [patch]
+//	@Success		200	{object}	map[string]interface{}	"Successfully sold gundam with details"
+//	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
+//	@Failure		403	{object}	map[string]string		"Cannot sell gundam for another user<br/>you do not own this gundam"
+//	@Failure		409	{object}	map[string]string		"Subscription limit exceeded<br/>Subscription expired<br/>Gundam is not available for sale"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/sellers/{sellerID}/gundams/{gundamID}/sell [patch]
 func (server *Server) sellGundam(ctx *gin.Context) {
 	gundamID, err := strconv.ParseInt(ctx.Param("gundamID"), 10, 64)
 	if err != nil {
@@ -174,11 +175,22 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	userSubscription, err := server.dbStore.GetCurrentActiveSubscriptionDetailsForSeller(ctx, userID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get current active subscription")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve subscription details"})
 		return
 	}
 	
-	if !userSubscription.IsUnlimited && userSubscription.ListingsUsed >= userSubscription.MaxListings.Int64 {
+	// Kiểm tra nếu gói không phải Gói Dùng Thử và đã hết hạn
+	if userSubscription.EndDate.Valid &&
+		userSubscription.EndDate.Time.Before(time.Now()) &&
+		userSubscription.PlanName != db.TrialSellerSubscriptionName {
+		ctx.JSON(http.StatusConflict, gin.H{"error": db.ErrSubscriptionExpired})
+		return
+	}
+	
+	// Kiểm tra nếu gói không phải Không Giới Hạn và đã vượt quá số lượt bán
+	if !userSubscription.IsUnlimited &&
+		userSubscription.MaxListings.Valid &&
+		userSubscription.ListingsUsed >= userSubscription.MaxListings.Int64 {
 		ctx.JSON(http.StatusConflict, errorResponse(db.ErrSubscriptionLimitExceeded))
 		return
 	}
@@ -186,11 +198,17 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	gundam, err := server.dbStore.GetGundamByID(ctx, gundamID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get gundam")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve gundam details"})
+		return
+	}
+	
+	// Kiểm tra quyền sở hữu và trạng thái Gundam
+	if gundam.OwnerID != userID {
+		ctx.JSON(http.StatusForbidden, gin.H{"message": "you do not own this gundam"})
 		return
 	}
 	if gundam.Status != db.GundamStatusAvailable {
-		ctx.JSON(http.StatusConflict, errorResponse(db.ErrGundamNotAvailableForSale))
+		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not available for sale"})
 		return
 	}
 	
@@ -203,9 +221,14 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	err = server.dbStore.SellGundamTx(ctx, arg)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start selling gundam")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start selling process"})
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, gin.H{"message": "gundam being sell successfully"})
+	// Phản hồi thành công với thông tin chi tiết sản phẩm
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":   "gundam is now listed for sale",
+		"gundam_id": gundam.ID,
+		"status":    db.GundamStatusSelling,
+	})
 }

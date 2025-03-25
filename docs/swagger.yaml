@@ -734,7 +734,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Generates and sends an OTP to the specified phone number
+      description: Generates and sends an OTP to the specified phone_number number
       parameters:
       - description: OTP Generation Request
         in: body
@@ -755,15 +755,15 @@ paths:
           description: Too Many Requests - OTP request rate limit exceeded
         "500":
           description: Internal Server Error
-      summary: Generate a One-Time Password (OTP) for phone number
+      summary: Generate a One-Time Password (OTP) for phone_number number
       tags:
       - authentication
   /otp/phone/verify:
     post:
       consumes:
       - application/json
-      description: Verifies the OTP sent to a user's phone number and updates the
-        user's phone number if valid
+      description: Verifies the OTP sent to a user's phone_number number and updates the
+        user's phone_number number if valid
       parameters:
       - description: OTP Verification Request
         in: body
@@ -782,7 +782,7 @@ paths:
           description: Unauthorized - Invalid OTP code
         "500":
           description: Internal Server Error - Failed to update user information
-      summary: Verify One-Time Password (OTP) via phone number
+      summary: Verify One-Time Password (OTP) via phone_number number
       tags:
       - authentication
   /sellers/:sellerID/gundams:
@@ -907,40 +907,6 @@ paths:
       summary: Create a new Gundam model
       tags:
       - sellers
-  /sellers/:sellerID/gundams/:gundamID/sell:
-    patch:
-      consumes:
-      - application/json
-      description: Start selling a gundam for the specified seller
-      parameters:
-      - description: Gundam ID
-        in: path
-        name: gundamID
-        required: true
-        type: integer
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully sold gundam
-        "400":
-          description: Invalid gundam ID
-        "403":
-          description: Cannot sell gundam for another user
-        "409":
-          description: Subscription limit exceeded<br/>Gundam not available for sale
-        "500":
-          description: Internal server error
-      security:
-      - accessToken: []
-      summary: Sell a gundam
-      tags:
-      - sellers
   /sellers/:sellerID/subscriptions/active:
     get:
       description: Get the current active subscription for the specified seller
@@ -981,6 +947,62 @@ paths:
         "500":
           description: Internal server error
       summary: Retrieve a seller by ID
+      tags:
+      - sellers
+  /sellers/{sellerID}/gundams/{gundamID}/sell:
+    patch:
+      consumes:
+      - application/json
+      description: Start selling a gundam for the specified seller. This endpoint
+        checks the seller's active subscription and the gundam's status before proceeding.
+      parameters:
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: integer
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully sold gundam with details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid gundam ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Cannot sell gundam for another user<br/>you do not own this
+            gundam
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Subscription limit exceeded<br/>Subscription expired<br/>Gundam
+            is not available for sale
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - accessToken: []
+      summary: Sell a gundam
       tags:
       - sellers
   /tokens/verify:
@@ -1287,7 +1309,7 @@ paths:
       - users
   /users/by-phone:
     get:
-      description: Get user details using a phone number as a query parameter
+      description: Get user details using a phone_number number as a query parameter
       parameters:
       - description: Phone Number
         in: query
@@ -1305,7 +1327,7 @@ paths:
           description: User not found
         "500":
           description: Internal server error
-      summary: Retrieve a user by phone number
+      summary: Retrieve a user by phone_number number
       tags:
       - users
 schemes:

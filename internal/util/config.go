@@ -20,6 +20,8 @@ type Config struct {
 	RedisServerAddress  string        `mapstructure:"REDIS_SERVER_ADDRESS"`
 	DiscordBotToken     string        `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID"`
+	GmailSMTPUsername   string        `mapstructure:"GMAIL_SMTP_USERNAME"`
+	GmailSMTPPassword   string        `mapstructure:"GMAIL_SMTP_PASSWORD"`
 }
 
 // LoadConfig reads configuration from file or environment variables.

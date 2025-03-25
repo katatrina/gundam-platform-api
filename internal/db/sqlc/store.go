@@ -6,6 +6,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	TrialSellerSubscriptionName     = "GÓI DÙNG THỬ"
+	PremiumSellerSubscriptionName   = "GÓI NÂNG CẤP"
+	UnlimitedSellerSubscriptionName = "GÓI KHÔNG GIỚI HẠN"
+)
+
 // Store provides all functions to execute db queries and transactions.
 type Store interface {
 	Querier

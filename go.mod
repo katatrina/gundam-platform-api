@@ -20,6 +20,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
+	github.com/wneessen/go-mail v0.5.2
 	golang.org/x/crypto v0.33.0
 	google.golang.org/api v0.216.0
 )

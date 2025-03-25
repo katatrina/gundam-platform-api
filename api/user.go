@@ -439,15 +439,15 @@ type updateAvatarResponse struct {
 	AvatarURL string `json:"avatar_url" binding:"required"`
 }
 
-//	@Summary		Retrieve a user by phone number
-//	@Description	Get user details using a phone number as a query parameter
+//	@Summary		Retrieve a user by phone_number number
+//	@Description	Get user details using a phone_number number as a query parameter
 //	@Tags			users
 //	@Produce		json
 //	@Param			phone_number	query		string	true	"Phone Number"
 //	@Success		200				{object}	db.User	"Successfully retrieved user"
 //	@Failure		404				"User not found"
 //	@Failure		500				"Internal server error"
-//	@Router			/users/by-phone [get]
+//	@Router			/users/by-phone_number [get]
 func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	phoneNumber := ctx.Query("phone_number")
 	
@@ -461,7 +461,7 @@ func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by phone number")
+		log.Err(err).Msg("failed to get user by phone_number number")
 		ctx.Status(http.StatusInternalServerError)
 		return
 	}

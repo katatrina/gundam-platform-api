@@ -316,9 +316,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/phone/generate": {
+        "/otp/phone_number/generate": {
             "post": {
-                "description": "Generates and sends an OTP to the specified phone number",
+                "description": "Generates and sends an OTP to the specified phone_number number",
                 "consumes": [
                     "application/json"
                 ],
@@ -328,7 +328,7 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Generate a One-Time Password (OTP) for phone number",
+                "summary": "Generate a One-Time Password (OTP) for phone_number number",
                 "parameters": [
                     {
                         "description": "OTP Generation Request",
@@ -359,9 +359,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/phone/verify": {
+        "/otp/phone_number/verify": {
             "post": {
-                "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
+                "description": "Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid",
                 "consumes": [
                     "application/json"
                 ],
@@ -371,7 +371,7 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Verify One-Time Password (OTP) via phone number",
+                "summary": "Verify One-Time Password (OTP) via phone_number number",
                 "parameters": [
                     {
                         "description": "OTP Verification Request",
@@ -578,59 +578,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/:sellerID/gundams/:gundamID/sell": {
-            "patch": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Start selling a gundam for the specified seller",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Sell a gundam",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Gundam ID",
-                        "name": "gundamID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully sold gundam"
-                    },
-                    "400": {
-                        "description": "Invalid gundam ID"
-                    },
-                    "403": {
-                        "description": "Cannot sell gundam for another user"
-                    },
-                    "409": {
-                        "description": "Subscription limit exceeded\u003cbr/\u003eGundam not available for sale"
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            }
-        },
         "/sellers/:sellerID/subscriptions/active": {
             "get": {
                 "security": [
@@ -693,6 +640,87 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/gundams/{gundamID}/sell": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Start selling a gundam for the specified seller. This endpoint checks the seller's active subscription and the gundam's status before proceeding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Sell a gundam",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully sold gundam with details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid gundam ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Cannot sell gundam for another user\u003cbr/\u003eyou do not own this gundam",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Subscription limit exceeded\u003cbr/\u003eSubscription expired\u003cbr/\u003eGundam is not available for sale",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -817,16 +845,16 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/by-phone": {
+        "/users/by-phone_number": {
             "get": {
-                "description": "Get user details using a phone number as a query parameter",
+                "description": "Get user details using a phone_number number as a query parameter",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Retrieve a user by phone number",
+                "summary": "Retrieve a user by phone_number number",
                 "parameters": [
                     {
                         "type": "string",

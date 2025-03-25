@@ -34,6 +34,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
 	GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error)
+	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error)

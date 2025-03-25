@@ -6,6 +6,7 @@ import (
 	"strings"
 	
 	"github.com/gin-gonic/gin"
+	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 )
 
@@ -49,4 +50,21 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 		ctx.Set(authorizationPayloadKey, payload)
 		ctx.Next()
 	}
+}
+
+func requiredSellerOrAdminRole(ctx *gin.Context) {
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	sellerID := ctx.Param("sellerID")
+	if payload.Role != string(db.UserRoleAdmin) {
+		if payload.Role == string(db.UserRoleSeller) && payload.Subject == sellerID {
+			ctx.Next()
+			return
+		}
+		
+		err := errors.New("user is not authorized to access this resource")
+		ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	ctx.Next()
 }

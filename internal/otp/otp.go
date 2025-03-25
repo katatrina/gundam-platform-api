@@ -9,71 +9,60 @@ import (
 	"math/big"
 	"time"
 	
-	"github.com/bwmarrin/discordgo"
-	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
-//goland:noinspection ALL
 type OTPService struct {
-	redis   *redis.Client
-	discord *discordgo.Session
-	config  util.Config
+	redis           *redis.Client
+	rateLimitPrefix string
+	otpPrefix       string
+	attemptPrefix   string
+	expiration      time.Duration
+	maxAttempts     int
 }
 
-func NewOTPService(config util.Config, redisDb *redis.Client) (*OTPService, error) {
-	// Initialize Discord
-	discord, err := discordgo.New("Bot " + config.DiscordBotToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Discord session: %w", err)
+type OTPServiceOption func(*OTPService)
+
+func NewOTPService(redis *redis.Client, opts ...OTPServiceOption) *OTPService {
+	s := &OTPService{
+		redis:       redis,
+		expiration:  10 * time.Minute,
+		maxAttempts: 3,
 	}
 	
-	return &OTPService{
-		redis:   redisDb,
-		discord: discord,
-		config:  config,
-	}, nil
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
-func (s *OTPService) GenerateAndSendOTP(ctx context.Context, phoneNumber string) (code string, canSendIn time.Time, err error) {
-	// Check rate limiting
-	rateLimitKey := fmt.Sprintf("ratelimit:%s", phoneNumber)
+func WithPrefixes(rateLimit, otp, attempt string) OTPServiceOption {
+	return func(s *OTPService) {
+		s.rateLimitPrefix = rateLimit
+		s.otpPrefix = otp
+		s.attemptPrefix = attempt
+	}
+}
+
+func (s *OTPService) GenerateOTP(ctx context.Context, identifier string) (code string, createdAt time.Time, expiresAt time.Time, err error) {
+	rateLimitKey := fmt.Sprintf("%s:%s", s.rateLimitPrefix, identifier)
 	ttl, err := s.redis.TTL(ctx, rateLimitKey).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
-		return "", time.Time{}, err
+		return "", time.Time{}, time.Time{}, err
 	}
 	
-	// If rate limited, return the time when they can send next
 	if ttl.Seconds() > 0 {
-		nextAllowed := time.Now().Add(ttl)
-		return "", nextAllowed, fmt.Errorf("please wait before requesting new OTP")
+		return "", time.Now(), time.Now().Add(ttl), fmt.Errorf("please wait before requesting new OTP")
 	}
 	
-	// Generate 6-digit OTP
 	otp, err := generateSixDigitOTP()
 	if err != nil {
-		return "", time.Time{}, err
+		return "", time.Time{}, time.Time{}, err
 	}
 	
-	// Use Redis pipeline for atomic operations
 	pipe := s.redis.Pipeline()
-	
-	// Store OTP with 10-minute expiry
-	otpKey := fmt.Sprintf("otp:%s", phoneNumber)
-	pipe.Set(ctx, otpKey, otp, 10*time.Minute)
-	
-	// Set rate limit (1 minute)
-	pipe.Set(ctx, rateLimitKey, "1", 1*time.Minute)
-	
-	// Store attempt count
-	attemptKey := fmt.Sprintf("attempts:%s", phoneNumber)
-	pipe.Set(ctx, attemptKey, 0, 10*time.Minute)
-	
-	// Execute pipeline
-	if _, err := pipe.Exec(ctx); err != nil {
-		return "", time.Time{}, err
-	}
+	otpKey := fmt.Sprintf("%s:%s", s.otpPrefix, identifier)
 	
 	// Load specific timezone
 	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
@@ -83,40 +72,30 @@ func (s *OTPService) GenerateAndSendOTP(ctx context.Context, phoneNumber string)
 	}
 	
 	now := time.Now().In(loc)
-	expiryTime := now.Add(10 * time.Minute)
+	expiresAt = now.Add(s.expiration)
+	pipe.Set(ctx, otpKey, otp, s.expiration)
 	
-	// Format message
-	message := fmt.Sprintf("Số điện thoại: %s | OTP: %s | Hiệu lực từ %s đến %s",
-		phoneNumber,
-		otp,
-		// Format time in HH:MM:SS dd/mm/yyyy
-		now.Format("15:04:05 02/01/2006"),
-		expiryTime.Format("15:04:05 02/01/2006"),
-	)
+	pipe.Set(ctx, rateLimitKey, "1", 1*time.Minute)
 	
-	// Send to Discord Channel
-	if _, err = s.discord.ChannelMessageSend(s.config.DiscordChannelID, message); err != nil {
-		return "", time.Time{}, err
+	attemptKey := fmt.Sprintf("%s:%s", s.attemptPrefix, identifier)
+	pipe.Set(ctx, attemptKey, 0, s.expiration)
+	
+	if _, err := pipe.Exec(ctx); err != nil {
+		return "", time.Time{}, time.Time{}, err
 	}
 	
-	// Return OTP and when they can send next (1 minute from now)
-	nextAllowed := time.Now().Add(1 * time.Minute)
-	return otp, nextAllowed, nil
+	return otp, now, expiresAt, nil
 }
 
-func (s *OTPService) VerifyOTP(ctx context.Context, phoneNumber, providedOTP string) (bool, error) {
-	// Validate inputs
+func (s *OTPService) VerifyOTP(ctx context.Context, identifier, providedOTP string) (bool, error) {
 	if len(providedOTP) != 6 {
 		return false, fmt.Errorf("invalid OTP format")
 	}
 	
-	// Use Redis transaction to ensure atomicity
 	pipe := s.redis.Pipeline()
+	otpKey := fmt.Sprintf("%s:%s", s.otpPrefix, identifier)
+	attemptKey := fmt.Sprintf("%s:%s", s.attemptPrefix, identifier)
 	
-	otpKey := fmt.Sprintf("otp:%s", phoneNumber)
-	attemptKey := fmt.Sprintf("attempts:%s", phoneNumber)
-	
-	// Get stored OTP and current attempts in one round trip
 	storedOTPCmd := pipe.Get(ctx, otpKey)
 	attemptsCmd := pipe.Incr(ctx, attemptKey)
 	
@@ -125,7 +104,6 @@ func (s *OTPService) VerifyOTP(ctx context.Context, phoneNumber, providedOTP str
 		return false, fmt.Errorf("failed to get OTP data: %w", err)
 	}
 	
-	// Check if OTP exists
 	storedOTP, err := storedOTPCmd.Result()
 	if errors.Is(err, redis.Nil) {
 		return false, fmt.Errorf("no OTP found or expired")
@@ -134,40 +112,30 @@ func (s *OTPService) VerifyOTP(ctx context.Context, phoneNumber, providedOTP str
 		return false, fmt.Errorf("failed to retrieve OTP: %w", err)
 	}
 	
-	// Get attempt count
 	attempts, err := attemptsCmd.Result()
 	if err != nil {
 		return false, fmt.Errorf("failed to track attempts: %w", err)
 	}
 	
-	// Check max attempts (3 tries)
-	if attempts > 3 {
-		// Clean up on max attempts
+	if attempts > int64(s.maxAttempts) {
 		pipe.Del(ctx, otpKey, attemptKey)
 		if _, err := pipe.Exec(ctx); err != nil {
-			// Log error but don't return it since we want to return max attempts error
-			log.Printf("failed to clean up after max attempts: %v", err)
+			log.Error().Err(err).Msg("failed to clean up after max attempts")
 		}
-		return false, fmt.Errorf("max attempts (3) exceeded, please request a new OTP")
+		return false, fmt.Errorf("max attempts (%d) exceeded", s.maxAttempts)
 	}
 	
-	// Time-constant comparison to prevent timing attacks
 	if subtle.ConstantTimeCompare([]byte(storedOTP), []byte(providedOTP)) == 1 {
-		// Clean up on success
 		pipe.Del(ctx, otpKey, attemptKey)
-		// Also clean up rate limit to allow immediate new OTP request after successful verification
-		pipe.Del(ctx, fmt.Sprintf("ratelimit:%s", phoneNumber))
+		pipe.Del(ctx, fmt.Sprintf("%s:%s", s.rateLimitPrefix, identifier))
 		
 		if _, err := pipe.Exec(ctx); err != nil {
-			// Log error but don't return it since verification was successful
-			log.Printf("failed to clean up after successful verification: %v", err)
+			log.Error().Err(err).Msg("failed to clean up after successful verification")
 		}
-		
 		return true, nil
 	}
 	
-	// Calculate remaining attempts
-	remainingAttempts := 3 - attempts
+	remainingAttempts := s.maxAttempts - int(attempts)
 	return false, fmt.Errorf("invalid OTP, %d attempts remaining", remainingAttempts)
 }
 
