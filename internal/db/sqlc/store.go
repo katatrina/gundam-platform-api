@@ -22,6 +22,7 @@ type Store interface {
 	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) error
 	BecomeSellerTx(ctx context.Context, userID string) (User, error)
 	SellGundamTx(ctx context.Context, arg SellGundamTxParams) error
+	UnsellGundamTx(ctx context.Context, arg UnsellGundamTxParams) error
 }
 
 type SQLStore struct {

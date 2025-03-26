@@ -232,3 +232,61 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 		"status":    db.GundamStatusSelling,
 	})
 }
+
+//	@Summary		Unsell a gundam
+//	@Description	Stop selling a gundam for the specified seller. This endpoint checks the gundam's status before proceeding.
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Param			gundamID	path	int64	true	"Gundam ID"
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Security		accessToken
+//	@Success		200	{object}	map[string]interface{}	"Successfully unsold gundam with details"
+//	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
+//	@Failure		403	{object}	map[string]string		"Cannot unsell gundam for another user<br/>You do not own this gundam"
+//	@Failure		409	{object}	map[string]string		"Gundam is not currently listed for sale"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/sellers/{sellerID}/gundams/{gundamID}/unsell [patch]
+func (server *Server) unsellGundam(ctx *gin.Context) {
+	gundamID, err := strconv.ParseInt(ctx.Param("gundamID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(ctx, gundamID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get gundam")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve gundam details"})
+		return
+	}
+	
+	userID := ctx.Param("sellerID")
+	
+	if gundam.OwnerID != userID {
+		ctx.JSON(http.StatusForbidden, gin.H{"message": "you do not own this gundam"})
+		return
+	}
+	if gundam.Status != db.GundamStatusSelling {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not currently listed for sale"})
+		return
+	}
+	
+	// TODO: Kiểm tra xem Gundam có đang được giao dịch không
+	// Nếu có, không cho phép hủy bán
+	
+	err = server.dbStore.UnsellGundamTx(ctx, db.UnsellGundamTxParams{
+		GundamID: gundam.ID,
+		SellerID: gundam.OwnerID,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to unsell gundam")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unsell gundam"})
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":   "gundam is no longer listed for sale",
+		"gundam_id": gundam.ID,
+	})
+}
