@@ -3,6 +3,7 @@ package phone_number
 import (
 	"context"
 	"fmt"
+	"time"
 	
 	"github.com/bwmarrin/discordgo"
 	"github.com/katatrina/gundam-BE/internal/otp"
@@ -32,10 +33,10 @@ func NewPhoneService(config util.Config, redis *redis.Client) (*PhoneService, er
 	}, nil
 }
 
-func (s *PhoneService) SendOTP(ctx context.Context, phone string) (code string, err error) {
-	code, createdAt, expiresAt, err := s.otpService.GenerateOTP(ctx, phone)
+func (s *PhoneService) SendOTP(ctx context.Context, phone string) (code string, expiresAt time.Time, createdAt time.Time, err error) {
+	code, createdAt, expiresAt, err = s.otpService.GenerateOTP(ctx, phone)
 	if err != nil {
-		return code, err
+		return "", time.Time{}, time.Time{}, err
 	}
 	
 	// Format message
@@ -49,7 +50,7 @@ func (s *PhoneService) SendOTP(ctx context.Context, phone string) (code string, 
 	
 	// Tạm thời: gửi OTP qua Discord
 	_, err = s.discord.ChannelMessageSend(s.config.DiscordChannelID, message)
-	return code, err
+	return code, expiresAt, createdAt, err
 }
 
 func (s *PhoneService) VerifyOTP(ctx context.Context, phone string, code string) (bool, error) {

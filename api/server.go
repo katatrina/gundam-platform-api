@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
@@ -39,24 +39,24 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 		return nil, fmt.Errorf("failed to create token maker: %w", err)
 	}
 	log.Info().Msg("Token maker created successfully ✅")
-	
+
 	// Create a new Google ID token validator
 	googleIDTokenValidator, err := idtoken.NewValidator(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create google id token validator: %w", err)
 	}
-	
+
 	// Create a new Cloudinary instance
 	fileStore := storage.NewCloudinaryStore(config.CloudinaryURL)
 	log.Info().Msg("Cloudinary store created successfully ✅")
-	
+
 	// Create a new OTP service
 	phoneNumberService, err := phone_number.NewPhoneService(config, redisDb)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create phone service: %w", err)
 	}
 	log.Info().Msg("Phone service created successfully ✅")
-	
+
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -67,7 +67,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 		redisDb:                redisDb,
 		mailer:                 mailer,
 	}
-	
+
 	server.setupRouter()
 	return server, nil
 }
@@ -87,14 +87,14 @@ func (server *Server) setupRouter() {
 		c.Header("Cross-Origin-Embedder-Policy", "unsafe-none")
 		c.Next()
 	})
-	
+
 	v1 := router.Group("/v1")
-	
+
 	v1.POST("/tokens/verify", server.verifyAccessToken)
-	
+
 	v1.POST("/auth/login", server.loginUser)
 	v1.POST("/auth/google-login", server.loginUserWithGoogle)
-	
+
 	userGroup := v1.Group("/users")
 	{
 		userGroup.POST("", server.createUser)
@@ -107,14 +107,14 @@ func (server *Server) setupRouter() {
 		userGroup.POST(":id/addresses", server.createUserAddress)
 		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
-		
+
 		userGroup.POST("become-seller", authMiddleware(server.tokenMaker), server.becomeSeller)
 		// userGroup.GET(":id/wallet", authMiddleware(server.tokenMaker), server.getUserWallet)
 		// userGroup.PUT(":id/wallet", authMiddleware(server.tokenMaker), server.updateUserWallet)
 	}
-	
+
 	v1.GET("/grades", server.listGundamGrades)
-	
+
 	v1.GET("/sellers/:sellerID", server.getSeller)
 	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerOrAdminRole)
 	{
@@ -124,39 +124,42 @@ func (server *Server) setupRouter() {
 			gundamGroup.GET("", server.listGundamsBySeller)
 			gundamGroup.PATCH(":gundamID/sell", server.sellGundam)
 		}
-		
+
 		subscriptionGroup := sellerGroup.Group("subscriptions")
 		{
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
 		}
 	}
-	
+
 	gundamGroup := v1.Group("/gundams")
 	{
 		gundamGroup.GET("", server.listGundams)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
 	}
-	
+
 	cartGroup := v1.Group("/cart", authMiddleware(server.tokenMaker))
 	{
 		cartGroup.POST("/items", server.addCartItem)
 		cartGroup.GET("/items", server.listCartItems)
 		cartGroup.DELETE("/items/:id", server.deleteCartItem)
 	}
-	
+
 	v1.POST("checkout", authMiddleware(server.tokenMaker), server.checkout)
-	
+
 	otpGroup := v1.Group("/otp")
 	{
 		otpGroup.POST("/phone/generate", server.generatePhoneOTP)
 		otpGroup.POST("/phone/verify", server.verifyPhoneOTP)
-		
-		otpGroup.GET("/email/generate", server.generateEmailOTP)
+
+		otpGroup.POST("/email/generate", server.generateEmailOTP)
 		otpGroup.POST("/email/verify", server.verifyEmailOTP)
 	}
-	
+
+	// Thêm endpoint mới để kiểm tra email
+	v1.GET("/check-email", server.checkEmailExists)
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	
+
 	server.router = router
 }
 

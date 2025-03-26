@@ -19,7 +19,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, full_name, hashed_password
 
 type CreateUserParams struct {
 	HashedPassword      pgtype.Text `json:"-"`
-	FullName            pgtype.Text `extensions:"x-nullable" json:"full_name"`
+	FullName            string      `extensions:"x-nullable" json:"full_name"`
 	Email               string      `json:"email"`
 	EmailVerified       bool        `json:"email_verified"`
 	PhoneNumber         pgtype.Text `extensions:"x-nullable" json:"phone_number"`
@@ -63,7 +63,7 @@ VALUES ($1, $2, $3, $4, $5) RETURNING id, full_name, hashed_password, email, ema
 
 type CreateUserWithGoogleAccountParams struct {
 	ID            string      `json:"id"`
-	FullName      pgtype.Text `extensions:"x-nullable" json:"full_name"`
+	FullName      string      `extensions:"x-nullable" json:"full_name"`
 	Email         string      `json:"email"`
 	EmailVerified bool        `json:"email_verified"`
 	AvatarUrl     pgtype.Text `extensions:"x-nullable" json:"avatar_url"`

@@ -22,6 +22,7 @@ import (
 
 // CreateUserRequest represents the input for creating a new user
 type createUserRequest struct {
+	FullName string `json:"full_name" binding:"required"`
 	Email    string `json:"email" binding:"required" `
 	Password string `json:"password" binding:"required"`
 }
@@ -60,22 +61,14 @@ func (server *Server) createUser(ctx *gin.Context) {
 	}
 	
 	arg := db.CreateUserParams{
+		FullName: req.FullName,
 		HashedPassword: pgtype.Text{
 			String: hashedPassword,
 			Valid:  true,
 		},
 		Email:         req.Email,
-		EmailVerified: false,
-		PhoneNumber: pgtype.Text{
-			Valid:  false,
-			String: "",
-		},
-		PhoneNumberVerified: false,
-		Role:                db.UserRoleMember,
-		AvatarUrl: pgtype.Text{
-			Valid:  false,
-			String: "",
-		},
+		EmailVerified: true,
+		Role:          db.UserRoleMember,
 	}
 	
 	user, err := server.dbStore.CreateUserTx(context.Background(), arg)
@@ -89,7 +82,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 			}
 			
 			log.Err(err).Msg("failed to create user")
-			ctx.Status(http.StatusInternalServerError)
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 	}
@@ -99,8 +92,16 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 // validateCreateUserRequest performs validation on the create user request
 func validateCreateUserRequest(req *createUserRequest) (violations []*FieldViolation) {
+	if err := validator.ValidateFullName(req.FullName); err != nil {
+		violations = append(violations, fieldViolation("full_name", err))
+	}
+	
 	if err := validator.ValidateEmail(req.Email); err != nil {
 		violations = append(violations, fieldViolation("email", err))
+	}
+	
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		violations = append(violations, fieldViolation("password", err))
 	}
 	
 	return violations
@@ -240,11 +241,8 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	
 	// User doesn't exist - create new account
 	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
-		ID: payload.Subject,
-		FullName: pgtype.Text{
-			String: payload.Claims["name"].(string),
-			Valid:  true,
-		},
+		ID:            payload.Subject,
+		FullName:      payload.Claims["name"].(string),
 		Email:         email,
 		EmailVerified: payload.Claims["email_verified"].(bool),
 		AvatarUrl: pgtype.Text{

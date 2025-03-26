@@ -32,7 +32,7 @@ type GetCheckoutItemsRow struct {
 	GundamPrice     int64       `json:"gundam_price"`
 	GundamImageUrl  string      `json:"gundam_image_url"`
 	SellerID        string      `json:"seller_id"`
-	SellerName      pgtype.Text `extensions:"x-nullable" json:"seller_name"`
+	SellerName      string      `extensions:"x-nullable" json:"seller_name"`
 	SellerAvatarUrl pgtype.Text `extensions:"x-nullable" json:"seller_avatar_url"`
 }
 

@@ -1,5 +1,28 @@
 basePath: /v1
 definitions:
+  api.GenerateEmailOTPRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  api.GenerateEmailOTPResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      otp_code:
+        type: string
+    required:
+    - created_at
+    - email
+    - expires_at
+    - otp_code
+    type: object
   api.GeneratePhoneOTPRequest:
     properties:
       phone_number:
@@ -9,7 +32,7 @@ definitions:
     type: object
   api.GeneratePhoneOTPResponse:
     properties:
-      can_resend_in:
+      created_at:
         type: string
       expires_at:
         type: string
@@ -18,10 +41,20 @@ definitions:
       phone_number:
         type: string
     required:
-    - can_resend_in
+    - created_at
     - expires_at
     - otp_code
     - phone_number
+    type: object
+  api.VerifyEmailOTPRequest:
+    properties:
+      email:
+        type: string
+      otp_code:
+        type: string
+    required:
+    - email
+    - otp_code
     type: object
   api.VerifyPhoneOTPRequest:
     properties:
@@ -29,12 +62,9 @@ definitions:
         type: string
       phone_number:
         type: string
-      user_id:
-        type: string
     required:
     - otp_code
     - phone_number
-    - user_id
     type: object
   api.addCartItemRequest:
     properties:
@@ -81,10 +111,13 @@ definitions:
     properties:
       email:
         type: string
+      full_name:
+        type: string
       password:
         type: string
     required:
     - email
+    - full_name
     - password
     type: object
   api.getGundamBySlugResponse:
@@ -202,8 +235,7 @@ definitions:
       seller_id:
         type: string
       seller_name:
-        allOf:
-        - $ref: '#/definitions/pgtype.Text'
+        type: string
         x-nullable: true
     required:
     - cart_item_id
@@ -359,8 +391,7 @@ definitions:
       seller_id:
         type: string
       seller_name:
-        allOf:
-        - $ref: '#/definitions/pgtype.Text'
+        type: string
         x-nullable: true
     required:
     - cart_item_id
@@ -436,8 +467,7 @@ definitions:
       email_verified:
         type: boolean
       full_name:
-        allOf:
-        - $ref: '#/definitions/pgtype.Text'
+        type: string
         x-nullable: true
       id:
         type: string
@@ -664,6 +694,29 @@ paths:
       summary: Delete Cart Item
       tags:
       - cart
+  /check-email:
+    get:
+      consumes:
+      - application/json
+      description: Kiểm tra xem email đã được đăng ký trong hệ thống chưa
+      parameters:
+      - description: Email cần kiểm tra
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Kiểm tra sự tồn tại của email
+      tags:
+      - authentication
   /grades:
     get:
       description: Retrieves a list of all available Gundam model grades
@@ -730,7 +783,89 @@ paths:
       summary: Get Gundam by Slug
       tags:
       - gundams
-  /otp/phone/generate:
+  /otp/email/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generates and sends an OTP to the specified email address
+      parameters:
+      - description: OTP Generation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.GenerateEmailOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP generated successfully
+          schema:
+            $ref: '#/definitions/api.GenerateEmailOTPResponse'
+        "400":
+          description: Bad Request - Invalid input
+        "429":
+          description: Too Many Requests - OTP request rate limit exceeded
+        "500":
+          description: Internal Server Error
+      summary: Generate a One-Time Password (OTP) for email
+      tags:
+      - authentication
+  /otp/email/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's email address and updates the
+        user's email if valid
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.VerifyEmailOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified successfully
+        "400":
+          description: Bad Request - Invalid input or OTP verification failed
+        "401":
+          description: Unauthorized - Invalid OTP code
+        "500":
+          description: Internal Server Error - Failed to update user information
+      summary: Verify One-Time Password (OTP) via email
+      tags:
+      - authentication
+  /otp/phone/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's phone_number number and updates
+        the user's phone_number number if valid
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.VerifyPhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP verified successfully
+        "400":
+          description: Bad Request - Invalid input or OTP verification failed
+        "401":
+          description: Unauthorized - Invalid OTP code
+        "500":
+          description: Internal Server Error - Failed to update user information
+      summary: Verify One-Time Password (OTP) via phone_number number
+      tags:
+      - authentication
+  /otp/phone_number/generate:
     post:
       consumes:
       - application/json
@@ -756,33 +891,6 @@ paths:
         "500":
           description: Internal Server Error
       summary: Generate a One-Time Password (OTP) for phone_number number
-      tags:
-      - authentication
-  /otp/phone/verify:
-    post:
-      consumes:
-      - application/json
-      description: Verifies the OTP sent to a user's phone_number number and updates the
-        user's phone_number number if valid
-      parameters:
-      - description: OTP Verification Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/api.VerifyPhoneOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OTP verified successfully
-        "400":
-          description: Bad Request - Invalid input or OTP verification failed
-        "401":
-          description: Unauthorized - Invalid OTP code
-        "500":
-          description: Internal Server Error - Failed to update user information
-      summary: Verify One-Time Password (OTP) via phone_number number
       tags:
       - authentication
   /sellers/:sellerID/gundams:
@@ -1307,7 +1415,7 @@ paths:
       summary: Become a seller
       tags:
       - users
-  /users/by-phone:
+  /users/by-phone_number:
     get:
       description: Get user details using a phone_number number as a query parameter
       parameters:

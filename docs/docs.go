@@ -216,6 +216,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/check-email": {
+            "get": {
+                "description": "Kiểm tra xem email đã được đăng ký trong hệ thống chưa",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Kiểm tra sự tồn tại của email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Email cần kiểm tra",
+                        "name": "email",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/grades": {
             "get": {
                 "description": "Retrieves a list of all available Gundam model grades",
@@ -316,6 +351,129 @@ const docTemplate = `{
                 }
             }
         },
+        "/otp/email/generate": {
+            "post": {
+                "description": "Generates and sends an OTP to the specified email address",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Generate a One-Time Password (OTP) for email",
+                "parameters": [
+                    {
+                        "description": "OTP Generation Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.GenerateEmailOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP generated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/api.GenerateEmailOTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input"
+                    },
+                    "429": {
+                        "description": "Too Many Requests - OTP request rate limit exceeded"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/otp/email/verify": {
+            "post": {
+                "description": "Verifies the OTP sent to a user's email address and updates the user's email if valid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Verify One-Time Password (OTP) via email",
+                "parameters": [
+                    {
+                        "description": "OTP Verification Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.VerifyEmailOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP verified successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input or OTP verification failed"
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid OTP code"
+                    },
+                    "500": {
+                        "description": "Internal Server Error - Failed to update user information"
+                    }
+                }
+            }
+        },
+        "/otp/phone/verify": {
+            "post": {
+                "description": "Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Verify One-Time Password (OTP) via phone_number number",
+                "parameters": [
+                    {
+                        "description": "OTP Verification Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.VerifyPhoneOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP verified successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input or OTP verification failed"
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid OTP code"
+                    },
+                    "500": {
+                        "description": "Internal Server Error - Failed to update user information"
+                    }
+                }
+            }
+        },
         "/otp/phone_number/generate": {
             "post": {
                 "description": "Generates and sends an OTP to the specified phone_number number",
@@ -355,46 +513,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error"
-                    }
-                }
-            }
-        },
-        "/otp/phone_number/verify": {
-            "post": {
-                "description": "Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authentication"
-                ],
-                "summary": "Verify One-Time Password (OTP) via phone_number number",
-                "parameters": [
-                    {
-                        "description": "OTP Verification Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.VerifyPhoneOTPRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OTP verified successfully"
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid input or OTP verification failed"
-                    },
-                    "401": {
-                        "description": "Unauthorized - Invalid OTP code"
-                    },
-                    "500": {
-                        "description": "Internal Server Error - Failed to update user information"
                     }
                 }
             }
@@ -1221,6 +1339,40 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "api.GenerateEmailOTPRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.GenerateEmailOTPResponse": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "email",
+                "expires_at",
+                "otp_code"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "otp_code": {
+                    "type": "string"
+                }
+            }
+        },
         "api.GeneratePhoneOTPRequest": {
             "type": "object",
             "required": [
@@ -1235,13 +1387,13 @@ const docTemplate = `{
         "api.GeneratePhoneOTPResponse": {
             "type": "object",
             "required": [
-                "can_resend_in",
+                "created_at",
                 "expires_at",
                 "otp_code",
                 "phone_number"
             ],
             "properties": {
-                "can_resend_in": {
+                "created_at": {
                     "type": "string"
                 },
                 "expires_at": {
@@ -1255,21 +1407,32 @@ const docTemplate = `{
                 }
             }
         },
+        "api.VerifyEmailOTPRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "otp_code"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "otp_code": {
+                    "type": "string"
+                }
+            }
+        },
         "api.VerifyPhoneOTPRequest": {
             "type": "object",
             "required": [
                 "otp_code",
-                "phone_number",
-                "user_id"
+                "phone_number"
             ],
             "properties": {
                 "otp_code": {
                     "type": "string"
                 },
                 "phone_number": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
@@ -1336,10 +1499,14 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "email",
+                "full_name",
                 "password"
             ],
             "properties": {
                 "email": {
+                    "type": "string"
+                },
+                "full_name": {
                     "type": "string"
                 },
                 "password": {
@@ -1529,11 +1696,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "seller_name": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
+                    "type": "string",
                     "x-nullable": true
                 }
             }
@@ -1747,11 +1910,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "seller_name": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
+                    "type": "string",
                     "x-nullable": true
                 }
             }
@@ -1859,11 +2018,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "full_name": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
+                    "type": "string",
                     "x-nullable": true
                 },
                 "id": {

@@ -393,7 +393,7 @@ type SubscriptionPlan struct {
 
 type User struct {
 	ID                  string      `json:"id"`
-	FullName            pgtype.Text `extensions:"x-nullable" json:"full_name"`
+	FullName            string      `extensions:"x-nullable" json:"full_name"`
 	HashedPassword      pgtype.Text `json:"-"`
 	Email               string      `json:"email"`
 	EmailVerified       bool        `json:"email_verified"`
