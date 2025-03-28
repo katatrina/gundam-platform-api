@@ -24,6 +24,8 @@ var (
 	ErrPickupAddressDeletion     = errors.New("pickup address cannot be deleted")
 	ErrSubscriptionLimitExceeded = errors.New("subscription limit exceeded")
 	ErrSubscriptionExpired       = errors.New("subscription has expired")
+	ErrCartInvalid               = errors.New("some items in cart have been updated and are no longer available for checkout")
+	ErrCartItemExists            = errors.New("item already exists in cart")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name

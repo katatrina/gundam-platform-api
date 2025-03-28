@@ -39,3 +39,25 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID string) (Wallet,
 	)
 	return i, err
 }
+
+const getWalletForUpdate = `-- name: GetWalletForUpdate :one
+SELECT id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+FROM wallets
+WHERE user_id = $1
+    FOR UPDATE
+`
+
+func (q *Queries) GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error) {
+	row := q.db.QueryRow(ctx, getWalletForUpdate, userID)
+	var i Wallet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Balance,
+		&i.NonWithdrawableAmount,
+		&i.Currency,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

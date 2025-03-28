@@ -73,6 +73,70 @@ definitions:
     required:
     - gundam_id
     type: object
+  api.createOrderRequest:
+    properties:
+      buyer_address_id:
+        description: |-
+          ID of the buyer's address
+          example: 42
+        type: integer
+      delivery_fee:
+        description: |-
+          Delivery fee (VND)
+          minimum: 0
+          example: 30000
+        minimum: 0
+        type: integer
+      expected_delivery_time:
+        description: |-
+          Expected delivery time
+          example: 2025-04-05T10:00:00Z
+        type: string
+      gundam_ids:
+        description: |-
+          List of Gundam IDs in the order
+          example: [1, 2, 3]
+        items:
+          type: integer
+        type: array
+      items_subtotal:
+        description: |-
+          Total value of all items (excluding delivery fee)
+          minimum: 0
+          example: 500000
+        minimum: 0
+        type: integer
+      note:
+        description: |-
+          Optional note for the order
+          maxLength: 255
+          example: Please deliver in the morning
+        maxLength: 255
+        type: string
+      payment_method:
+        description: |-
+          Payment method (wallet: pay via platform wallet, cod: cash on delivery)
+          enums: wallet,cod
+          example: wallet
+        enum:
+        - wallet
+        - cod
+        type: string
+      seller_id:
+        description: |-
+          ID of the seller
+          example: user123
+        type: string
+    required:
+    - buyer_address_id
+    - delivery_fee
+    - expected_delivery_time
+    - gundam_ids
+    - items_subtotal
+    - note
+    - payment_method
+    - seller_id
+    type: object
   api.createUserAddressRequest:
     properties:
       detail:
@@ -247,6 +311,35 @@ definitions:
     - seller_id
     - seller_name
     type: object
+  db.CreateOrderTxResult:
+    properties:
+      order:
+        $ref: '#/definitions/db.Order'
+      order_delivery:
+        $ref: '#/definitions/db.OrderDelivery'
+      order_items:
+        items:
+          $ref: '#/definitions/db.OrderItem'
+        type: array
+    required:
+    - order
+    - order_delivery
+    - order_items
+    type: object
+  db.DeliveryOverralStatus:
+    enum:
+    - picking
+    - delivering
+    - delivered
+    - failed
+    - return
+    type: string
+    x-enum-varnames:
+    - DeliveryOverralStatusPicking
+    - DeliveryOverralStatusDelivering
+    - DeliveryOverralStatusDelivered
+    - DeliveryOverralStatusFailed
+    - DeliveryOverralStatusReturn
   db.GetGundamBySlugRow:
     properties:
       condition:
@@ -360,18 +453,18 @@ definitions:
     - GundamScale148
   db.GundamStatus:
     enum:
-    - available
-    - selling
+    - in store
+    - published
+    - processing
     - pending auction approval
     - auctioning
-    - exchange
     type: string
     x-enum-varnames:
-    - GundamStatusAvailable
-    - GundamStatusSelling
+    - GundamStatusInstore
+    - GundamStatusPublished
+    - GundamStatusProcessing
     - GundamStatusPendingauctionapproval
     - GundamStatusAuctioning
-    - GundamStatusExchange
   db.ListCartItemsWithDetailsRow:
     properties:
       cart_item_id:
@@ -454,6 +547,136 @@ definitions:
     - status
     - updated_at
     type: object
+  db.NullDeliveryOverralStatus:
+    properties:
+      delivery_overral_status:
+        $ref: '#/definitions/db.DeliveryOverralStatus'
+      valid:
+        description: Valid is true if DeliveryOverralStatus is not NULL
+        type: boolean
+    required:
+    - delivery_overral_status
+    - valid
+    type: object
+  db.Order:
+    properties:
+      buyer_id:
+        type: string
+      created_at:
+        type: string
+      delivery_fee:
+        type: integer
+      id:
+        type: string
+      items_subtotal:
+        type: integer
+      note:
+        $ref: '#/definitions/pgtype.Text'
+      payment_method:
+        $ref: '#/definitions/db.PaymentMethod'
+      seller_id:
+        type: string
+      status:
+        $ref: '#/definitions/db.OrderStatus'
+      total_amount:
+        type: integer
+      updated_at:
+        type: string
+    required:
+    - buyer_id
+    - created_at
+    - delivery_fee
+    - id
+    - items_subtotal
+    - note
+    - payment_method
+    - seller_id
+    - status
+    - total_amount
+    - updated_at
+    type: object
+  db.OrderDelivery:
+    properties:
+      created_at:
+        type: string
+      expected_delivery_time:
+        type: string
+      fromID:
+        type: integer
+      ghn_order_code:
+        $ref: '#/definitions/pgtype.Text'
+      id:
+        type: integer
+      order_id:
+        type: string
+      overall_status:
+        $ref: '#/definitions/db.NullDeliveryOverralStatus'
+      status:
+        $ref: '#/definitions/pgtype.Text'
+      toID:
+        type: integer
+      updated_at:
+        type: string
+    required:
+    - created_at
+    - expected_delivery_time
+    - fromID
+    - ghn_order_code
+    - id
+    - order_id
+    - overall_status
+    - status
+    - toID
+    - updated_at
+    type: object
+  db.OrderItem:
+    properties:
+      created_at:
+        type: string
+      gundam_id:
+        type: integer
+      id:
+        type: integer
+      order_id:
+        type: string
+      price:
+        type: integer
+      quantity:
+        type: integer
+    required:
+    - created_at
+    - gundam_id
+    - id
+    - order_id
+    - price
+    - quantity
+    type: object
+  db.OrderStatus:
+    enum:
+    - pending
+    - packaging
+    - delivering
+    - delivered
+    - successful
+    - failed
+    - canceled
+    type: string
+    x-enum-varnames:
+    - OrderStatusPending
+    - OrderStatusPackaging
+    - OrderStatusDelivering
+    - OrderStatusDelivered
+    - OrderStatusSuccessful
+    - OrderStatusFailed
+    - OrderStatusCanceled
+  db.PaymentMethod:
+    enum:
+    - cod
+    - wallet
+    type: string
+    x-enum-varnames:
+    - PaymentMethodCod
+    - PaymentMethodWallet
   db.User:
     properties:
       avatar_url:
@@ -551,6 +774,9 @@ definitions:
     - UserRoleSeller
     - UserRoleModerator
     - UserRoleAdmin
+  gin.H:
+    additionalProperties: {}
+    type: object
   pgtype.Text:
     properties:
       string:
@@ -743,6 +969,16 @@ paths:
         in: query
         name: grade
         type: string
+      - description: Filter by Gundam status
+        enum:
+        - available
+        - selling
+        - pending auction approval
+        - auctioning
+        - exchange
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -769,6 +1005,16 @@ paths:
         name: slug
         required: true
         type: string
+      - description: Filter by Gundam status
+        enum:
+        - available
+        - selling
+        - pending auction approval
+        - auctioning
+        - exchange
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -783,6 +1029,46 @@ paths:
       summary: Get Gundam by Slug
       tags:
       - gundams
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Create a new order for purchasing Gundam models
+      parameters:
+      - description: Order details
+        in: body
+        name: createOrderRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.createOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Order created successfully
+          schema:
+            $ref: '#/definitions/db.CreateOrderTxResult'
+        "400":
+          description: Invalid request data
+          schema:
+            $ref: '#/definitions/gin.H'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/gin.H'
+        "422":
+          description: Invalid items or price mismatch
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/gin.H'
+      security:
+      - accessToken: []
+      summary: Create a new order
+      tags:
+      - orders
   /otp/email/generate:
     post:
       consumes:
@@ -1057,12 +1343,12 @@ paths:
       summary: Retrieve a seller by ID
       tags:
       - sellers
-  /sellers/{sellerID}/gundams/{gundamID}/sell:
+  /sellers/{sellerID}/gundams/{gundamID}/publish:
     patch:
       consumes:
       - application/json
-      description: Start selling a gundam for the specified seller. This endpoint
-        checks the seller's active subscription and the gundam's status before proceeding.
+      description: Publish a gundam for sale for the specified seller. This endpoint
+        checks the gundam's status before proceeding.
       parameters:
       - description: Gundam ID
         in: path
@@ -1078,7 +1364,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully sold gundam with details
+          description: Successfully published gundam
           schema:
             additionalProperties: true
             type: object
@@ -1089,15 +1375,15 @@ paths:
               type: string
             type: object
         "403":
-          description: Cannot sell gundam for another user<br/>you do not own this
-            gundam
+          description: Cannot publish gundam for another seller<br/>you do not own
+            this gundam
           schema:
             additionalProperties:
               type: string
             type: object
         "409":
           description: Subscription limit exceeded<br/>Subscription expired<br/>Gundam
-            is not available for sale
+            is not available for publishing
           schema:
             additionalProperties:
               type: string
@@ -1110,7 +1396,62 @@ paths:
             type: object
       security:
       - accessToken: []
-      summary: Sell a gundam
+      summary: Publish a gundam for sale
+      tags:
+      - sellers
+  /sellers/{sellerID}/gundams/{gundamID}/unpublish:
+    patch:
+      consumes:
+      - application/json
+      description: Unpublish a gundam for the specified seller. This endpoint checks
+        the gundam's status before proceeding.
+      parameters:
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: integer
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully unsold gundam with details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid gundam ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Cannot unsell gundam for another user<br/>You do not own this
+            gundam
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Gundam is not currently listed for sale
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - accessToken: []
+      summary: Unpublish a gundam
       tags:
       - sellers
   /tokens/verify:

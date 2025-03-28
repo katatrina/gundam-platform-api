@@ -19,17 +19,18 @@ CREATE TYPE "gundam_scale" AS ENUM (
 );
 
 CREATE TYPE "gundam_status" AS ENUM (
-  'available',
-  'selling',
+  'in store',
+  'published',
+  'processing',
   'pending auction approval',
-  'auctioning',
-  'exchange'
+  'auctioning'
 );
 
 CREATE TYPE "order_status" AS ENUM (
   'pending',
   'packaging',
   'delivering',
+  'delivered',
   'successful',
   'failed',
   'canceled'
@@ -38,6 +39,49 @@ CREATE TYPE "order_status" AS ENUM (
 CREATE TYPE "payment_method" AS ENUM (
   'cod',
   'wallet'
+);
+
+CREATE TYPE "delivery_overral_status" AS ENUM (
+  'picking',
+  'delivering',
+  'delivered',
+  'failed',
+  'return'
+);
+
+CREATE TYPE "wallet_entry_type" AS ENUM (
+  'deposit',
+  'withdrawal',
+  'payment',
+  'payment_received',
+  'refund',
+  'refund_deduction',
+  'auction_lock',
+  'auction_release',
+  'auction_payment',
+  'platform_fee'
+);
+
+CREATE TYPE "wallet_reference_type" AS ENUM (
+  'order',
+  'auction',
+  'withdrawal_request',
+  'deposit_request',
+  'promotion',
+  'affiliate'
+);
+
+CREATE TYPE "wallet_entry_status" AS ENUM (
+  'pending',
+  'completed',
+  'failed'
+);
+
+CREATE TYPE "order_transaction_status" AS ENUM (
+  'pending',
+  'completed',
+  'refunded',
+  'failed'
 );
 
 CREATE TABLE "users"
@@ -80,6 +124,7 @@ CREATE TABLE "gundams"
     "name"                  text             NOT NULL,
     "slug"                  text UNIQUE      NOT NULL,
     "grade_id"              bigint           NOT NULL,
+    "quantity"              bigint           NOT NULL DEFAULT 1,
     "condition"             gundam_condition NOT NULL,
     "condition_description" text,
     "manufacturer"          text             NOT NULL,
@@ -165,14 +210,15 @@ CREATE TABLE "seller_subscriptions"
 
 CREATE TABLE "orders"
 (
-    "id"             bigserial PRIMARY KEY,
+    "id"             varchar(14) PRIMARY KEY,
     "buyer_id"       text           NOT NULL,
     "seller_id"      text           NOT NULL,
-    "total_price"    bigint         NOT NULL,
+    "items_subtotal" bigint         NOT NULL,
+    "delivery_fee"   bigint         NOT NULL,
+    "total_amount"   bigint         NOT NULL,
     "status"         order_status   NOT NULL DEFAULT 'pending',
     "payment_method" payment_method NOT NULL,
     "note"           text,
-    "cancel_reason"  text,
     "created_at"     timestamptz    NOT NULL DEFAULT (now()),
     "updated_at"     timestamptz    NOT NULL DEFAULT (now())
 );
@@ -180,23 +226,40 @@ CREATE TABLE "orders"
 CREATE TABLE "order_items"
 (
     "id"         bigserial PRIMARY KEY,
-    "order_id"   bigint      NOT NULL,
+    "order_id"   text        NOT NULL,
     "gundam_id"  bigint      NOT NULL,
+    "quantity"   bigint      NOT NULL DEFAULT 1,
     "price"      bigint      NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "shipments"
+CREATE TABLE "delivery_information"
 (
-    "id"               bigserial PRIMARY KEY,
-    "order_id"         bigint,
-    "tracking_code"    text        NOT NULL,
-    "shipping_address" text        NOT NULL,
-    "shipping_method"  text        NOT NULL,
-    "status"           text        NOT NULL,
-    "shipping_cost"    bigint      NOT NULL,
-    "created_at"       timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"       timestamptz NOT NULL DEFAULT (now())
+    "id"              bigserial PRIMARY KEY,
+    "user_id"         text        NOT NULL,
+    "full_name"       text        NOT NULL,
+    "phone_number"    text        NOT NULL,
+    "province_name"   text        NOT NULL,
+    "district_name"   text        NOT NULL,
+    "ghn_district_id" bigint      NOT NULL,
+    "ward_name"       text        NOT NULL,
+    "ghn_ward_code"   text        NOT NULL,
+    "detail"          text        NOT NULL,
+    "created_at"      timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "order_deliveries"
+(
+    "id"                     bigserial PRIMARY KEY,
+    "order_id"               text        NOT NULL,
+    "ghn_order_code"         text,
+    "expected_delivery_time" timestamptz NOT NULL,
+    "status"                 text,
+    "overall_status"         delivery_overral_status,
+    "fromID"                 bigint      NOT NULL,
+    "toID"                   bigint      NOT NULL,
+    "created_at"             timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"             timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "wallets"
@@ -210,29 +273,46 @@ CREATE TABLE "wallets"
     "updated_at"              timestamptz NOT NULL DEFAULT (now())
 );
 
-CREATE TABLE "wallet_transactions"
+CREATE TABLE "wallet_entries"
 (
-    "id"               bigserial PRIMARY KEY,
-    "wallet_id"        bigint      NOT NULL,
-    "transaction_type" text        NOT NULL,
-    "amount"           bigint      NOT NULL,
-    "description"      text,
-    "status"           text        NOT NULL DEFAULT 'pending',
-    "created_at"       timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"       timestamptz NOT NULL DEFAULT (now())
+    "id"             bigserial PRIMARY KEY,
+    "wallet_id"      bigint              NOT NULL,
+    "reference_id"   text,
+    "reference_type" wallet_reference_type,
+    "entry_type"     wallet_entry_type   NOT NULL,
+    "amount"         bigint              NOT NULL,
+    "status"         wallet_entry_status NOT NULL DEFAULT 'pending',
+    "created_at"     timestamptz         NOT NULL DEFAULT (now()),
+    "updated_at"     timestamptz         NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "order_transactions"
+(
+    "id"              bigserial PRIMARY KEY,
+    "order_id"        varchar(14)              NOT NULL,
+    "amount"          bigint                   NOT NULL,
+    "status"          order_transaction_status NOT NULL DEFAULT 'pending',
+    "buyer_entry_id"  bigint,
+    "seller_entry_id" bigint,
+    "created_at"      timestamptz              NOT NULL DEFAULT (now()),
+    "updated_at"      timestamptz              NOT NULL DEFAULT (now())
 );
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_pickup_address");
 
-CREATE UNIQUE INDEX ON "cart_items" ("cart_id", "gundam_id");
+CREATE UNIQUE INDEX "unique_cart_item" ON "cart_items" ("cart_id", "gundam_id");
 
 CREATE INDEX "idx_seller_active_subscription" ON "seller_subscriptions" ("seller_id", "is_active");
 
 CREATE INDEX ON "wallets" ("user_id");
 
-CREATE INDEX ON "wallet_transactions" ("wallet_id");
+CREATE INDEX ON "wallet_entries" ("wallet_id");
+
+CREATE INDEX ON "wallet_entries" ("reference_id", "reference_type");
+
+CREATE INDEX ON "order_transactions" ("order_id");
 
 ALTER TABLE "user_addresses"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
@@ -276,11 +356,29 @@ ALTER TABLE "order_items"
 ALTER TABLE "order_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
 
-ALTER TABLE "shipments"
+ALTER TABLE "delivery_information"
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+
+ALTER TABLE "order_deliveries"
     ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+
+ALTER TABLE "order_deliveries"
+    ADD FOREIGN KEY ("fromID") REFERENCES "delivery_information" ("id");
+
+ALTER TABLE "order_deliveries"
+    ADD FOREIGN KEY ("toID") REFERENCES "delivery_information" ("id");
 
 ALTER TABLE "wallets"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 
-ALTER TABLE "wallet_transactions"
+ALTER TABLE "wallet_entries"
     ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id");
+
+ALTER TABLE "order_transactions"
+    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+
+ALTER TABLE "order_transactions"
+    ADD FOREIGN KEY ("buyer_entry_id") REFERENCES "wallet_entries" ("id");
+
+ALTER TABLE "order_transactions"
+    ADD FOREIGN KEY ("seller_entry_id") REFERENCES "wallet_entries" ("id");

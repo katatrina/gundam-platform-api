@@ -1,0 +1,22 @@
+-- name: ValidateGundamBeforeCheckout :one
+SELECT sqlc.embed(g),
+       CASE
+           WHEN g.id IS NOT NULL AND g.status = 'published' AND g.deleted_at IS NULL
+               THEN true
+           ELSE false
+           END as valid
+FROM gundams g
+         JOIN users u ON g.owner_id = u.id
+WHERE g.id = $1;
+
+-- name: CreateOrder :one
+INSERT INTO orders (id,
+                    buyer_id,
+                    seller_id,
+                    items_subtotal,
+                    delivery_fee,
+                    total_amount,
+                    status,
+                    payment_method,
+                    note)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;

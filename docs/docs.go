@@ -294,6 +294,19 @@ const docTemplate = `{
                         "description": "Filter by Gundam grade slug",
                         "name": "grade",
                         "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "available",
+                            "selling",
+                            "pending auction approval",
+                            "auctioning",
+                            "exchange"
+                        ],
+                        "type": "string",
+                        "description": "Filter by Gundam status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -333,6 +346,19 @@ const docTemplate = `{
                         "name": "slug",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "available",
+                            "selling",
+                            "pending auction approval",
+                            "auctioning",
+                            "exchange"
+                        ],
+                        "type": "string",
+                        "description": "Filter by Gundam status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -347,6 +373,69 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error - Failed to retrieve Gundam"
+                    }
+                }
+            }
+        },
+        "/orders": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new order for purchasing Gundam models",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Create a new order",
+                "parameters": [
+                    {
+                        "description": "Order details",
+                        "name": "createOrderRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Order created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.CreateOrderTxResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request data",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid items or price mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
                     }
                 }
             }
@@ -762,14 +851,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/{sellerID}/gundams/{gundamID}/sell": {
+        "/sellers/{sellerID}/gundams/{gundamID}/publish": {
             "patch": {
                 "security": [
                     {
                         "accessToken": []
                     }
                 ],
-                "description": "Start selling a gundam for the specified seller. This endpoint checks the seller's active subscription and the gundam's status before proceeding.",
+                "description": "Publish a gundam for sale for the specified seller. This endpoint checks the gundam's status before proceeding.",
                 "consumes": [
                     "application/json"
                 ],
@@ -779,7 +868,7 @@ const docTemplate = `{
                 "tags": [
                     "sellers"
                 ],
-                "summary": "Sell a gundam",
+                "summary": "Publish a gundam for sale",
                 "parameters": [
                     {
                         "type": "integer",
@@ -798,7 +887,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully sold gundam with details",
+                        "description": "Successfully published gundam",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -814,7 +903,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Cannot sell gundam for another user\u003cbr/\u003eyou do not own this gundam",
+                        "description": "Cannot publish gundam for another seller\u003cbr/\u003eyou do not own this gundam",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -823,7 +912,88 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "Subscription limit exceeded\u003cbr/\u003eSubscription expired\u003cbr/\u003eGundam is not available for sale",
+                        "description": "Subscription limit exceeded\u003cbr/\u003eSubscription expired\u003cbr/\u003eGundam is not available for publishing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/gundams/{gundamID}/unpublish": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Unpublish a gundam for the specified seller. This endpoint checks the gundam's status before proceeding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Unpublish a gundam",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully unsold gundam with details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid gundam ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Cannot unsell gundam for another user\u003cbr/\u003eYou do not own this gundam",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Gundam is not currently listed for sale",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1448,6 +1618,63 @@ const docTemplate = `{
                 }
             }
         },
+        "api.createOrderRequest": {
+            "type": "object",
+            "required": [
+                "buyer_address_id",
+                "delivery_fee",
+                "expected_delivery_time",
+                "gundam_ids",
+                "items_subtotal",
+                "note",
+                "payment_method",
+                "seller_id"
+            ],
+            "properties": {
+                "buyer_address_id": {
+                    "description": "ID of the buyer's address\nexample: 42",
+                    "type": "integer"
+                },
+                "delivery_fee": {
+                    "description": "Delivery fee (VND)\nminimum: 0\nexample: 30000",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expected_delivery_time": {
+                    "description": "Expected delivery time\nexample: 2025-04-05T10:00:00Z",
+                    "type": "string"
+                },
+                "gundam_ids": {
+                    "description": "List of Gundam IDs in the order\nexample: [1, 2, 3]",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "items_subtotal": {
+                    "description": "Total value of all items (excluding delivery fee)\nminimum: 0\nexample: 500000",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "note": {
+                    "description": "Optional note for the order\nmaxLength: 255\nexample: Please deliver in the morning",
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "payment_method": {
+                    "description": "Payment method (wallet: pay via platform wallet, cod: cash on delivery)\nenums: wallet,cod\nexample: wallet",
+                    "type": "string",
+                    "enum": [
+                        "wallet",
+                        "cod"
+                    ]
+                },
+                "seller_id": {
+                    "description": "ID of the seller\nexample: user123",
+                    "type": "string"
+                }
+            }
+        },
         "api.createUserAddressRequest": {
             "type": "object",
             "required": [
@@ -1701,6 +1928,45 @@ const docTemplate = `{
                 }
             }
         },
+        "db.CreateOrderTxResult": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_delivery",
+                "order_items"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_delivery": {
+                    "$ref": "#/definitions/db.OrderDelivery"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                }
+            }
+        },
+        "db.DeliveryOverralStatus": {
+            "type": "string",
+            "enum": [
+                "picking",
+                "delivering",
+                "delivered",
+                "failed",
+                "return"
+            ],
+            "x-enum-varnames": [
+                "DeliveryOverralStatusPicking",
+                "DeliveryOverralStatusDelivering",
+                "DeliveryOverralStatusDelivered",
+                "DeliveryOverralStatusFailed",
+                "DeliveryOverralStatusReturn"
+            ]
+        },
         "db.GetGundamBySlugRow": {
             "type": "object",
             "required": [
@@ -1856,18 +2122,18 @@ const docTemplate = `{
         "db.GundamStatus": {
             "type": "string",
             "enum": [
-                "available",
-                "selling",
+                "in store",
+                "published",
+                "processing",
                 "pending auction approval",
-                "auctioning",
-                "exchange"
+                "auctioning"
             ],
             "x-enum-varnames": [
-                "GundamStatusAvailable",
-                "GundamStatusSelling",
+                "GundamStatusInstore",
+                "GundamStatusPublished",
+                "GundamStatusProcessing",
                 "GundamStatusPendingauctionapproval",
-                "GundamStatusAuctioning",
-                "GundamStatusExchange"
+                "GundamStatusAuctioning"
             ]
         },
         "db.ListCartItemsWithDetailsRow": {
@@ -1984,6 +2250,183 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "db.NullDeliveryOverralStatus": {
+            "type": "object",
+            "required": [
+                "delivery_overral_status",
+                "valid"
+            ],
+            "properties": {
+                "delivery_overral_status": {
+                    "$ref": "#/definitions/db.DeliveryOverralStatus"
+                },
+                "valid": {
+                    "description": "Valid is true if DeliveryOverralStatus is not NULL",
+                    "type": "boolean"
+                }
+            }
+        },
+        "db.Order": {
+            "type": "object",
+            "required": [
+                "buyer_id",
+                "created_at",
+                "delivery_fee",
+                "id",
+                "items_subtotal",
+                "note",
+                "payment_method",
+                "seller_id",
+                "status",
+                "total_amount",
+                "updated_at"
+            ],
+            "properties": {
+                "buyer_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "delivery_fee": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items_subtotal": {
+                    "type": "integer"
+                },
+                "note": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/db.PaymentMethod"
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.OrderStatus"
+                },
+                "total_amount": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.OrderDelivery": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "expected_delivery_time",
+                "fromID",
+                "ghn_order_code",
+                "id",
+                "order_id",
+                "overall_status",
+                "status",
+                "toID",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expected_delivery_time": {
+                    "type": "string"
+                },
+                "fromID": {
+                    "type": "integer"
+                },
+                "ghn_order_code": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "overall_status": {
+                    "$ref": "#/definitions/db.NullDeliveryOverralStatus"
+                },
+                "status": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "toID": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.OrderItem": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "gundam_id",
+                "id",
+                "order_id",
+                "price",
+                "quantity"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.OrderStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "packaging",
+                "delivering",
+                "delivered",
+                "successful",
+                "failed",
+                "canceled"
+            ],
+            "x-enum-varnames": [
+                "OrderStatusPending",
+                "OrderStatusPackaging",
+                "OrderStatusDelivering",
+                "OrderStatusDelivered",
+                "OrderStatusSuccessful",
+                "OrderStatusFailed",
+                "OrderStatusCanceled"
+            ]
+        },
+        "db.PaymentMethod": {
+            "type": "string",
+            "enum": [
+                "cod",
+                "wallet"
+            ],
+            "x-enum-varnames": [
+                "PaymentMethodCod",
+                "PaymentMethodWallet"
+            ]
         },
         "db.User": {
             "type": "object",
@@ -2120,6 +2563,10 @@ const docTemplate = `{
                 "UserRoleModerator",
                 "UserRoleAdmin"
             ]
+        },
+        "gin.H": {
+            "type": "object",
+            "additionalProperties": {}
         },
         "pgtype.Text": {
             "type": "object",

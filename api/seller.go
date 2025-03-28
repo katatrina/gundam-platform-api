@@ -144,21 +144,21 @@ func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, subscription)
 }
 
-//	@Summary		Sell a gundam
-//	@Description	Start selling a gundam for the specified seller. This endpoint checks the seller's active subscription and the gundam's status before proceeding.
+//	@Summary		Publish a gundam for sale
+//	@Description	Publish a gundam for sale for the specified seller. This endpoint checks the gundam's status before proceeding.
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
 //	@Param			gundamID	path	int64	true	"Gundam ID"
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
-//	@Success		200	{object}	map[string]interface{}	"Successfully sold gundam with details"
+//	@Success		200	{object}	map[string]interface{}	"Successfully published gundam"
 //	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
-//	@Failure		403	{object}	map[string]string		"Cannot sell gundam for another user<br/>you do not own this gundam"
-//	@Failure		409	{object}	map[string]string		"Subscription limit exceeded<br/>Subscription expired<br/>Gundam is not available for sale"
+//	@Failure		403	{object}	map[string]string		"Cannot publish gundam for another seller<br/>you do not own this gundam"
+//	@Failure		409	{object}	map[string]string		"Subscription limit exceeded<br/>Subscription expired<br/>Gundam is not available for publishing"
 //	@Failure		500	{object}	map[string]string		"Internal server error"
-//	@Router			/sellers/{sellerID}/gundams/{gundamID}/sell [patch]
-func (server *Server) sellGundam(ctx *gin.Context) {
+//	@Router			/sellers/{sellerID}/gundams/{gundamID}/publish [patch]
+func (server *Server) publishGundam(ctx *gin.Context) {
 	gundamID, err := strconv.ParseInt(ctx.Param("gundamID"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
@@ -168,7 +168,7 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	userID := ctx.Param("sellerID")
 	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	if userID != ownerID {
-		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot sell gundam for another user"})
+		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot publish gundam for another user"})
 		return
 	}
 	
@@ -183,7 +183,7 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	if userSubscription.EndDate.Valid &&
 		userSubscription.EndDate.Time.Before(time.Now()) &&
 		userSubscription.PlanName != db.TrialSellerSubscriptionName {
-		ctx.JSON(http.StatusConflict, gin.H{"error": db.ErrSubscriptionExpired})
+		ctx.JSON(http.StatusConflict, errorResponse(db.ErrSubscriptionExpired))
 		return
 	}
 	
@@ -207,21 +207,21 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 		ctx.JSON(http.StatusForbidden, gin.H{"message": "you do not own this gundam"})
 		return
 	}
-	if gundam.Status != db.GundamStatusAvailable {
-		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not available for sale"})
+	if gundam.Status != db.GundamStatusInstore {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not available for publishing"})
 		return
 	}
 	
-	arg := db.SellGundamTxParams{
+	arg := db.PublishGundamTxParams{
 		GundamID:             gundam.ID,
 		SellerID:             userID,
 		ActiveSubscriptionID: userSubscription.ID,
 		ListingsUsed:         userSubscription.ListingsUsed + 1,
 	}
-	err = server.dbStore.SellGundamTx(ctx, arg)
+	err = server.dbStore.PublishGundamTx(ctx, arg)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to start selling gundam")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start selling process"})
+		log.Error().Err(err).Msg("Failed to publish gundam")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start publishing process"})
 		return
 	}
 	
@@ -229,12 +229,12 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":   "gundam is now listed for sale",
 		"gundam_id": gundam.ID,
-		"status":    db.GundamStatusSelling,
+		"status":    db.GundamStatusPublished,
 	})
 }
 
-//	@Summary		Unsell a gundam
-//	@Description	Stop selling a gundam for the specified seller. This endpoint checks the gundam's status before proceeding.
+//	@Summary		Unpublish a gundam
+//	@Description	Unpublish a gundam for the specified seller. This endpoint checks the gundam's status before proceeding.
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
@@ -246,8 +246,8 @@ func (server *Server) sellGundam(ctx *gin.Context) {
 //	@Failure		403	{object}	map[string]string		"Cannot unsell gundam for another user<br/>You do not own this gundam"
 //	@Failure		409	{object}	map[string]string		"Gundam is not currently listed for sale"
 //	@Failure		500	{object}	map[string]string		"Internal server error"
-//	@Router			/sellers/{sellerID}/gundams/{gundamID}/unsell [patch]
-func (server *Server) unsellGundam(ctx *gin.Context) {
+//	@Router			/sellers/{sellerID}/gundams/{gundamID}/unpublish [patch]
+func (server *Server) unpublishGundam(ctx *gin.Context) {
 	gundamID, err := strconv.ParseInt(ctx.Param("gundamID"), 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
@@ -267,26 +267,26 @@ func (server *Server) unsellGundam(ctx *gin.Context) {
 		ctx.JSON(http.StatusForbidden, gin.H{"message": "you do not own this gundam"})
 		return
 	}
-	if gundam.Status != db.GundamStatusSelling {
-		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not currently listed for sale"})
+	if gundam.Status != db.GundamStatusPublished {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "gundam is not currently published"})
 		return
 	}
 	
 	// TODO: Kiểm tra xem Gundam có đang được giao dịch không
-	// Nếu có, không cho phép hủy bán
+	// Không cần thiết nữa vì khi tạo order, Gundam sẽ tự động được unpublish
 	
-	err = server.dbStore.UnsellGundamTx(ctx, db.UnsellGundamTxParams{
+	err = server.dbStore.UnpublishGundamTx(ctx, db.UnpublishGundamTxParams{
 		GundamID: gundam.ID,
 		SellerID: gundam.OwnerID,
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to unsell gundam")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unsell gundam"})
+		log.Error().Err(err).Msg("Failed to unpublish gundam")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unpublish gundam"})
 		return
 	}
 	
 	ctx.JSON(http.StatusOK, gin.H{
-		"message":   "gundam is no longer listed for sale",
+		"message":   "gundam is no longer being published",
 		"gundam_id": gundam.ID,
 	})
 }

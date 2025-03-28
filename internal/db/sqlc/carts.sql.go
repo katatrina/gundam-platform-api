@@ -66,6 +66,25 @@ func (q *Queries) AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCa
 	return i, err
 }
 
+const checkCartItemExists = `-- name: CheckCartItemExists :one
+SELECT EXISTS (SELECT 1
+               FROM cart_items
+               WHERE cart_id = $1
+                 AND gundam_id = $2)
+`
+
+type CheckCartItemExistsParams struct {
+	CartID   int64 `json:"cart_id"`
+	GundamID int64 `json:"gundam_id"`
+}
+
+func (q *Queries) CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkCartItemExists, arg.CartID, arg.GundamID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getCartByUserID = `-- name: GetCartByUserID :one
 SELECT id
 FROM carts
@@ -110,6 +129,8 @@ FROM cart_items ci
               ON gi.gundam_id = g.id
                   AND gi.is_primary = true
 WHERE ci.cart_id = $1
+  AND g.status = 'selling'
+  AND g.deleted_at IS NULL
 `
 
 type ListCartItemsWithDetailsRow struct {

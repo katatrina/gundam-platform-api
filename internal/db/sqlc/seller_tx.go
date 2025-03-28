@@ -6,20 +6,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type SellGundamTxParams struct {
+type PublishGundamTxParams struct {
 	GundamID             int64
 	SellerID             string
 	ActiveSubscriptionID int64
 	ListingsUsed         int64
 }
 
-func (store *SQLStore) SellGundamTx(ctx context.Context, arg SellGundamTxParams) error {
+func (store *SQLStore) PublishGundamTx(ctx context.Context, arg PublishGundamTxParams) error {
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
-		// Update gundam status to selling
+		// Update gundam status to published
 		err := qTx.UpdateGundam(ctx, UpdateGundamParams{
 			ID: arg.GundamID,
 			Status: NullGundamStatus{
-				GundamStatus: GundamStatusSelling,
+				GundamStatus: GundamStatusPublished,
 				Valid:        true,
 			},
 		})
@@ -46,18 +46,18 @@ func (store *SQLStore) SellGundamTx(ctx context.Context, arg SellGundamTxParams)
 	return err
 }
 
-type UnsellGundamTxParams struct {
+type UnpublishGundamTxParams struct {
 	GundamID int64
 	SellerID string
 }
 
-func (store *SQLStore) UnSellGundamTx(ctx context.Context, arg UnsellGundamTxParams) error {
+func (store *SQLStore) UnpublishGundamTx(ctx context.Context, arg UnpublishGundamTxParams) error {
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
-		// Update gundam status to available
+		// Update gundam status to "in store"
 		err := qTx.UpdateGundam(ctx, UpdateGundamParams{
 			ID: arg.GundamID,
 			Status: NullGundamStatus{
-				GundamStatus: GundamStatusAvailable,
+				GundamStatus: GundamStatusInstore,
 				Valid:        true,
 			},
 		})

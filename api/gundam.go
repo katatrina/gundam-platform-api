@@ -34,6 +34,7 @@ func (server *Server) listGundamGrades(ctx *gin.Context) {
 
 type listGundamsRequest struct {
 	GradeSlug *string `form:"grade"`
+	Status    *string `form:"status"`
 }
 
 type listGundamsResponse []db.ListGundamsWithFiltersRow
@@ -42,7 +43,16 @@ func (req *listGundamsRequest) getGradeSlug() string {
 	if req == nil || req.GradeSlug == nil {
 		return ""
 	}
+	
 	return *req.GradeSlug
+}
+
+func (req *listGundamsRequest) getStatus() string {
+	if req == nil || req.Status == nil {
+		return ""
+	}
+	
+	return *req.Status
 }
 
 //	@Summary		List Gundams
@@ -50,6 +60,7 @@ func (req *listGundamsRequest) getGradeSlug() string {
 //	@Tags			gundams
 //	@Produce		json
 //	@Param			grade	query		string				false	"Filter by Gundam grade slug"	example(master-grade)
+//	@Param			status	query		string				false	"Filter by Gundam status"		Enums(available, selling, pending auction approval, auctioning, exchange)
 //	@Success		200		{object}	listGundamsResponse	"Successfully retrieved list of Gundams"
 //	@Failure		400		"Bad Request - Invalid query parameters"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundams"
@@ -62,12 +73,18 @@ func (server *Server) listGundams(ctx *gin.Context) {
 		return
 	}
 	
-	gradeSlug := pgtype.Text{
-		String: req.getGradeSlug(),
-		Valid:  req.GradeSlug != nil,
+	arg := db.ListGundamsWithFiltersParams{
+		GradeSlug: pgtype.Text{
+			String: req.getGradeSlug(),
+			Valid:  req.GradeSlug != nil,
+		},
+		Status: pgtype.Text{
+			String: req.getStatus(),
+			Valid:  req.Status != nil,
+		},
 	}
 	
-	gundams, err := server.dbStore.ListGundamsWithFilters(ctx, gradeSlug)
+	gundams, err := server.dbStore.ListGundamsWithFilters(ctx, arg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list gundams")
 		ctx.Status(http.StatusInternalServerError)
@@ -86,15 +103,25 @@ type getGundamBySlugResponse struct {
 //	@Description	Retrieves a specific Gundam model by its unique slug
 //	@Tags			gundams
 //	@Produce		json
-//	@Param			slug	path		string					true	"Gundam model slug"	example(rx-78-2-gundam)
+//	@Param			slug	path		string					true	"Gundam model slug"			example(rx-78-2-gundam)
+//	@Param			status	query		string					false	"Filter by Gundam status"	Enums(available, selling, pending auction approval, auctioning, exchange)
 //	@Success		200		{object}	getGundamBySlugResponse	"Successfully retrieved Gundam details"
 //	@Failure		404		"Not Found - Gundam with specified slug does not exist"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundam"
 //	@Router			/gundams/{slug} [get]
 func (server *Server) getGundamBySlug(ctx *gin.Context) {
 	slug := ctx.Param("slug")
+	status := ctx.Query("status")
 	
-	gundam, err := server.dbStore.GetGundamBySlug(ctx, slug)
+	arg := db.GetGundamBySlugParams{
+		Slug: slug,
+		Status: pgtype.Text{
+			String: status,
+			Valid:  status != "",
+		},
+	}
+	
+	gundam, err := server.dbStore.GetGundamBySlug(ctx, arg)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.Status(http.StatusNotFound)

@@ -108,9 +108,16 @@ func (server *Server) setupRouter() {
 		userGroup.PUT(":id/addresses/:address_id", server.updateUserAddress)
 		userGroup.DELETE(":id/addresses/:address_id", server.deleteUserAddress)
 		
-		userGroup.POST("become-seller", authMiddleware(server.tokenMaker), server.becomeSeller)
+		userGroup.Use(authMiddleware(server.tokenMaker))
+		userGroup.POST("become-seller", server.becomeSeller)
+		
 		// userGroup.GET(":id/wallet", authMiddleware(server.tokenMaker), server.getUserWallet)
 		// userGroup.PUT(":id/wallet", authMiddleware(server.tokenMaker), server.updateUserWallet)
+	}
+	
+	orderGroup := v1.Group("/orders").Use(authMiddleware(server.tokenMaker))
+	{
+		orderGroup.POST("", server.createOrder)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)
@@ -122,8 +129,8 @@ func (server *Server) setupRouter() {
 		{
 			gundamGroup.POST("", server.createGundam)
 			gundamGroup.GET("", server.listGundamsBySeller)
-			gundamGroup.PATCH(":gundamID/sell", server.sellGundam)
-			gundamGroup.PATCH(":gundamID/unsell", server.unsellGundam)
+			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)
+			gundamGroup.PATCH(":gundamID/unpublish", server.unpublishGundam)
 		}
 		
 		subscriptionGroup := sellerGroup.Group("subscriptions")
@@ -145,7 +152,7 @@ func (server *Server) setupRouter() {
 		cartGroup.DELETE("/items/:id", server.deleteCartItem)
 	}
 	
-	v1.POST("checkout", authMiddleware(server.tokenMaker), server.checkout)
+	v1.POST("checkout", authMiddleware(server.tokenMaker), server.createOrder)
 	
 	otpGroup := v1.Group("/otp")
 	{
@@ -156,7 +163,6 @@ func (server *Server) setupRouter() {
 		otpGroup.POST("/email/verify", server.verifyEmailOTP)
 	}
 	
-	// Thêm endpoint mới để kiểm tra email
 	v1.GET("/check-email", server.checkEmailExists)
 	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

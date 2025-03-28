@@ -42,7 +42,7 @@ INSERT INTO gundams (owner_id,
                      scale,
                      description,
                      price)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
 `
 
 type CreateGundamParams struct {
@@ -80,6 +80,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.Name,
 		&i.Slug,
 		&i.GradeID,
+		&i.Quantity,
 		&i.Condition,
 		&i.ConditionDescription,
 		&i.Manufacturer,
@@ -154,7 +155,7 @@ func (q *Queries) GetGundamAccessories(ctx context.Context, gundamID int64) ([]G
 }
 
 const getGundamByID = `-- name: GetGundamByID :one
-SELECT id, owner_id, name, slug, grade_id, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+SELECT id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
 FROM gundams
 WHERE id = $1
 `
@@ -168,6 +169,7 @@ func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
 		&i.Name,
 		&i.Slug,
 		&i.GradeID,
+		&i.Quantity,
 		&i.Condition,
 		&i.ConditionDescription,
 		&i.Manufacturer,
@@ -205,8 +207,14 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE g.slug = $1
+  AND ($2::text IS NULL OR g.status = $2::text)
 ORDER BY g.created_at DESC
 `
+
+type GetGundamBySlugParams struct {
+	Slug   string      `json:"slug"`
+	Status pgtype.Text `json:"status"`
+}
 
 type GetGundamBySlugRow struct {
 	ID           int64           `json:"id"`
@@ -226,8 +234,8 @@ type GetGundamBySlugRow struct {
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
-func (q *Queries) GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error) {
-	row := q.db.QueryRow(ctx, getGundamBySlug, slug)
+func (q *Queries) GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getGundamBySlug, arg.Slug, arg.Status)
 	var i GetGundamBySlugRow
 	err := row.Scan(
 		&i.ID,
@@ -302,9 +310,14 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE gg.slug = COALESCE($1::text, gg.slug)
-  AND g.status = 'selling'
+  AND ($2::text IS NULL OR g.status = $2::text)
 ORDER BY g.created_at DESC
 `
+
+type ListGundamsWithFiltersParams struct {
+	GradeSlug pgtype.Text `json:"grade_slug"`
+	Status    pgtype.Text `json:"status"`
+}
 
 type ListGundamsWithFiltersRow struct {
 	ID                   int64           `json:"id"`
@@ -324,8 +337,8 @@ type ListGundamsWithFiltersRow struct {
 	ImageURLs            []string        `json:"image_urls"`
 }
 
-func (q *Queries) ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error) {
-	rows, err := q.db.Query(ctx, listGundamsWithFilters, gradeSlug)
+func (q *Queries) ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error) {
+	rows, err := q.db.Query(ctx, listGundamsWithFilters, arg.GradeSlug, arg.Status)
 	if err != nil {
 		return nil, err
 	}

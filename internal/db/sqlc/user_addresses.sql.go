@@ -83,6 +83,40 @@ func (q *Queries) DeleteUserAddress(ctx context.Context, arg DeleteUserAddressPa
 	return err
 }
 
+const getUserAddressByID = `-- name: GetUserAddressByID :one
+SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
+FROM user_addresses
+WHERE id = $1
+  AND user_id = $2
+`
+
+type GetUserAddressByIDParams struct {
+	ID     int64  `json:"id"`
+	UserID string `json:"user_id"`
+}
+
+func (q *Queries) GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error) {
+	row := q.db.QueryRow(ctx, getUserAddressByID, arg.ID, arg.UserID)
+	var i UserAddress
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.ProvinceName,
+		&i.DistrictName,
+		&i.GhnDistrictID,
+		&i.WardName,
+		&i.GhnWardCode,
+		&i.Detail,
+		&i.IsPrimary,
+		&i.IsPickupAddress,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserAddressForUpdate = `-- name: GetUserAddressForUpdate :one
 SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
 FROM user_addresses

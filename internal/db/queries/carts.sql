@@ -47,10 +47,18 @@ FROM cart_items ci
          JOIN gundam_images gi
               ON gi.gundam_id = g.id
                   AND gi.is_primary = true
-WHERE ci.cart_id = $1;
+WHERE ci.cart_id = $1
+  AND g.status = 'selling'
+  AND g.deleted_at IS NULL;
 
 -- name: RemoveCartItem :exec
 DELETE
 FROM cart_items
 WHERE id = $1
   AND cart_id = $2;
+
+-- name: CheckCartItemExists :one
+SELECT EXISTS (SELECT 1
+               FROM cart_items
+               WHERE cart_id = $1
+                 AND gundam_id = $2);

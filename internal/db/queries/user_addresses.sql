@@ -4,6 +4,12 @@ INSERT INTO user_addresses (user_id, full_name, phone_number, province_name, dis
                             detail, is_primary, is_pickup_address)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *;
 
+-- name: GetUserAddressByID :one
+SELECT *
+FROM user_addresses
+WHERE id = $1
+  AND user_id = $2;
+
 -- name: GetUserAddressForUpdate :one
 SELECT *
 FROM user_addresses

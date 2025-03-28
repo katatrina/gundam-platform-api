@@ -6,3 +6,9 @@ VALUES ($1);
 SELECT *
 FROM wallets
 WHERE user_id = $1;
+
+-- name: GetWalletForUpdate :one
+SELECT *
+FROM wallets
+WHERE user_id = $1
+    FOR UPDATE;

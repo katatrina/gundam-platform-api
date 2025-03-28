@@ -43,9 +43,36 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 		return
 	}
 	
+	// Check if Gundam exists
+	gundam, err := server.dbStore.GetGundamByID(ctx, req.GundamID)
+	if err != nil {
+		log.Err(err).Msg("failed to get Gundam by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if gundam.Status != db.GundamStatusPublished || gundam.DeletedAt.Valid == true {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "this gundam has been deleted or is not being published"})
+		return
+	}
+	
 	arg := db.AddCartItemParams{
 		CartID:   cartID,
 		GundamID: req.GundamID,
+	}
+	
+	// Check if Gundam is already in the cart
+	exists, err := server.dbStore.CheckCartItemExists(ctx, db.CheckCartItemExistsParams{
+		CartID:   cartID,
+		GundamID: req.GundamID,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to check if Gundam is already in the cart")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if exists {
+		ctx.JSON(http.StatusBadRequest, errorResponse(db.ErrCartItemExists))
+		return
 	}
 	
 	cartItem, err := server.dbStore.AddCartItem(ctx, arg)

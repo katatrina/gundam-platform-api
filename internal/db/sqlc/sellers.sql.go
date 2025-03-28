@@ -12,6 +12,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getSellerByGundamID = `-- name: GetSellerByGundamID :one
+SELECT u.id, u.full_name, u.hashed_password, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.role, u.avatar_url, u.created_at, u.updated_at
+FROM users u
+         JOIN gundams g ON u.id = g.owner_id
+WHERE g.id = $1
+  AND u.role = 'seller'
+`
+
+func (q *Queries) GetSellerByGundamID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getSellerByGundamID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FullName,
+		&i.HashedPassword,
+		&i.Email,
+		&i.EmailVerified,
+		&i.PhoneNumber,
+		&i.PhoneNumberVerified,
+		&i.Role,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSellerByID = `-- name: GetSellerByID :one
 SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 FROM users

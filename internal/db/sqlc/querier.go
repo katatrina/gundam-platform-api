@@ -12,9 +12,14 @@ import (
 
 type Querier interface {
 	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
+	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
+	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
 	CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error)
+	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	CreateOrderDelivery(ctx context.Context, arg CreateOrderDeliveryParams) (OrderDelivery, error)
+	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
@@ -22,23 +27,25 @@ type Querier interface {
 	CreateWallet(ctx context.Context, userID string) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
-	GetCheckoutItems(ctx context.Context, itemIds []int64) ([]GetCheckoutItemsRow, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
-	GetGundamBySlug(ctx context.Context, slug string) (GetGundamBySlugRow, error)
+	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
+	GetSellerByGundamID(ctx context.Context, id int64) (User, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
+	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
 	GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error)
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
+	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error)
-	ListGundamsWithFilters(ctx context.Context, gradeSlug pgtype.Text) ([]ListGundamsWithFiltersRow, error)
+	ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
@@ -48,6 +55,7 @@ type Querier interface {
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
+	ValidateGundamBeforeCheckout(ctx context.Context, id int64) (ValidateGundamBeforeCheckoutRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

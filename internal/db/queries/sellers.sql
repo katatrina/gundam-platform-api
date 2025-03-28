@@ -4,6 +4,13 @@ FROM users
 WHERE id = $1
   AND role = 'seller';
 
+-- name: GetSellerByGundamID :one
+SELECT u.*
+FROM users u
+         JOIN gundams g ON u.id = g.owner_id
+WHERE g.id = $1
+  AND u.role = 'seller';
+
 -- name: ListGundamsBySellerID :many
 SELECT g.id,
        g.owner_id,
