@@ -12,18 +12,25 @@ import (
 const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (order_id,
                          gundam_id,
-                         price)
-VALUES ($1, $2, $3) RETURNING id, order_id, gundam_id, quantity, price, created_at
+                         price,
+                         quantity)
+VALUES ($1, $2, $3, $4) RETURNING id, order_id, gundam_id, quantity, price, created_at
 `
 
 type CreateOrderItemParams struct {
 	OrderID  string `json:"order_id"`
 	GundamID int64  `json:"gundam_id"`
 	Price    int64  `json:"price"`
+	Quantity int64  `json:"quantity"`
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
-	row := q.db.QueryRow(ctx, createOrderItem, arg.OrderID, arg.GundamID, arg.Price)
+	row := q.db.QueryRow(ctx, createOrderItem,
+		arg.OrderID,
+		arg.GundamID,
+		arg.Price,
+		arg.Quantity,
+	)
 	var i OrderItem
 	err := row.Scan(
 		&i.ID,

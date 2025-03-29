@@ -313,6 +313,8 @@ definitions:
     type: object
   db.CreateOrderTxResult:
     properties:
+      buyer_entry:
+        $ref: '#/definitions/db.WalletEntry'
       order:
         $ref: '#/definitions/db.Order'
       order_delivery:
@@ -321,10 +323,14 @@ definitions:
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
+      order_transaction:
+        $ref: '#/definitions/db.OrderTransaction'
     required:
+    - buyer_entry
     - order
     - order_delivery
     - order_items
+    - order_transaction
     type: object
   db.DeliveryOverralStatus:
     enum:
@@ -558,6 +564,17 @@ definitions:
     - delivery_overral_status
     - valid
     type: object
+  db.NullWalletReferenceType:
+    properties:
+      valid:
+        description: Valid is true if WalletReferenceType is not NULL
+        type: boolean
+      wallet_reference_type:
+        $ref: '#/definitions/db.WalletReferenceType'
+    required:
+    - valid
+    - wallet_reference_type
+    type: object
   db.Order:
     properties:
       buyer_id:
@@ -669,6 +686,46 @@ definitions:
     - OrderStatusSuccessful
     - OrderStatusFailed
     - OrderStatusCanceled
+  db.OrderTransaction:
+    properties:
+      amount:
+        type: integer
+      buyer_entry_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      order_id:
+        type: string
+      seller_entry_id:
+        $ref: '#/definitions/pgtype.Int8'
+      status:
+        $ref: '#/definitions/db.OrderTransactionStatus'
+      updated_at:
+        type: string
+    required:
+    - amount
+    - buyer_entry_id
+    - created_at
+    - id
+    - order_id
+    - seller_entry_id
+    - status
+    - updated_at
+    type: object
+  db.OrderTransactionStatus:
+    enum:
+    - pending
+    - completed
+    - refunded
+    - failed
+    type: string
+    x-enum-varnames:
+    - OrderTransactionStatusPending
+    - OrderTransactionStatusCompleted
+    - OrderTransactionStatusRefunded
+    - OrderTransactionStatusFailed
   db.PaymentMethod:
     enum:
     - cod
@@ -774,8 +831,96 @@ definitions:
     - UserRoleSeller
     - UserRoleModerator
     - UserRoleAdmin
+  db.WalletEntry:
+    properties:
+      amount:
+        type: integer
+      created_at:
+        type: string
+      entry_type:
+        $ref: '#/definitions/db.WalletEntryType'
+      id:
+        type: integer
+      reference_id:
+        $ref: '#/definitions/pgtype.Text'
+      reference_type:
+        $ref: '#/definitions/db.NullWalletReferenceType'
+      status:
+        $ref: '#/definitions/db.WalletEntryStatus'
+      updated_at:
+        type: string
+      wallet_id:
+        type: integer
+    required:
+    - amount
+    - created_at
+    - entry_type
+    - id
+    - reference_id
+    - reference_type
+    - status
+    - updated_at
+    - wallet_id
+    type: object
+  db.WalletEntryStatus:
+    enum:
+    - pending
+    - completed
+    - failed
+    type: string
+    x-enum-varnames:
+    - WalletEntryStatusPending
+    - WalletEntryStatusCompleted
+    - WalletEntryStatusFailed
+  db.WalletEntryType:
+    enum:
+    - deposit
+    - withdrawal
+    - payment
+    - payment_received
+    - refund
+    - refund_deduction
+    - auction_lock
+    - auction_release
+    - auction_payment
+    - platform_fee
+    type: string
+    x-enum-varnames:
+    - WalletEntryTypeDeposit
+    - WalletEntryTypeWithdrawal
+    - WalletEntryTypePayment
+    - WalletEntryTypePaymentReceived
+    - WalletEntryTypeRefund
+    - WalletEntryTypeRefundDeduction
+    - WalletEntryTypeAuctionLock
+    - WalletEntryTypeAuctionRelease
+    - WalletEntryTypeAuctionPayment
+    - WalletEntryTypePlatformFee
+  db.WalletReferenceType:
+    enum:
+    - order
+    - auction
+    - withdrawal_request
+    - deposit_request
+    - promotion
+    - affiliate
+    type: string
+    x-enum-varnames:
+    - WalletReferenceTypeOrder
+    - WalletReferenceTypeAuction
+    - WalletReferenceTypeWithdrawalRequest
+    - WalletReferenceTypeDepositRequest
+    - WalletReferenceTypePromotion
+    - WalletReferenceTypeAffiliate
   gin.H:
     additionalProperties: {}
+    type: object
+  pgtype.Int8:
+    properties:
+      int64:
+        type: integer
+      valid:
+        type: boolean
     type: object
   pgtype.Text:
     properties:

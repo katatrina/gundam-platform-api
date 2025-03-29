@@ -12,3 +12,10 @@ SELECT *
 FROM wallets
 WHERE user_id = $1
     FOR UPDATE;
+
+-- name: AddWalletBalance :one
+UPDATE wallets
+SET balance = balance + $2,
+    updated_at = NOW()
+WHERE id = $1
+    RETURNING *;

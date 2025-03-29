@@ -292,7 +292,7 @@ CREATE TABLE "order_transactions"
     "order_id"        varchar(14)              NOT NULL,
     "amount"          bigint                   NOT NULL,
     "status"          order_transaction_status NOT NULL DEFAULT 'pending',
-    "buyer_entry_id"  bigint,
+    "buyer_entry_id"  bigint                   NOT NULL,
     "seller_entry_id" bigint,
     "created_at"      timestamptz              NOT NULL DEFAULT (now()),
     "updated_at"      timestamptz              NOT NULL DEFAULT (now())

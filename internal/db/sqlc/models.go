@@ -619,7 +619,7 @@ type OrderTransaction struct {
 	OrderID       string                 `json:"order_id"`
 	Amount        int64                  `json:"amount"`
 	Status        OrderTransactionStatus `json:"status"`
-	BuyerEntryID  pgtype.Int8            `json:"buyer_entry_id"`
+	BuyerEntryID  int64                  `json:"buyer_entry_id"`
 	SellerEntryID pgtype.Int8            `json:"seller_entry_id"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`

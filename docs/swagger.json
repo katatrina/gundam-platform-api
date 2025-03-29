@@ -1929,11 +1929,16 @@
         "db.CreateOrderTxResult": {
             "type": "object",
             "required": [
+                "buyer_entry",
                 "order",
                 "order_delivery",
-                "order_items"
+                "order_items",
+                "order_transaction"
             ],
             "properties": {
+                "buyer_entry": {
+                    "$ref": "#/definitions/db.WalletEntry"
+                },
                 "order": {
                     "$ref": "#/definitions/db.Order"
                 },
@@ -1945,6 +1950,9 @@
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
                 }
             }
         },
@@ -2265,6 +2273,22 @@
                 }
             }
         },
+        "db.NullWalletReferenceType": {
+            "type": "object",
+            "required": [
+                "valid",
+                "wallet_reference_type"
+            ],
+            "properties": {
+                "valid": {
+                    "description": "Valid is true if WalletReferenceType is not NULL",
+                    "type": "boolean"
+                },
+                "wallet_reference_type": {
+                    "$ref": "#/definitions/db.WalletReferenceType"
+                }
+            }
+        },
         "db.Order": {
             "type": "object",
             "required": [
@@ -2415,6 +2439,60 @@
                 "OrderStatusCanceled"
             ]
         },
+        "db.OrderTransaction": {
+            "type": "object",
+            "required": [
+                "amount",
+                "buyer_entry_id",
+                "created_at",
+                "id",
+                "order_id",
+                "seller_entry_id",
+                "status",
+                "updated_at"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "buyer_entry_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "seller_entry_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.OrderTransactionStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.OrderTransactionStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "completed",
+                "refunded",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "OrderTransactionStatusPending",
+                "OrderTransactionStatusCompleted",
+                "OrderTransactionStatusRefunded",
+                "OrderTransactionStatusFailed"
+            ]
+        },
         "db.PaymentMethod": {
             "type": "string",
             "enum": [
@@ -2562,9 +2640,122 @@
                 "UserRoleAdmin"
             ]
         },
+        "db.WalletEntry": {
+            "type": "object",
+            "required": [
+                "amount",
+                "created_at",
+                "entry_type",
+                "id",
+                "reference_id",
+                "reference_type",
+                "status",
+                "updated_at",
+                "wallet_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "entry_type": {
+                    "$ref": "#/definitions/db.WalletEntryType"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "reference_id": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "reference_type": {
+                    "$ref": "#/definitions/db.NullWalletReferenceType"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.WalletEntryStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "wallet_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.WalletEntryStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "completed",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "WalletEntryStatusPending",
+                "WalletEntryStatusCompleted",
+                "WalletEntryStatusFailed"
+            ]
+        },
+        "db.WalletEntryType": {
+            "type": "string",
+            "enum": [
+                "deposit",
+                "withdrawal",
+                "payment",
+                "payment_received",
+                "refund",
+                "refund_deduction",
+                "auction_lock",
+                "auction_release",
+                "auction_payment",
+                "platform_fee"
+            ],
+            "x-enum-varnames": [
+                "WalletEntryTypeDeposit",
+                "WalletEntryTypeWithdrawal",
+                "WalletEntryTypePayment",
+                "WalletEntryTypePaymentReceived",
+                "WalletEntryTypeRefund",
+                "WalletEntryTypeRefundDeduction",
+                "WalletEntryTypeAuctionLock",
+                "WalletEntryTypeAuctionRelease",
+                "WalletEntryTypeAuctionPayment",
+                "WalletEntryTypePlatformFee"
+            ]
+        },
+        "db.WalletReferenceType": {
+            "type": "string",
+            "enum": [
+                "order",
+                "auction",
+                "withdrawal_request",
+                "deposit_request",
+                "promotion",
+                "affiliate"
+            ],
+            "x-enum-varnames": [
+                "WalletReferenceTypeOrder",
+                "WalletReferenceTypeAuction",
+                "WalletReferenceTypeWithdrawalRequest",
+                "WalletReferenceTypeDepositRequest",
+                "WalletReferenceTypePromotion",
+                "WalletReferenceTypeAffiliate"
+            ]
+        },
         "gin.H": {
             "type": "object",
             "additionalProperties": {}
+        },
+        "pgtype.Int8": {
+            "type": "object",
+            "properties": {
+                "int64": {
+                    "type": "integer"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
         },
         "pgtype.Text": {
             "type": "object",

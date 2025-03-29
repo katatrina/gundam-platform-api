@@ -1,11 +1,16 @@
 package util
 
 import (
+	"fmt"
+	
 	"github.com/lithammer/shortuuid/v4"
 )
 
+const (
+	alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+)
+
 func GenerateOrderID() string {
-	alphabet := "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 	uuid := shortuuid.NewWithAlphabet(alphabet)
-	return uuid[:14]
+	return fmt.Sprintf("ORD-%s", uuid[:10])
 }
