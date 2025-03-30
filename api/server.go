@@ -129,6 +129,7 @@ func (server *Server) setupRouter() {
 	orderGroup := v1.Group("/orders").Use(authMiddleware(server.tokenMaker))
 	{
 		orderGroup.POST("", server.createOrder)
+		// orderGroup.POST("/confirm", server.confirmOrder)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)

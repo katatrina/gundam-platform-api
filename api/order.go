@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/notification"
+	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/rs/zerolog/log"
 )
 
@@ -74,7 +75,7 @@ func (r *createOrderRequest) getNote() string {
 //	@Router			/orders [post]
 func (server *Server) createOrder(ctx *gin.Context) {
 	// Lấy userID từ token xác thực
-	userID := ctx.MustGet(authorizationPayloadKey).(string)
+	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	
 	var req createOrderRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
