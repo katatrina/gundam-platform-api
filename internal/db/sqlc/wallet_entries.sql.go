@@ -22,12 +22,12 @@ VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, wallet_id, reference_id, reference
 `
 
 type CreateWalletEntryParams struct {
-	WalletID      int64                   `json:"wallet_id"`
-	ReferenceID   pgtype.Text             `json:"reference_id"`
-	ReferenceType NullWalletReferenceType `json:"reference_type"`
-	EntryType     WalletEntryType         `json:"entry_type"`
-	Amount        int64                   `json:"amount"`
-	Status        WalletEntryStatus       `json:"status"`
+	WalletID      int64               `json:"wallet_id"`
+	ReferenceID   pgtype.Text         `json:"reference_id"`
+	ReferenceType WalletReferenceType `json:"reference_type"`
+	EntryType     WalletEntryType     `json:"entry_type"`
+	Amount        int64               `json:"amount"`
+	Status        WalletEntryStatus   `json:"status"`
 }
 
 func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error) {

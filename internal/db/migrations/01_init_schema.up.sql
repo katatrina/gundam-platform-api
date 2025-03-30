@@ -276,14 +276,14 @@ CREATE TABLE "wallets"
 CREATE TABLE "wallet_entries"
 (
     "id"             bigserial PRIMARY KEY,
-    "wallet_id"      bigint              NOT NULL,
+    "wallet_id"      bigint                NOT NULL,
     "reference_id"   text,
-    "reference_type" wallet_reference_type,
-    "entry_type"     wallet_entry_type   NOT NULL,
-    "amount"         bigint              NOT NULL,
-    "status"         wallet_entry_status NOT NULL DEFAULT 'pending',
-    "created_at"     timestamptz         NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz         NOT NULL DEFAULT (now())
+    "reference_type" wallet_reference_type NOT NULL,
+    "entry_type"     wallet_entry_type     NOT NULL,
+    "amount"         bigint                NOT NULL,
+    "status"         wallet_entry_status   NOT NULL DEFAULT 'pending',
+    "created_at"     timestamptz           NOT NULL DEFAULT (now()),
+    "updated_at"     timestamptz           NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "order_transactions"

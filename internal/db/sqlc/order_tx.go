@@ -91,13 +91,10 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 				String: order.ID,
 				Valid:  true,
 			},
-			ReferenceType: NullWalletReferenceType{
-				WalletReferenceType: WalletReferenceTypeOrder,
-				Valid:               true,
-			},
-			EntryType: WalletEntryTypePayment,
-			Amount:    -arg.TotalAmount,
-			Status:    WalletEntryStatusCompleted,
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypePayment,
+			Amount:        -arg.TotalAmount,
+			Status:        WalletEntryStatusCompleted,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create buyer wallet entry: %w", err)

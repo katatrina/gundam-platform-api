@@ -691,13 +691,13 @@ type Wallet struct {
 }
 
 type WalletEntry struct {
-	ID            int64                   `json:"id"`
-	WalletID      int64                   `json:"wallet_id"`
-	ReferenceID   pgtype.Text             `json:"reference_id"`
-	ReferenceType NullWalletReferenceType `json:"reference_type"`
-	EntryType     WalletEntryType         `json:"entry_type"`
-	Amount        int64                   `json:"amount"`
-	Status        WalletEntryStatus       `json:"status"`
-	CreatedAt     time.Time               `json:"created_at"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	ID            int64               `json:"id"`
+	WalletID      int64               `json:"wallet_id"`
+	ReferenceID   pgtype.Text         `json:"reference_id"`
+	ReferenceType WalletReferenceType `json:"reference_type"`
+	EntryType     WalletEntryType     `json:"entry_type"`
+	Amount        int64               `json:"amount"`
+	Status        WalletEntryStatus   `json:"status"`
+	CreatedAt     time.Time           `json:"created_at"`
+	UpdatedAt     time.Time           `json:"updated_at"`
 }
