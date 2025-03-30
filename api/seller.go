@@ -272,9 +272,6 @@ func (server *Server) unpublishGundam(ctx *gin.Context) {
 		return
 	}
 	
-	// TODO: Kiểm tra xem Gundam có đang được giao dịch không
-	// Không cần thiết nữa vì khi tạo order, Gundam sẽ tự động được unpublish
-	
 	err = server.dbStore.UnpublishGundamTx(ctx, db.UnpublishGundamTxParams{
 		GundamID: gundam.ID,
 		SellerID: gundam.OwnerID,

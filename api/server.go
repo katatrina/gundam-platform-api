@@ -14,6 +14,7 @@ import (
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/katatrina/gundam-BE/internal/zalopay"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
@@ -32,6 +33,7 @@ type Server struct {
 	phoneNumberService     *phone_number.PhoneService
 	mailService            *mailer.GmailSender
 	notificationService    *notification.NotificationService
+	zalopayService         *zalopay.ZalopayService
 }
 
 // NewServer creates a new HTTP server and set up routing.
@@ -67,6 +69,10 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 	}
 	log.Info().Msg("Notification service created successfully ✅")
 	
+	// Create a new ZaloPay service
+	zalopayService := zalopay.NewZalopayService()
+	log.Info().Msg("ZaloPay service created successfully ✅")
+	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -77,6 +83,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 		redisDb:                redisDb,
 		mailService:            mailer,
 		notificationService:    notificationService,
+		zalopayService:         zalopayService,
 	}
 	
 	server.setupRouter()
@@ -126,11 +133,29 @@ func (server *Server) setupRouter() {
 		// userGroup.PUT(":id/wallet", authMiddleware(server.tokenMaker), server.updateUserWallet)
 	}
 	
-	orderGroup := v1.Group("/orders").Use(authMiddleware(server.tokenMaker))
+	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))
 	{
 		orderGroup.POST("", server.createOrder)
+		// orderGroup.GET("", server.listOrders)
 		// orderGroup.POST("/confirm", server.confirmOrder)
 	}
+	
+	// Thêm nhóm wallet để quản lý ví và thanh toán
+	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
+	{
+		// walletGroup.GET("", server.getUserWallet)                // Lấy thông tin ví
+		// walletGroup.GET("/transactions", server.listTransactions) // Lấy lịch sử giao dịch
+		
+		// ZaloPay payment endpoints
+		zalopayGroup := walletGroup.Group("/zalopay")
+		{
+			zalopayGroup.POST("/create", server.createZalopayOrder) // API 1: Tạo đơn hàng ZaloPay
+			// zalopayGroup.GET("/status/:app_trans_id", server.getZaloPayOrderStatus) // API 3: Kiểm tra trạng thái
+		}
+	}
+	
+	// Callback endpoint không cần authentication middleware vì ZaloPay server sẽ gọi
+	// v1.POST("/zalopay/callback", server.handleZaloPayCallback) // API 2: Xử lý callback
 	
 	v1.GET("/grades", server.listGundamGrades)
 	

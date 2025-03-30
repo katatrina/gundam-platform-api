@@ -1506,6 +1506,51 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/wallet/zalopay/create": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a ZaloPay order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Create a ZaloPay order",
+                "parameters": [
+                    {
+                        "description": "Create ZaloPay order request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createZaloPayOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Create ZaloPay order response",
+                        "schema": {
+                            "$ref": "#/definitions/zalopay.CreateOrderZaloPayResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1737,6 +1782,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.createZaloPayOrderRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "description"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "description": {
                     "type": "string"
                 }
             }
@@ -2275,22 +2335,6 @@ const docTemplate = `{
                 }
             }
         },
-        "db.NullWalletReferenceType": {
-            "type": "object",
-            "required": [
-                "valid",
-                "wallet_reference_type"
-            ],
-            "properties": {
-                "valid": {
-                    "description": "Valid is true if WalletReferenceType is not NULL",
-                    "type": "boolean"
-                },
-                "wallet_reference_type": {
-                    "$ref": "#/definitions/db.WalletReferenceType"
-                }
-            }
-        },
         "db.Order": {
             "type": "object",
             "required": [
@@ -2672,7 +2716,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/pgtype.Text"
                 },
                 "reference_type": {
-                    "$ref": "#/definitions/db.NullWalletReferenceType"
+                    "$ref": "#/definitions/db.WalletReferenceType"
                 },
                 "status": {
                     "$ref": "#/definitions/db.WalletEntryStatus"
@@ -2767,6 +2811,45 @@ const docTemplate = `{
                 },
                 "valid": {
                     "type": "boolean"
+                }
+            }
+        },
+        "zalopay.CreateOrderZaloPayResponse": {
+            "type": "object",
+            "required": [
+                "order_token",
+                "order_url",
+                "qr_code",
+                "return_code",
+                "return_message",
+                "sub_return_code",
+                "sub_return_message",
+                "zp_trans_token"
+            ],
+            "properties": {
+                "order_token": {
+                    "type": "string"
+                },
+                "order_url": {
+                    "type": "string"
+                },
+                "qr_code": {
+                    "type": "string"
+                },
+                "return_code": {
+                    "type": "integer"
+                },
+                "return_message": {
+                    "type": "string"
+                },
+                "sub_return_code": {
+                    "type": "integer"
+                },
+                "sub_return_message": {
+                    "type": "string"
+                },
+                "zp_trans_token": {
+                    "type": "string"
                 }
             }
         }

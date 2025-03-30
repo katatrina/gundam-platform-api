@@ -249,6 +249,8 @@ github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZ
 github.com/wneessen/go-mail v0.6.2 h1:c6V7c8D2mz868z9WJ+8zDKtUyLfZ1++uAZmo2GRFji8=
 github.com/wneessen/go-mail v0.6.2/go.mod h1:L/PYjPK3/2ZlNb2/FjEBIn9n1rUWjW+Toy531oVmeb4=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+github.com/zpmep/hmacutil v0.0.0-20190619043418-253bc927934c h1:TZTYe1Zalvbwkoleu8FVhDSHekxh0/UKpI7R4betVPw=
+github.com/zpmep/hmacutil v0.0.0-20190619043418-253bc927934c/go.mod h1:rPi1RGvYoxhq3Qah8HKnI7p6IrXqPYKY32/Wayz48YI=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=

@@ -184,6 +184,16 @@ definitions:
     - full_name
     - password
     type: object
+  api.createZaloPayOrderRequest:
+    properties:
+      amount:
+        type: integer
+      description:
+        type: string
+    required:
+    - amount
+    - description
+    type: object
   api.getGundamBySlugResponse:
     properties:
       accessories:
@@ -564,17 +574,6 @@ definitions:
     - delivery_overral_status
     - valid
     type: object
-  db.NullWalletReferenceType:
-    properties:
-      valid:
-        description: Valid is true if WalletReferenceType is not NULL
-        type: boolean
-      wallet_reference_type:
-        $ref: '#/definitions/db.WalletReferenceType'
-    required:
-    - valid
-    - wallet_reference_type
-    type: object
   db.Order:
     properties:
       buyer_id:
@@ -844,7 +843,7 @@ definitions:
       reference_id:
         $ref: '#/definitions/pgtype.Text'
       reference_type:
-        $ref: '#/definitions/db.NullWalletReferenceType'
+        $ref: '#/definitions/db.WalletReferenceType'
       status:
         $ref: '#/definitions/db.WalletEntryStatus'
       updated_at:
@@ -928,6 +927,34 @@ definitions:
         type: string
       valid:
         type: boolean
+    type: object
+  zalopay.CreateOrderZaloPayResponse:
+    properties:
+      order_token:
+        type: string
+      order_url:
+        type: string
+      qr_code:
+        type: string
+      return_code:
+        type: integer
+      return_message:
+        type: string
+      sub_return_code:
+        type: integer
+      sub_return_message:
+        type: string
+      zp_trans_token:
+        type: string
+    required:
+    - order_token
+    - order_url
+    - qr_code
+    - return_code
+    - return_message
+    - sub_return_code
+    - sub_return_message
+    - zp_trans_token
     type: object
 host: localhost:8080
 info:
@@ -1924,6 +1951,34 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /wallet/zalopay/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a ZaloPay order
+      parameters:
+      - description: Create ZaloPay order request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createZaloPayOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Create ZaloPay order response
+          schema:
+            $ref: '#/definitions/zalopay.CreateOrderZaloPayResponse'
+        "400":
+          description: Bad request
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Create a ZaloPay order
+      tags:
+      - wallet
 schemes:
 - http
 - https

@@ -1,6 +1,7 @@
 module github.com/katatrina/gundam-BE
 
 go 1.24.0
+
 require (
 	cloud.google.com/go/firestore v1.18.0
 	firebase.google.com/go/v4 v4.15.2
@@ -21,6 +22,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
 	github.com/wneessen/go-mail v0.6.2
+	github.com/zpmep/hmacutil v0.0.0-20190619043418-253bc927934c
 	golang.org/x/crypto v0.36.0
 	google.golang.org/api v0.227.0
 )
