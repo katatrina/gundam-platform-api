@@ -2,3 +2,4 @@
 app.env
 *.log
 data.sql
+service-account-file.json

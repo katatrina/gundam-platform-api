@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/notification"
 	"github.com/rs/zerolog/log"
 )
 
@@ -174,8 +175,35 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		return
 	}
 	
-	// TODO: Thông báo cho cả người mua và người bán về đơn hàng mới.
-	// TODO: Tạo notification objects trên Firestore.
+	// Gửi thông báo cho người mua
+	err = server.notificationService.SendNotification(ctx.Request.Context(), &notification.Notification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
+		Message:     fmt.Sprintf("Đơn hàng của bạn đã được tạo thành công với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.TotalAmount),
+		Type:        "order",
+		ReferenceID: result.Order.ID,
+		IsRead:      false,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Gửi thông báo cho người bán
+	err = server.notificationService.SendNotification(ctx.Request.Context(), &notification.Notification{
+		RecipientID: result.Order.SellerID,
+		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
+		Message:     fmt.Sprintf("Bạn đã nhận được một đơn hàng mới với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.ItemsSubtotal),
+		Type:        "order",
+		ReferenceID: result.Order.ID,
+		IsRead:      false,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 	
 	// Trả về kết quả cho client
 	ctx.JSON(http.StatusCreated, result)

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	
+	firebase "firebase.google.com/go/v4"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/mailer"
+	"github.com/katatrina/gundam-BE/internal/notification"
 	"github.com/katatrina/gundam-BE/internal/phone_number"
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
@@ -28,11 +30,12 @@ type Server struct {
 	googleIDTokenValidator *idtoken.Validator
 	redisDb                *redis.Client
 	phoneNumberService     *phone_number.PhoneService
-	mailer                 *mailer.GmailSender
+	mailService            *mailer.GmailSender
+	notificationService    *notification.NotificationService
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer *mailer.GmailSender) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer *mailer.GmailSender, firebaseApp *firebase.App) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -57,6 +60,13 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 	}
 	log.Info().Msg("Phone service created successfully ✅")
 	
+	// Create a new notification service
+	notificationService, err := notification.NewNotificationService(context.Background(), firebaseApp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create notification service: %w", err)
+	}
+	log.Info().Msg("Notification service created successfully ✅")
+	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -65,7 +75,8 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 		fileStore:              fileStore,
 		phoneNumberService:     phoneNumberService,
 		redisDb:                redisDb,
-		mailer:                 mailer,
+		mailService:            mailer,
+		notificationService:    notificationService,
 	}
 	
 	server.setupRouter()

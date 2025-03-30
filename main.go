@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	
+	firebase "firebase.google.com/go/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
@@ -11,6 +12,7 @@ import (
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
+	"google.golang.org/api/option"
 	
 	"github.com/rs/zerolog/log"
 	
@@ -38,6 +40,14 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load config file 😣")
 	}
 	
+	// Load Google service account file and initialize Firebase app
+	ctx := context.Background()
+	opt := option.WithCredentialsFile("./service-account-file.json")
+	firebaseApp, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create firebase app 😣")
+	}
+	
 	log.Info().Msg("configurations loaded successfully ✅")
 	
 	// Create connection pool
@@ -63,14 +73,14 @@ func main() {
 	// fmt.Println(config.GmailSMTPUsername, config.GmailSMTPPassword)
 	mailService, err := mailer.NewGmailSender(config.GmailSMTPUsername, config.GmailSMTPPassword, config, redisDb)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create mailer service 😣")
+		log.Fatal().Err(err).Msg("failed to create mail service 😣")
 	}
 	
-	runHTTPServer(config, store, redisDb, mailService)
+	runHTTPServer(config, store, redisDb, mailService, firebaseApp)
 }
 
-func runHTTPServer(config util.Config, store db.Store, redisDb *redis.Client, mailer *mailer.GmailSender) {
-	server, err := api.NewServer(store, redisDb, config, mailer)
+func runHTTPServer(config util.Config, store db.Store, redisDb *redis.Client, mailer *mailer.GmailSender, firebaseApp *firebase.App) {
+	server, err := api.NewServer(store, redisDb, config, mailer, firebaseApp)
 	
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")

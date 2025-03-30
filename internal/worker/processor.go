@@ -4,8 +4,8 @@ import (
 	"context"
 	
 	"github.com/hibiken/asynq"
+	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/storage"
-	db "github.com/katatrina/simplebank/db/sqlc"
 	"github.com/rs/zerolog/log"
 )
 

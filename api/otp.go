@@ -172,7 +172,7 @@ func (server *Server) generateEmailOTP(c *gin.Context) {
 		Subject: "Your OTP Code",
 		To:      []string{req.Email},
 	}
-	code, createdAt, expiresAt, err := server.mailer.SendOTP(mailHeader)
+	code, createdAt, expiresAt, err := server.mailService.SendOTP(mailHeader)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to send OTP email")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -211,7 +211,7 @@ func (server *Server) verifyEmailOTP(c *gin.Context) {
 		return
 	}
 	
-	valid, err := server.mailer.VerifyOTP(c.Request.Context(), req.Email, req.OTPCode)
+	valid, err := server.mailService.VerifyOTP(c.Request.Context(), req.Email, req.OTPCode)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to verify OTP")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
