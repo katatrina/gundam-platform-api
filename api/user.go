@@ -255,7 +255,7 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	
-	err = server.dbStore.CreateWallet(ctx, user.ID)
+	err = server.dbStore.CreateWallet(ctx, newUser.ID)
 	if err != nil {
 		log.Err(err).Msg("failed to create wallet")
 		return nil, fmt.Errorf("failed to create wallet: %w", err)
