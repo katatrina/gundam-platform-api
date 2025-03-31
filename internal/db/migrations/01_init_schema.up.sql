@@ -68,7 +68,8 @@ CREATE TYPE "wallet_reference_type" AS ENUM (
   'withdrawal_request',
   'deposit_request',
   'promotion',
-  'affiliate'
+  'affiliate',
+  'zalopay'
 );
 
 CREATE TYPE "wallet_entry_status" AS ENUM (
@@ -82,6 +83,20 @@ CREATE TYPE "order_transaction_status" AS ENUM (
   'completed',
   'refunded',
   'failed'
+);
+
+CREATE TYPE "payment_transaction_provider" AS ENUM (
+  'zalopay'
+);
+
+CREATE TYPE "payment_transaction_status" AS ENUM (
+  'pending',
+  'successful',
+  'failed'
+);
+
+CREATE TYPE "payment_transaction_type" AS ENUM (
+  'wallet_deposit'
 );
 
 CREATE TABLE "users"
@@ -132,7 +147,7 @@ CREATE TABLE "gundams"
     "scale"                 gundam_scale     NOT NULL,
     "description"           text             NOT NULL,
     "price"                 bigint           NOT NULL,
-    "status"                gundam_status    NOT NULL DEFAULT 'available',
+    "status"                gundam_status    NOT NULL DEFAULT 'in store',
     "created_at"            timestamptz      NOT NULL DEFAULT (now()),
     "updated_at"            timestamptz      NOT NULL DEFAULT (now()),
     "deleted_at"            timestamptz
@@ -210,17 +225,18 @@ CREATE TABLE "seller_subscriptions"
 
 CREATE TABLE "orders"
 (
-    "id"             varchar(14) PRIMARY KEY,
-    "buyer_id"       text           NOT NULL,
-    "seller_id"      text           NOT NULL,
-    "items_subtotal" bigint         NOT NULL,
-    "delivery_fee"   bigint         NOT NULL,
-    "total_amount"   bigint         NOT NULL,
-    "status"         order_status   NOT NULL DEFAULT 'pending',
-    "payment_method" payment_method NOT NULL,
+    "id"             uuid PRIMARY KEY,
+    "code"           varchar(14) UNIQUE NOT NULL,
+    "buyer_id"       text               NOT NULL,
+    "seller_id"      text               NOT NULL,
+    "items_subtotal" bigint             NOT NULL,
+    "delivery_fee"   bigint             NOT NULL,
+    "total_amount"   bigint             NOT NULL,
+    "status"         order_status       NOT NULL DEFAULT 'pending',
+    "payment_method" payment_method     NOT NULL,
     "note"           text,
-    "created_at"     timestamptz    NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz    NOT NULL DEFAULT (now())
+    "created_at"     timestamptz        NOT NULL DEFAULT (now()),
+    "updated_at"     timestamptz        NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "order_items"
@@ -298,6 +314,20 @@ CREATE TABLE "order_transactions"
     "updated_at"      timestamptz              NOT NULL DEFAULT (now())
 );
 
+CREATE TABLE "payment_transactions"
+(
+    "id"                      bigserial PRIMARY KEY,
+    "user_id"                 text                         NOT NULL,
+    "amount"                  bigint                       NOT NULL,
+    "transaction_type"        payment_transaction_type     NOT NULL,
+    "provider"                payment_transaction_provider NOT NULL,
+    "provider_transaction_id" text                         NOT NULL,
+    "status"                  payment_transaction_status   NOT NULL DEFAULT 'pending',
+    "metadata"                jsonb,
+    "created_at"              timestamptz                  NOT NULL DEFAULT (now()),
+    "updated_at"              timestamptz                  NOT NULL DEFAULT (now())
+);
+
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_pickup_address");
@@ -313,6 +343,10 @@ CREATE INDEX ON "wallet_entries" ("wallet_id");
 CREATE INDEX ON "wallet_entries" ("reference_id", "reference_type");
 
 CREATE INDEX ON "order_transactions" ("order_id");
+
+CREATE UNIQUE INDEX ON "payment_transactions" ("provider", "provider_transaction_id");
+
+CREATE INDEX ON "payment_transactions" ("user_id", "status");
 
 ALTER TABLE "user_addresses"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
@@ -382,3 +416,6 @@ ALTER TABLE "order_transactions"
 
 ALTER TABLE "order_transactions"
     ADD FOREIGN KEY ("seller_entry_id") REFERENCES "wallet_entries" ("id");
+
+ALTER TABLE "payment_transactions"
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
