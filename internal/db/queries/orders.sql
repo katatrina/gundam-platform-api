@@ -11,6 +11,7 @@ WHERE g.id = $1;
 
 -- name: CreateOrder :one
 INSERT INTO orders (id,
+                    code,
                     buyer_id,
                     seller_id,
                     items_subtotal,
@@ -19,4 +20,4 @@ INSERT INTO orders (id,
                     status,
                     payment_method,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *;

@@ -1,15 +1,19 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
+	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/rs/zerolog/log"
 )
 
 type createZaloPayOrderRequest struct {
-	Amount      int64  `json:"amount" binding:"required"`
-	Description string `json:"description"`
+	Amount      int64  `json:"amount" binding:"required,min=1000"`
+	Description string `json:"description" binding:"required,max=256"`
+	RedirectURL string `json:"redirect_url" binding:"required,url"`
 }
 
 //	@Summary		Create a ZaloPay order
@@ -34,8 +38,37 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	}
 	
 	// Tạo đơn hàng Zalopay
-	// items tạm thời là nil
-	result, err := server.zalopayService.CreateOrder(appUser, req.Amount, nil, req.Description)
+	transID, result, err := server.zalopayService.CreateOrder(appUser, req.Amount, nil, req.Description, req.RedirectURL)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create ZaloPay order")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Tạo metadata để lưu thông tin bổ sung
+	metadata, err := json.Marshal(map[string]interface{}{
+		"order_url":      result.OrderURL,
+		"zp_trans_token": result.ZpTransToken,
+		"order_token":    result.OrderToken,
+		"qr_code":        result.QrCode,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to marshal metadata")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lưu thông tin giao dịch vào database
+	transaction := db.CreatePaymentTransactionParams{
+		UserID:                appUser,
+		Amount:                req.Amount,
+		Provider:              db.PaymentTransactionProviderZalopay,
+		ProviderTransactionID: transID,
+		Status:                db.PaymentTransactionStatusPending,
+		Metadata:              metadata,
+	}
+	
+	_, err = server.dbStore.CreatePaymentTransaction(c, transaction)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -43,3 +76,32 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+// func (server *Server) handleZalopayCallback(c *gin.Context) {
+// 	var callbackData zalopay.ZaloPayCallbackData
+// 	if err := c.ShouldBindJSON(&callbackData); err != nil {
+// 		c.JSON(http.StatusBadRequest, zalopay.ZalopayCallbackResult{
+// 			ReturnCode:    -1,
+// 			ReturnMessage: "Invalid request data",
+// 		})
+// 		return
+// 	}
+//
+// 	// Bước 1: Xác thực callback
+// 	if !server.zalopayService.VerifyCallback(callbackData) {
+// 		c.JSON(http.StatusOK, zalopay.ZalopayCallbackResult{
+// 			ReturnCode:    -1,
+// 			ReturnMessage: "mac not equal",
+// 		})
+// 		return
+// 	}
+//
+// 	// Bước 2: Xử lý dữ liệu callback
+// 	result, err := server.zalopayService.ProcessCallback(callbackData)
+// 	if err != nil {
+// 		log.Printf("Error processing Zalopay callback: %v", err)
+// 	}
+//
+// 	// Trả về kết quả cho Zalopay server
+// 	c.JSON(http.StatusOK, result)
+// }

@@ -22,8 +22,9 @@ SELECT unnest(ARRAY[
               'user_addresses',
               'gundams',
               'seller_subscriptions',
-              'orders'
-                  ])
+              'orders',
+              'payment_transactions',
+           ])
            LOOP EXECUTE format('
             CREATE TRIGGER update_timestamp_trigger
             BEFORE UPDATE ON %I

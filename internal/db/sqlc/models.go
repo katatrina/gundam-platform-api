@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -322,6 +323,131 @@ func (ns NullPaymentMethod) Value() (driver.Value, error) {
 	return string(ns.PaymentMethod), nil
 }
 
+type PaymentTransactionProvider string
+
+const (
+	PaymentTransactionProviderZalopay PaymentTransactionProvider = "zalopay"
+)
+
+func (e *PaymentTransactionProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentTransactionProvider(s)
+	case string:
+		*e = PaymentTransactionProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentTransactionProvider: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentTransactionProvider struct {
+	PaymentTransactionProvider PaymentTransactionProvider `json:"payment_transaction_provider"`
+	Valid                      bool                       `json:"valid"` // Valid is true if PaymentTransactionProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentTransactionProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentTransactionProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentTransactionProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentTransactionProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentTransactionProvider), nil
+}
+
+type PaymentTransactionStatus string
+
+const (
+	PaymentTransactionStatusPending    PaymentTransactionStatus = "pending"
+	PaymentTransactionStatusSuccessful PaymentTransactionStatus = "successful"
+	PaymentTransactionStatusFailed     PaymentTransactionStatus = "failed"
+)
+
+func (e *PaymentTransactionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentTransactionStatus(s)
+	case string:
+		*e = PaymentTransactionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentTransactionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentTransactionStatus struct {
+	PaymentTransactionStatus PaymentTransactionStatus `json:"payment_transaction_status"`
+	Valid                    bool                     `json:"valid"` // Valid is true if PaymentTransactionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentTransactionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentTransactionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentTransactionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentTransactionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentTransactionStatus), nil
+}
+
+type PaymentTransactionType string
+
+const (
+	PaymentTransactionTypeWalletDeposit PaymentTransactionType = "wallet_deposit"
+)
+
+func (e *PaymentTransactionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentTransactionType(s)
+	case string:
+		*e = PaymentTransactionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentTransactionType: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentTransactionType struct {
+	PaymentTransactionType PaymentTransactionType `json:"payment_transaction_type"`
+	Valid                  bool                   `json:"valid"` // Valid is true if PaymentTransactionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentTransactionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentTransactionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentTransactionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentTransactionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentTransactionType), nil
+}
+
 type UserRole string
 
 const (
@@ -468,6 +594,7 @@ const (
 	WalletReferenceTypeDepositRequest    WalletReferenceType = "deposit_request"
 	WalletReferenceTypePromotion         WalletReferenceType = "promotion"
 	WalletReferenceTypeAffiliate         WalletReferenceType = "affiliate"
+	WalletReferenceTypeZalopay           WalletReferenceType = "zalopay"
 )
 
 func (e *WalletReferenceType) Scan(src interface{}) error {
@@ -579,7 +706,8 @@ type GundamImage struct {
 }
 
 type Order struct {
-	ID            string        `json:"id"`
+	ID            uuid.UUID     `json:"id"`
+	Code          string        `json:"code"`
 	BuyerID       string        `json:"buyer_id"`
 	SellerID      string        `json:"seller_id"`
 	ItemsSubtotal int64         `json:"items_subtotal"`
@@ -623,6 +751,19 @@ type OrderTransaction struct {
 	SellerEntryID pgtype.Int8            `json:"seller_entry_id"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`
+}
+
+type PaymentTransaction struct {
+	ID                    int64                      `json:"id"`
+	UserID                string                     `json:"user_id"`
+	Amount                int64                      `json:"amount"`
+	TransactionType       PaymentTransactionType     `json:"transaction_type"`
+	Provider              PaymentTransactionProvider `json:"provider"`
+	ProviderTransactionID string                     `json:"provider_transaction_id"`
+	Status                PaymentTransactionStatus   `json:"status"`
+	Metadata              []byte                     `json:"metadata"`
+	CreatedAt             time.Time                  `json:"created_at"`
+	UpdatedAt             time.Time                  `json:"updated_at"`
 }
 
 type SellerSubscription struct {

@@ -3,55 +3,61 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
-	"strings"
 	"time"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/mailer"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
 
 // GeneratePhoneOTPRequest represents the input structure for generating an OTP
 type GeneratePhoneOTPRequest struct {
-	PhoneNumber string `json:"phone_number" binding:"required"`
+	PhoneNumber string `json:"phone_number" binding:"required"` // Số điện thoại cần gửi OTP
 }
 
 // GeneratePhoneOTPResponse represents the response structure after OTP generation
 type GeneratePhoneOTPResponse struct {
-	OTPCode     string    `json:"otp_code"`
-	PhoneNumber string    `json:"phone_number"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	CreatedAt   time.Time `json:"created_at"`
+	OTPCode     string    `json:"otp_code"`     // Mã OTP được tạo
+	PhoneNumber string    `json:"phone_number"` // Số điện thoại đã gửi OTP
+	ExpiresAt   time.Time `json:"expires_at"`   // Thời điểm OTP hết hạn
+	CreatedAt   time.Time `json:"created_at"`   // Thời điểm OTP được tạo
 }
 
-// @Summary		Generate a One-Time Password (OTP) for phone_number number
-// @Description	Generates and sends an OTP to the specified phone_number number
+// @Summary		Generate a One-Time Password (OTP) for phone number
+// @Description	Generates and sends an OTP to the specified phone number. The OTP will be valid for 10 minutes.
+// Phone number must be a valid Vietnamese phone number (10-11 digits, starting with 03, 05, 07, 08, 09, or 84).
 // @Tags			authentication
 // @Accept			json
 // @Produce		json
 // @Param			request	body		GeneratePhoneOTPRequest		true	"OTP Generation Request"
 // @Success		200		{object}	GeneratePhoneOTPResponse	"OTP generated successfully"
-// @Failure		400		"Bad Request - Invalid input"
-// @Failure		429		"Too Many Requests - OTP request rate limit exceeded"
-// @Failure		500		"Internal Server Error"
+// @Failure		400		"Bad Request - Invalid phone number format"
+// @Failure		500		"Internal Server Error - Failed to generate or send OTP"
 // @Router			/otp/phone_number/generate [post]
-func (server *Server) generatePhoneOTP(c *gin.Context) {
+func (server *Server) generatePhoneNumberOTP(c *gin.Context) {
 	var req GeneratePhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Error().Err(err).Msg("failed to bind JSON request")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
+	// Validate phone number format (Vietnam)
+	if !util.IsValidVietnamesePhoneNumber(req.PhoneNumber) {
+		log.Error().Str("phone", req.PhoneNumber).Msg("invalid phone number format")
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid phone number format")))
+		return
+	}
+	
+	// Tạo và gửi OTP
 	code, expiresAt, createdAt, err := server.phoneNumberService.SendOTP(c, req.PhoneNumber)
 	if err != nil {
-		if strings.Contains(err.Error(), "wait") {
-			c.JSON(http.StatusTooManyRequests, errorResponse(err))
-			return
-		}
-		
+		log.Error().Err(err).Msg("failed to send OTP")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -65,12 +71,13 @@ func (server *Server) generatePhoneOTP(c *gin.Context) {
 }
 
 type VerifyPhoneOTPRequest struct {
-	PhoneNumber string `json:"phone_number" binding:"required"`
-	OTPCode     string `json:"otp_code" binding:"required,len=6"`
+	UserID      string `json:"user_id" binding:"required"`        // ID của user cần cập nhật số điện thoại
+	PhoneNumber string `json:"phone_number" binding:"required"`   // Số điện thoại mới
+	OTPCode     string `json:"otp_code" binding:"required,len=6"` // Mã OTP
 }
 
-// @Summary		Verify One-Time Password (OTP) via phone_number number
-// @Description	Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid
+// @Summary		Verify One-Time Password (OTP) via phone number
+// @Description	Verifies the OTP sent to a user's phone number and updates the user's phone number if valid
 // @Tags			authentication
 // @Accept			json
 // @Produce		json
@@ -78,32 +85,44 @@ type VerifyPhoneOTPRequest struct {
 // @Success		200		"OTP verified successfully"
 // @Failure		400		"Bad Request - Invalid input or OTP verification failed"
 // @Failure		401		"Unauthorized - Invalid OTP code"
+// @Failure		404		"Not Found - User not found"
 // @Failure		500		"Internal Server Error - Failed to update user information"
-// @Router			/otp/phone/verify [post]
-func (server *Server) verifyPhoneOTP(c *gin.Context) {
-	req := new(VerifyPhoneOTPRequest)
+// @Router			/otp/phone_number/verify [post]
+func (server *Server) verifyPhoneNumberOTP(c *gin.Context) {
+	var req VerifyPhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("failed to bind JSON")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	// Kiểm tra xem số điện thoại đã được sử dụng chưa
-	user, err := server.dbStore.GetUserByPhoneNumber(c.Request.Context(), pgtype.Text{
-		String: req.PhoneNumber,
-		Valid:  true,
-	})
-	if err != nil {
-		if !errors.Is(err, db.ErrRecordNotFound) {
-			// Lỗi khác khi truy vấn cơ sở dữ liệu
-			log.Error().Err(err).Msg("failed to check phone number")
-			c.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
-		}
-		
-		// Số điện thoại chưa được sử dụng, có thể tiếp tục
+	// Validate phone number format (Vietnam)
+	if !util.IsValidVietnamesePhoneNumber(req.PhoneNumber) {
+		log.Error().Str("phone", req.PhoneNumber).Msg("invalid phone number format")
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid phone number format")))
+		return
 	}
 	
+	// Kiểm tra user có tồn tại không
+	user, err := server.dbStore.GetUserByID(c.Request.Context(), req.UserID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			log.Error().Err(err).Msg("user not found")
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("user not found")))
+			return
+		}
+		log.Error().Err(err).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// So sánh số điện thoại mới với số điện thoại hiện tại
+	if user.PhoneNumber.String == req.PhoneNumber {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("cannot update to the same phone number")))
+		return
+	}
+	
+	// Xác thực OTP
 	valid, err := server.phoneNumberService.VerifyOTP(c, req.PhoneNumber, req.OTPCode)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to verify OTP")
@@ -112,10 +131,23 @@ func (server *Server) verifyPhoneOTP(c *gin.Context) {
 	}
 	
 	if !valid {
-		log.Error().Msg("invalid OTP code")
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid OTP code"})
+		c.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
+	
+	// Kiểm tra xem số điện thoại đã được sử dụng bởi user khác chưa
+	_, err = server.dbStore.GetUserByPhoneNumber(c.Request.Context(), pgtype.Text{
+		String: req.PhoneNumber,
+		Valid:  true,
+	})
+	if err != nil {
+		if !errors.Is(err, db.ErrRecordNotFound) {
+			log.Error().Err(err).Msg("failed to get user by phone number")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	}
+	// Số điện thoại vẫn chưa được sử dụng
 	
 	// Update user's phone_number column
 	arg := db.UpdateUserParams{
@@ -136,7 +168,7 @@ func (server *Server) verifyPhoneOTP(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully and phone number updated"})
 }
 
 type GenerateEmailOTPRequest struct {

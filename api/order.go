@@ -182,7 +182,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
 		Message:     fmt.Sprintf("Đơn hàng của bạn đã được tạo thành công với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.TotalAmount),
 		Type:        "order",
-		ReferenceID: result.Order.ID,
+		ReferenceID: result.Order.ID.String(),
 		IsRead:      false,
 	})
 	if err != nil {
@@ -197,7 +197,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
 		Message:     fmt.Sprintf("Bạn đã nhận được một đơn hàng mới với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.ItemsSubtotal),
 		Type:        "order",
-		ReferenceID: result.Order.ID,
+		ReferenceID: result.Order.ID.String(),
 		IsRead:      false,
 	})
 	if err != nil {

@@ -38,7 +38,7 @@ func NewGmailSender(username, password string, config util.Config, redisDb *redi
 		redis:  redisDb,
 		config: config,
 		otpService: otp.NewOTPService(redisDb,
-			otp.WithPrefixes("ratelimit:email", "otp:email", "attempts:email"),
+			otp.WithPrefix("otp:email"),
 		),
 	}, nil
 }

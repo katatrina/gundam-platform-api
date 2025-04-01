@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/katatrina/gundam-BE/internal/util"
 )
@@ -58,9 +59,15 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 				buyerWallet.Balance, arg.TotalAmount)
 		}
 		
+		orderID, _ := uuid.NewV7() // Có thể không cần kiểm tra error
+		if err != nil {
+			return fmt.Errorf("failed to generate order ID: %w", err)
+		}
+		
 		// 2. Tạo order
 		order, err := qTx.CreateOrder(ctx, CreateOrderParams{
-			ID:            util.GenerateOrderID(),
+			ID:            orderID,
+			Code:          util.GenerateOrderCode(), // Bỏ qua kiểm tra unique
 			BuyerID:       arg.BuyerID,
 			SellerID:      arg.SellerID,
 			ItemsSubtotal: arg.ItemsSubtotal,
@@ -88,7 +95,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		buyerEntry, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID: buyerWallet.ID,
 			ReferenceID: pgtype.Text{
-				String: order.ID,
+				String: order.Code, // Tham chiếu đến mã đơn hàng
 				Valid:  true,
 			},
 			ReferenceType: WalletReferenceTypeOrder,
@@ -104,7 +111,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		for _, gundam := range arg.Gundams {
 			var orderItem OrderItem
 			orderItem, err = qTx.CreateOrderItem(ctx, CreateOrderItemParams{
-				OrderID:  order.ID,
+				OrderID:  order.ID.String(),
 				GundamID: gundam.ID,
 				Price:    gundam.Price,
 				Quantity: gundam.Quantity,
@@ -136,7 +143,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		// 6. Tạo order delivery
 		// Một số trường có dữ liệu ban đầu là null, và sẽ được cập nhật sau.
 		orderDelivery, err := qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
-			OrderID:              order.ID,
+			OrderID:              order.ID.String(),
 			ExpectedDeliveryTime: arg.ExpectedDeliveryTime,
 			FromID:               sellerDelivery.ID,
 			ToID:                 buyerDelivery.ID,
@@ -148,7 +155,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		
 		// 7. Tạo order transaction
 		if _, err = qTx.CreateOrderTransaction(ctx, CreateOrderTransactionParams{
-			OrderID:      order.ID,
+			OrderID:      order.ID.String(),
 			Amount:       arg.TotalAmount,
 			Status:       OrderTransactionStatusPending,
 			BuyerEntryID: buyerEntry.ID,

@@ -8,11 +8,13 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (id,
+                    code,
                     buyer_id,
                     seller_id,
                     items_subtotal,
@@ -21,11 +23,12 @@ INSERT INTO orders (id,
                     status,
                     payment_method,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
 `
 
 type CreateOrderParams struct {
-	ID            string        `json:"id"`
+	ID            uuid.UUID     `json:"id"`
+	Code          string        `json:"code"`
 	BuyerID       string        `json:"buyer_id"`
 	SellerID      string        `json:"seller_id"`
 	ItemsSubtotal int64         `json:"items_subtotal"`
@@ -39,6 +42,7 @@ type CreateOrderParams struct {
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
 	row := q.db.QueryRow(ctx, createOrder,
 		arg.ID,
+		arg.Code,
 		arg.BuyerID,
 		arg.SellerID,
 		arg.ItemsSubtotal,
@@ -51,6 +55,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	var i Order
 	err := row.Scan(
 		&i.ID,
+		&i.Code,
 		&i.BuyerID,
 		&i.SellerID,
 		&i.ItemsSubtotal,

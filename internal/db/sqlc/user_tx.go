@@ -13,6 +13,7 @@ func (store *SQLStore) CreateUserTx(ctx context.Context, arg CreateUserParams) (
 		if err != nil {
 			return err
 		}
+		result = user
 		
 		// Create user wallet
 		err = qTx.CreateWallet(ctx, user.ID)

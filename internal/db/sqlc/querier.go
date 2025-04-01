@@ -22,6 +22,7 @@ type Querier interface {
 	CreateOrderDelivery(ctx context.Context, arg CreateOrderDeliveryParams) (OrderDelivery, error)
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	CreateOrderTransaction(ctx context.Context, arg CreateOrderTransactionParams) (OrderTransaction, error)
+	CreatePaymentTransaction(ctx context.Context, arg CreatePaymentTransactionParams) (PaymentTransaction, error)
 	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)

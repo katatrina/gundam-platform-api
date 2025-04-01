@@ -30,7 +30,7 @@ type Server struct {
 	config                 util.Config
 	googleIDTokenValidator *idtoken.Validator
 	redisDb                *redis.Client
-	phoneNumberService     *phone_number.PhoneService
+	phoneNumberService     *phone_number.PhoneNumberService
 	mailService            *mailer.GmailSender
 	notificationService    *notification.NotificationService
 	zalopayService         *zalopay.ZalopayService
@@ -70,7 +70,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 	log.Info().Msg("Notification service created successfully ✅")
 	
 	// Create a new ZaloPay service
-	zalopayService := zalopay.NewZalopayService()
+	zalopayService := zalopay.NewZalopayService(store)
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
 	server := &Server{
@@ -155,7 +155,7 @@ func (server *Server) setupRouter() {
 	}
 	
 	// Callback endpoint không cần authentication middleware vì ZaloPay server sẽ gọi
-	// v1.POST("/zalopay/callback", server.handleZaloPayCallback) // API 2: Xử lý callback
+	// v1.POST("/zalopay/callback", server.handleZalopayCallback) // API 2: Xử lý callback
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
@@ -193,8 +193,8 @@ func (server *Server) setupRouter() {
 	
 	otpGroup := v1.Group("/otp")
 	{
-		otpGroup.POST("/phone/generate", server.generatePhoneOTP)
-		otpGroup.POST("/phone/verify", server.verifyPhoneOTP)
+		otpGroup.POST("/phone_number/generate", server.generatePhoneNumberOTP)
+		otpGroup.POST("/phone_number/verify", server.verifyPhoneNumberOTP)
 		
 		otpGroup.POST("/email/generate", server.generateEmailOTP)
 		otpGroup.POST("/email/verify", server.verifyEmailOTP)
