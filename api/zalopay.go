@@ -23,7 +23,7 @@ type createZaloPayOrderRequest struct {
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			request	body		createZaloPayOrderRequest			true	"Create ZaloPay order request"
-//	@Success		200		{object}	zalopay.CreateOrderZaloPayResponse	"Create ZaloPay order response"
+//	@Success		200		{object}	zalopay.CreateOrderZalopayResponse	"Create ZaloPay order response"
 //	@Failure		400		"Bad request"
 //	@Failure		500		"Internal server error"
 //	@Router			/wallet/zalopay/create [post]

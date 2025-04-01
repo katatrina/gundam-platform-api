@@ -26,6 +26,7 @@ definitions:
   api.GeneratePhoneOTPRequest:
     properties:
       phone_number:
+        description: Số điện thoại cần gửi OTP
         type: string
     required:
     - phone_number
@@ -33,12 +34,16 @@ definitions:
   api.GeneratePhoneOTPResponse:
     properties:
       created_at:
+        description: Thời điểm OTP được tạo
         type: string
       expires_at:
+        description: Thời điểm OTP hết hạn
         type: string
       otp_code:
+        description: Mã OTP được tạo
         type: string
       phone_number:
+        description: Số điện thoại đã gửi OTP
         type: string
     required:
     - created_at
@@ -59,12 +64,18 @@ definitions:
   api.VerifyPhoneOTPRequest:
     properties:
       otp_code:
+        description: Mã OTP
         type: string
       phone_number:
+        description: Số điện thoại mới
+        type: string
+      user_id:
+        description: ID của user cần cập nhật số điện thoại
         type: string
     required:
     - otp_code
     - phone_number
+    - user_id
     type: object
   api.addCartItemRequest:
     properties:
@@ -187,12 +198,17 @@ definitions:
   api.createZaloPayOrderRequest:
     properties:
       amount:
+        minimum: 1000
         type: integer
       description:
+        maxLength: 256
+        type: string
+      redirect_url:
         type: string
     required:
     - amount
     - description
+    - redirect_url
     type: object
   api.getGundamBySlugResponse:
     properties:
@@ -578,6 +594,8 @@ definitions:
     properties:
       buyer_id:
         type: string
+      code:
+        type: string
       created_at:
         type: string
       delivery_fee:
@@ -600,6 +618,7 @@ definitions:
         type: string
     required:
     - buyer_id
+    - code
     - created_at
     - delivery_fee
     - id
@@ -903,6 +922,7 @@ definitions:
     - deposit_request
     - promotion
     - affiliate
+    - zalopay
     type: string
     x-enum-varnames:
     - WalletReferenceTypeOrder
@@ -911,6 +931,7 @@ definitions:
     - WalletReferenceTypeDepositRequest
     - WalletReferenceTypePromotion
     - WalletReferenceTypeAffiliate
+    - WalletReferenceTypeZalopay
   gin.H:
     additionalProperties: {}
     type: object
@@ -928,7 +949,7 @@ definitions:
       valid:
         type: boolean
     type: object
-  zalopay.CreateOrderZaloPayResponse:
+  zalopay.CreateOrderZalopayResponse:
     properties:
       order_token:
         type: string
@@ -1296,12 +1317,39 @@ paths:
       summary: Verify One-Time Password (OTP) via email
       tags:
       - authentication
-  /otp/phone/verify:
+  /otp/phone_number/generate:
     post:
       consumes:
       - application/json
-      description: Verifies the OTP sent to a user's phone_number number and updates
-        the user's phone_number number if valid
+      description: Generates and sends an OTP to the specified phone number. The OTP
+        will be valid for 10 minutes.
+      parameters:
+      - description: OTP Generation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.GeneratePhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP generated successfully
+          schema:
+            $ref: '#/definitions/api.GeneratePhoneOTPResponse'
+        "400":
+          description: Bad Request - Invalid phone number format
+        "500":
+          description: Internal Server Error - Failed to generate or send OTP
+      summary: Generate a One-Time Password (OTP) for phone number
+      tags:
+      - authentication
+  /otp/phone_number/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent to a user's phone number and updates the
+        user's phone number if valid
       parameters:
       - description: OTP Verification Request
         in: body
@@ -1318,37 +1366,11 @@ paths:
           description: Bad Request - Invalid input or OTP verification failed
         "401":
           description: Unauthorized - Invalid OTP code
+        "404":
+          description: Not Found - User not found
         "500":
           description: Internal Server Error - Failed to update user information
-      summary: Verify One-Time Password (OTP) via phone_number number
-      tags:
-      - authentication
-  /otp/phone_number/generate:
-    post:
-      consumes:
-      - application/json
-      description: Generates and sends an OTP to the specified phone_number number
-      parameters:
-      - description: OTP Generation Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/api.GeneratePhoneOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OTP generated successfully
-          schema:
-            $ref: '#/definitions/api.GeneratePhoneOTPResponse'
-        "400":
-          description: Bad Request - Invalid input
-        "429":
-          description: Too Many Requests - OTP request rate limit exceeded
-        "500":
-          description: Internal Server Error
-      summary: Generate a One-Time Password (OTP) for phone_number number
+      summary: Verify One-Time Password (OTP) via phone number
       tags:
       - authentication
   /sellers/:sellerID/gundams:
@@ -1969,7 +1991,7 @@ paths:
         "200":
           description: Create ZaloPay order response
           schema:
-            $ref: '#/definitions/zalopay.CreateOrderZaloPayResponse'
+            $ref: '#/definitions/zalopay.CreateOrderZalopayResponse'
         "400":
           description: Bad request
         "500":

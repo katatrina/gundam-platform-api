@@ -523,9 +523,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/phone/verify": {
+        "/otp/phone_number/generate": {
             "post": {
-                "description": "Verifies the OTP sent to a user's phone_number number and updates the user's phone_number number if valid",
+                "description": "Generates and sends an OTP to the specified phone number. The OTP will be valid for 10 minutes.",
                 "consumes": [
                     "application/json"
                 ],
@@ -535,7 +535,47 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Verify One-Time Password (OTP) via phone_number number",
+                "summary": "Generate a One-Time Password (OTP) for phone number",
+                "parameters": [
+                    {
+                        "description": "OTP Generation Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.GeneratePhoneOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OTP generated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/api.GeneratePhoneOTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid phone number format"
+                    },
+                    "500": {
+                        "description": "Internal Server Error - Failed to generate or send OTP"
+                    }
+                }
+            }
+        },
+        "/otp/phone_number/verify": {
+            "post": {
+                "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Verify One-Time Password (OTP) via phone number",
                 "parameters": [
                     {
                         "description": "OTP Verification Request",
@@ -557,51 +597,11 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - Invalid OTP code"
                     },
+                    "404": {
+                        "description": "Not Found - User not found"
+                    },
                     "500": {
                         "description": "Internal Server Error - Failed to update user information"
-                    }
-                }
-            }
-        },
-        "/otp/phone_number/generate": {
-            "post": {
-                "description": "Generates and sends an OTP to the specified phone_number number",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authentication"
-                ],
-                "summary": "Generate a One-Time Password (OTP) for phone_number number",
-                "parameters": [
-                    {
-                        "description": "OTP Generation Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.GeneratePhoneOTPRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OTP generated successfully",
-                        "schema": {
-                            "$ref": "#/definitions/api.GeneratePhoneOTPResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid input"
-                    },
-                    "429": {
-                        "description": "Too Many Requests - OTP request rate limit exceeded"
-                    },
-                    "500": {
-                        "description": "Internal Server Error"
                     }
                 }
             }
@@ -1540,7 +1540,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Create ZaloPay order response",
                         "schema": {
-                            "$ref": "#/definitions/zalopay.CreateOrderZaloPayResponse"
+                            "$ref": "#/definitions/zalopay.CreateOrderZalopayResponse"
                         }
                     },
                     "400": {
@@ -1595,6 +1595,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "phone_number": {
+                    "description": "Số điện thoại cần gửi OTP",
                     "type": "string"
                 }
             }
@@ -1609,15 +1610,19 @@ const docTemplate = `{
             ],
             "properties": {
                 "created_at": {
+                    "description": "Thời điểm OTP được tạo",
                     "type": "string"
                 },
                 "expires_at": {
+                    "description": "Thời điểm OTP hết hạn",
                     "type": "string"
                 },
                 "otp_code": {
+                    "description": "Mã OTP được tạo",
                     "type": "string"
                 },
                 "phone_number": {
+                    "description": "Số điện thoại đã gửi OTP",
                     "type": "string"
                 }
             }
@@ -1641,13 +1646,20 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "otp_code",
-                "phone_number"
+                "phone_number",
+                "user_id"
             ],
             "properties": {
                 "otp_code": {
+                    "description": "Mã OTP",
                     "type": "string"
                 },
                 "phone_number": {
+                    "description": "Số điện thoại mới",
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "ID của user cần cập nhật số điện thoại",
                     "type": "string"
                 }
             }
@@ -1790,13 +1802,19 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "amount",
-                "description"
+                "description",
+                "redirect_url"
             ],
             "properties": {
                 "amount": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1000
                 },
                 "description": {
+                    "type": "string",
+                    "maxLength": 256
+                },
+                "redirect_url": {
                     "type": "string"
                 }
             }
@@ -2339,6 +2357,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "buyer_id",
+                "code",
                 "created_at",
                 "delivery_fee",
                 "id",
@@ -2352,6 +2371,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "buyer_id": {
+                    "type": "string"
+                },
+                "code": {
                     "type": "string"
                 },
                 "created_at": {
@@ -2777,7 +2799,8 @@ const docTemplate = `{
                 "withdrawal_request",
                 "deposit_request",
                 "promotion",
-                "affiliate"
+                "affiliate",
+                "zalopay"
             ],
             "x-enum-varnames": [
                 "WalletReferenceTypeOrder",
@@ -2785,7 +2808,8 @@ const docTemplate = `{
                 "WalletReferenceTypeWithdrawalRequest",
                 "WalletReferenceTypeDepositRequest",
                 "WalletReferenceTypePromotion",
-                "WalletReferenceTypeAffiliate"
+                "WalletReferenceTypeAffiliate",
+                "WalletReferenceTypeZalopay"
             ]
         },
         "gin.H": {
@@ -2814,7 +2838,7 @@ const docTemplate = `{
                 }
             }
         },
-        "zalopay.CreateOrderZaloPayResponse": {
+        "zalopay.CreateOrderZalopayResponse": {
             "type": "object",
             "required": [
                 "order_token",
