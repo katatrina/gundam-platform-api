@@ -16,12 +16,12 @@ import (
 type PhoneNumberService struct {
 	otpService *otp.OTPService    // Service để tạo và xác thực OTP
 	discord    *discordgo.Session // Kết nối Discord để gửi OTP (tạm thời)
-	config     util.Config        // Cấu hình của ứng dụng
+	config     *util.Config       // Cấu hình của ứng dụng
 }
 
 // NewPhoneService tạo một instance mới của PhoneNumberService
 // Khởi tạo kết nối Discord và cấu hình OTP service
-func NewPhoneService(config util.Config, redis *redis.Client) (*PhoneNumberService, error) {
+func NewPhoneService(config *util.Config, redis *redis.Client) (*PhoneNumberService, error) {
 	// Khởi tạo kết nối Discord với token bot
 	discord, err := discordgo.New("Bot " + config.DiscordBotToken)
 	if err != nil {

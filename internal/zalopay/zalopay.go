@@ -19,8 +19,9 @@ type ZalopayService struct {
 
 func NewZalopayService(dbStore db.Store) *ZalopayService {
 	return &ZalopayService{
-		appID: sandboxTestAppID,
-		key1:  sandboxTestKey1,
-		key2:  sandboxTestKey2,
+		appID:   sandboxTestAppID,
+		key1:    sandboxTestKey1,
+		key2:    sandboxTestKey2,
+		dbStore: dbStore,
 	}
 }

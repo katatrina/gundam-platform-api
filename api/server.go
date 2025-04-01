@@ -27,7 +27,7 @@ type Server struct {
 	dbStore                db.Store
 	fileStore              storage.FileStore
 	tokenMaker             token.Maker
-	config                 util.Config
+	config                 *util.Config
 	googleIDTokenValidator *idtoken.Validator
 	redisDb                *redis.Client
 	phoneNumberService     *phone_number.PhoneNumberService
@@ -37,7 +37,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer *mailer.GmailSender, firebaseApp *firebase.App) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, config *util.Config, mailer *mailer.GmailSender, firebaseApp *firebase.App) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -91,7 +91,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config util.Config, mailer
 }
 
 // setupRouter configures the HTTP server routes.
-func (server *Server) setupRouter() {
+func (server *Server) setupRouter() *gin.Engine {
 	gin.ForceConsoleColor()
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
@@ -128,34 +128,22 @@ func (server *Server) setupRouter() {
 		
 		userGroup.Use(authMiddleware(server.tokenMaker))
 		userGroup.POST("become-seller", server.becomeSeller)
-		
-		// userGroup.GET(":id/wallet", authMiddleware(server.tokenMaker), server.getUserWallet)
-		// userGroup.PUT(":id/wallet", authMiddleware(server.tokenMaker), server.updateUserWallet)
 	}
 	
 	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))
 	{
 		orderGroup.POST("", server.createOrder)
-		// orderGroup.GET("", server.listOrders)
-		// orderGroup.POST("/confirm", server.confirmOrder)
 	}
 	
-	// Thêm nhóm wallet để quản lý ví và thanh toán
 	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
 	{
-		// walletGroup.GET("", server.getUserWallet)                // Lấy thông tin ví
-		// walletGroup.GET("/transactions", server.listTransactions) // Lấy lịch sử giao dịch
-		
-		// ZaloPay payment endpoints
 		zalopayGroup := walletGroup.Group("/zalopay")
 		{
-			zalopayGroup.POST("/create", server.createZalopayOrder) // API 1: Tạo đơn hàng ZaloPay
-			// zalopayGroup.GET("/status/:app_trans_id", server.getZaloPayOrderStatus) // API 3: Kiểm tra trạng thái
+			zalopayGroup.POST("/create", server.createZalopayOrder)
 		}
 	}
 	
-	// Callback endpoint không cần authentication middleware vì ZaloPay server sẽ gọi
-	// v1.POST("/zalopay/callback", server.handleZalopayCallback) // API 2: Xử lý callback
+	v1.POST("/zalopay/callback", server.handleZalopayCallback)
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
@@ -205,6 +193,7 @@ func (server *Server) setupRouter() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
+	return router
 }
 
 // Start runs the HTTP server on a specific address.

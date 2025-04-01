@@ -1,10 +1,17 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"time"
 	
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+)
+
+const (
+	EnvironmentDevelopment = "development"
+	EnvironmentProduction  = "production"
 )
 
 // Config stores all configuration of the application.
@@ -22,6 +29,9 @@ type Config struct {
 	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID"`
 	GmailSMTPUsername   string        `mapstructure:"GMAIL_SMTP_USERNAME"`
 	GmailSMTPPassword   string        `mapstructure:"GMAIL_SMTP_PASSWORD"`
+	ZalopayCallbackURL  string        `mapstructure:"ZALOPAY_CALLBACK_URL"`
+	Environment         string        `mapstructure:"ENVIRONMENT"`
+	NgrokAuthToken      string        `mapstructure:"NGROK_AUTH_TOKEN"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -30,14 +40,22 @@ func LoadConfig(path string) (config Config, err error) {
 	viper.SetDefault("ALLOWED_ORIGINS", []string{"http://localhost:3000"})
 	viper.SetDefault("HTTP_SERVER_ADDRESS", "0.0.0.0:8080")
 	viper.SetDefault("ACCESS_TOKEN_DURATION", "24h")
+	viper.SetDefault("ENVIRONMENT", EnvironmentDevelopment)
 	
 	// Prefer environment variables over config file
 	viper.AutomaticEnv()
 	
-	// Load config file
+	// Load config file if exists
 	viper.SetConfigFile(path)
 	if err = viper.ReadInConfig(); err != nil {
-		return
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
+			// Config file was found but another error was produced
+			return config, fmt.Errorf("failed to read config file: %w", err)
+		}
+		
+		// If config file is not found, we will use environment variables
+		log.Warn().Msg("Config file not found, using environment variables")
 	}
 	
 	// Unmarshal config into struct
@@ -66,6 +84,9 @@ func validateConfig(config Config) error {
 	}
 	if config.RedisServerAddress == "" {
 		return fmt.Errorf("REDIS_SERVER_ADDRESS is required")
+	}
+	if config.Environment != EnvironmentDevelopment && config.Environment != EnvironmentProduction {
+		return fmt.Errorf("ENVIRONMENT must be either %s or %s", EnvironmentDevelopment, EnvironmentProduction)
 	}
 	
 	return nil

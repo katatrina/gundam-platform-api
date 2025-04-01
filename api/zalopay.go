@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/zalopay"
 	"github.com/rs/zerolog/log"
 )
 
@@ -77,31 +78,31 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// func (server *Server) handleZalopayCallback(c *gin.Context) {
-// 	var callbackData zalopay.ZaloPayCallbackData
-// 	if err := c.ShouldBindJSON(&callbackData); err != nil {
-// 		c.JSON(http.StatusBadRequest, zalopay.ZalopayCallbackResult{
-// 			ReturnCode:    -1,
-// 			ReturnMessage: "Invalid request data",
-// 		})
-// 		return
-// 	}
-//
-// 	// Bước 1: Xác thực callback
-// 	if !server.zalopayService.VerifyCallback(callbackData) {
-// 		c.JSON(http.StatusOK, zalopay.ZalopayCallbackResult{
-// 			ReturnCode:    -1,
-// 			ReturnMessage: "mac not equal",
-// 		})
-// 		return
-// 	}
-//
-// 	// Bước 2: Xử lý dữ liệu callback
-// 	result, err := server.zalopayService.ProcessCallback(callbackData)
-// 	if err != nil {
-// 		log.Printf("Error processing Zalopay callback: %v", err)
-// 	}
-//
-// 	// Trả về kết quả cho Zalopay server
-// 	c.JSON(http.StatusOK, result)
-// }
+func (server *Server) handleZalopayCallback(c *gin.Context) {
+	var callbackData zalopay.ZaloPayCallbackData
+	if err := c.ShouldBindJSON(&callbackData); err != nil {
+		c.JSON(http.StatusBadRequest, zalopay.ZalopayCallbackResult{
+			ReturnCode:    -1,
+			ReturnMessage: "Invalid request data",
+		})
+		return
+	}
+	
+	// Bước 1: Xác thực callback
+	if !server.zalopayService.VerifyCallback(callbackData) {
+		c.JSON(http.StatusOK, zalopay.ZalopayCallbackResult{
+			ReturnCode:    -1,
+			ReturnMessage: "mac not equal",
+		})
+		return
+	}
+	
+	// Bước 2: Xử lý dữ liệu callback
+	// result, err := server.zalopayService.ProcessCallback(callbackData)
+	// if err != nil {
+	// 	log.Printf("Error processing Zalopay callback: %v", err)
+	// }
+	
+	// Trả về kết quả cho Zalopay server
+	// c.JSON(http.StatusOK, result)
+}
