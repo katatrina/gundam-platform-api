@@ -102,6 +102,7 @@ CREATE TYPE "payment_transaction_type" AS ENUM (
 CREATE TABLE "users"
 (
     "id"                    text PRIMARY KEY     DEFAULT (gen_random_uuid()),
+    "google_account_id"     text,
     "full_name"             text        NOT NULL,
     "hashed_password"       text,
     "email"                 text UNIQUE NOT NULL,

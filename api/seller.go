@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -136,6 +137,11 @@ func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
 	
 	subscription, err := server.dbStore.GetCurrentActiveSubscriptionDetailsForSeller(ctx, sellerID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "no active subscription found"})
+			return
+		}
+		
 		log.Error().Err(err).Msg("Failed to get current active subscription")
 		ctx.Status(http.StatusInternalServerError)
 		return

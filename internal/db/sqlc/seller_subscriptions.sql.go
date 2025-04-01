@@ -43,7 +43,6 @@ SELECT ss.id,
        ss.open_auctions_used,
        ss.is_active,
        p.is_unlimited,
-       p.price,
        ss.end_date
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id
@@ -63,7 +62,6 @@ type GetCurrentActiveSubscriptionDetailsForSellerRow struct {
 	OpenAuctionsUsed int64              `json:"open_auctions_used"`
 	IsActive         bool               `json:"is_active"`
 	IsUnlimited      bool               `json:"is_unlimited"`
-	Price            int64              `json:"price"`
 	EndDate          pgtype.Timestamptz `json:"end_date"`
 }
 
@@ -81,7 +79,6 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 		&i.OpenAuctionsUsed,
 		&i.IsActive,
 		&i.IsUnlimited,
-		&i.Price,
 		&i.EndDate,
 	)
 	return i, err

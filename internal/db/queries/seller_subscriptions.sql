@@ -24,7 +24,6 @@ SELECT ss.id,
        ss.open_auctions_used,
        ss.is_active,
        p.is_unlimited,
-       p.price,
        ss.end_date
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id

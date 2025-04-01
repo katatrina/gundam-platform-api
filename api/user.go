@@ -158,7 +158,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 	
-	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
 		ctx.Status(http.StatusInternalServerError)
@@ -170,6 +170,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		AccessTokenExpiresAt: accessPayload.ExpiresAt.Time,
 		User:                 user,
 	}
+	
 	ctx.JSON(http.StatusOK, resp)
 }
 
@@ -212,7 +213,7 @@ func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
 		return
 	}
 	
-	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, string(user.Role), server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.AccessTokenDuration)
 	if err != nil {
 		log.Err(err).Msg("failed to create access token")
 		ctx.Status(http.StatusInternalServerError)
@@ -241,7 +242,10 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	
 	// User doesn't exist - create new account
 	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
-		ID:            payload.Subject,
+		GoogleAccountID: pgtype.Text{
+			String: payload.Subject,
+			Valid:  true,
+		},
 		FullName:      payload.Claims["name"].(string),
 		Email:         email,
 		EmailVerified: payload.Claims["email_verified"].(bool),

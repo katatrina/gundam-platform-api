@@ -13,7 +13,7 @@ import (
 )
 
 const getSellerByGundamID = `-- name: GetSellerByGundamID :one
-SELECT u.id, u.full_name, u.hashed_password, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.role, u.avatar_url, u.created_at, u.updated_at
+SELECT u.id, u.google_account_id, u.full_name, u.hashed_password, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.role, u.avatar_url, u.created_at, u.updated_at
 FROM users u
          JOIN gundams g ON u.id = g.owner_id
 WHERE g.id = $1
@@ -25,6 +25,7 @@ func (q *Queries) GetSellerByGundamID(ctx context.Context, id int64) (User, erro
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.GoogleAccountID,
 		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,
@@ -40,7 +41,7 @@ func (q *Queries) GetSellerByGundamID(ctx context.Context, id int64) (User, erro
 }
 
 const getSellerByID = `-- name: GetSellerByID :one
-SELECT id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
 FROM users
 WHERE id = $1
   AND role = 'seller'
@@ -51,6 +52,7 @@ func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.GoogleAccountID,
 		&i.FullName,
 		&i.HashedPassword,
 		&i.Email,

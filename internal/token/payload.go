@@ -10,17 +10,15 @@ import (
 
 type Payload struct {
 	jwt.RegisteredClaims
-	Role string `json:"role"`
 }
 
-func NewPayload(userID string, role string, duration time.Duration) (payload Payload, err error) {
+func NewPayload(userID string, duration time.Duration) (payload Payload, err error) {
 	tokenID, err := uuid.NewRandom()
 	if err != nil {
 		return payload, fmt.Errorf("failed to generate tokenID: %w", err)
 	}
 	
 	payload = Payload{
-		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        tokenID.String(),
 			Issuer:    "cvp",

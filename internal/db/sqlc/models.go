@@ -792,6 +792,7 @@ type SubscriptionPlan struct {
 
 type User struct {
 	ID                  string      `json:"id"`
+	GoogleAccountID     pgtype.Text `json:"google_account_id"`
 	FullName            string      `extensions:"x-nullable" json:"full_name"`
 	HashedPassword      pgtype.Text `json:"-"`
 	Email               string      `json:"email"`

@@ -24,8 +24,8 @@ func NewJWTMaker(secretKey string) (Maker, error) {
 	return &JWTMaker{secretKey}, nil
 }
 
-func (maker *JWTMaker) CreateToken(userID string, role string, duration time.Duration) (string, *Payload, error) {
-	payload, err := NewPayload(userID, role, duration)
+func (maker *JWTMaker) CreateToken(userID string, duration time.Duration) (string, *Payload, error) {
+	payload, err := NewPayload(userID, duration)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create payload: %w", err)
 	}

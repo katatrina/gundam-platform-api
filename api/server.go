@@ -148,7 +148,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	v1.GET("/grades", server.listGundamGrades)
 	
 	v1.GET("/sellers/:sellerID", server.getSeller)
-	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerOrAdminRole)
+	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerOrAdminRole(server.dbStore))
 	{
 		gundamGroup := sellerGroup.Group("gundams")
 		{

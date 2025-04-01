@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	
@@ -47,24 +48,35 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 			return
 		}
 		
+		fmt.Println(payload)
+		
 		ctx.Set(authorizationPayloadKey, payload)
 		ctx.Next()
 	}
 }
 
-func requiredSellerOrAdminRole(ctx *gin.Context) {
-	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	sellerID := ctx.Param("sellerID")
-	if payload.Role != string(db.UserRoleAdmin) {
-		if payload.Role == string(db.UserRoleSeller) && payload.Subject == sellerID {
-			ctx.Next()
+func requiredSellerOrAdminRole(dbStore db.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		sellerID := ctx.Param("sellerID")
+		
+		authUser, err := dbStore.GetUserByID(ctx, payload.Subject)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 		
-		err := errors.New("user is not authorized to access this resource")
-		ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
-		return
+		if authUser.Role != db.UserRoleAdmin {
+			if authUser.Role == db.UserRoleSeller && payload.Subject == sellerID {
+				ctx.Next()
+				return
+			}
+			
+			err = errors.New("user must be admin or seller")
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
+		
+		ctx.Next()
 	}
-	
-	ctx.Next()
 }
