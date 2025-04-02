@@ -195,7 +195,7 @@ definitions:
     - full_name
     - password
     type: object
-  api.createZaloPayOrderRequest:
+  api.createZalopayOrderRequest:
     properties:
       amount:
         minimum: 1000
@@ -767,6 +767,8 @@ definitions:
       full_name:
         type: string
         x-nullable: true
+      google_account_id:
+        $ref: '#/definitions/pgtype.Text'
       id:
         type: string
       phone_number:
@@ -785,6 +787,7 @@ definitions:
     - email
     - email_verified
     - full_name
+    - google_account_id
     - id
     - phone_number
     - phone_number_verified
@@ -1393,8 +1396,6 @@ paths:
       responses:
         "200":
           description: Successfully retrieved list of gundams
-        "403":
-          description: seller can only view their own gundams
         "500":
           description: Internal server error
       security:
@@ -1486,8 +1487,6 @@ paths:
           description: 'message: Gundam created successfully'
         "400":
           description: error details
-        "403":
-          description: cannot create gundam for another user
         "500":
           description: internal server error
       security:
@@ -1509,6 +1508,8 @@ paths:
       responses:
         "200":
           description: Successfully retrieved current active subscription
+        "404":
+          description: Subscription not found
         "500":
           description: Internal server error
       security:
@@ -1569,8 +1570,7 @@ paths:
               type: string
             type: object
         "403":
-          description: Cannot publish gundam for another seller<br/>you do not own
-            this gundam
+          description: Seller does not own this gundam
           schema:
             additionalProperties:
               type: string
@@ -1625,8 +1625,7 @@ paths:
               type: string
             type: object
         "403":
-          description: Cannot unsell gundam for another user<br/>You do not own this
-            gundam
+          description: Seller does not own this gundam
           schema:
             additionalProperties:
               type: string
@@ -1984,7 +1983,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/api.createZaloPayOrderRequest'
+          $ref: '#/definitions/api.createZalopayOrderRequest'
       produces:
       - application/json
       responses:

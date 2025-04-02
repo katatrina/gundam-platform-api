@@ -1,7 +1,17 @@
 package api
 
 import (
+	"errors"
+	
 	"github.com/gin-gonic/gin"
+)
+
+var (
+	ErrSellerIDMismatch       = errors.New("seller ID in URL does not match authenticated user ID")
+	ErrInsufficientPermission = errors.New("requires admin role or matching seller permissions")
+	ErrSellerNotOwnGundam     = errors.New("seller does not own this gundam")
+	ErrGundamNotInStore       = errors.New("gundam is not in the store")
+	ErrGundamNotPublishing    = errors.New("gundam is not publishing")
 )
 
 type FailedValidationResponse struct {

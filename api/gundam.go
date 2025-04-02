@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
-	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -194,7 +193,6 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Security		accessToken
 //	@Success		200	"message: Gundam created successfully"
 //	@Failure		400	"error details"
-//	@Failure		403	"cannot create gundam for another user"
 //	@Failure		500	"internal server error"
 //	@Router			/sellers/:sellerID/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
@@ -206,12 +204,7 @@ func (server *Server) createGundam(ctx *gin.Context) {
 		return
 	}
 	
-	userID := ctx.Param("sellerID")
-	ownerID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
-	if userID != ownerID {
-		ctx.JSON(http.StatusForbidden, gin.H{"message": "cannot create gundam for another user"})
-		return
-	}
+	ownerID := ctx.Param("sellerID")
 	
 	arg := db.CreateGundamTxParams{
 		OwnerID:   ownerID,
@@ -237,7 +230,7 @@ func (server *Server) createGundam(ctx *gin.Context) {
 	err := server.dbStore.CreateGundamTx(ctx, arg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create gundam")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

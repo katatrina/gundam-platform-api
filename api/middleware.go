@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	
@@ -48,8 +47,6 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 			return
 		}
 		
-		fmt.Println(payload)
-		
 		ctx.Set(authorizationPayloadKey, payload)
 		ctx.Next()
 	}
@@ -66,17 +63,24 @@ func requiredSellerOrAdminRole(dbStore db.Store) gin.HandlerFunc {
 			return
 		}
 		
-		if authUser.Role != db.UserRoleAdmin {
-			if authUser.Role == db.UserRoleSeller && payload.Subject == sellerID {
-				ctx.Next()
-				return
-			}
-			
-			err = errors.New("user must be admin or seller")
-			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+		// Nếu là Admin, cho phép truy cập
+		if authUser.Role == db.UserRoleAdmin {
+			ctx.Next()
 			return
 		}
 		
-		ctx.Next()
+		// Nếu là Seller, kiểm tra ID
+		if authUser.Role == db.UserRoleSeller {
+			if authUser.ID != sellerID {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(ErrSellerIDMismatch))
+				return
+			}
+			
+			ctx.Next()
+			return
+		}
+		
+		// Trường hợp còn lại: không phải Admin cũng không phải Seller
+		ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(ErrInsufficientPermission))
 	}
 }

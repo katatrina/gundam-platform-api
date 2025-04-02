@@ -643,9 +643,6 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved list of gundams"
                     },
-                    "403": {
-                        "description": "seller can only view their own gundams"
-                    },
                     "500": {
                         "description": "Internal server error"
                     }
@@ -776,9 +773,6 @@ const docTemplate = `{
                     "400": {
                         "description": "error details"
                     },
-                    "403": {
-                        "description": "cannot create gundam for another user"
-                    },
                     "500": {
                         "description": "internal server error"
                     }
@@ -812,6 +806,9 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved current active subscription"
+                    },
+                    "404": {
+                        "description": "Subscription not found"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -903,7 +900,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Cannot publish gundam for another seller\u003cbr/\u003eyou do not own this gundam",
+                        "description": "Seller does not own this gundam",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -984,7 +981,7 @@ const docTemplate = `{
                         }
                     },
                     "403": {
-                        "description": "Cannot unsell gundam for another user\u003cbr/\u003eYou do not own this gundam",
+                        "description": "Seller does not own this gundam",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1532,7 +1529,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.createZaloPayOrderRequest"
+                            "$ref": "#/definitions/api.createZalopayOrderRequest"
                         }
                     }
                 ],
@@ -1798,7 +1795,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api.createZaloPayOrderRequest": {
+        "api.createZalopayOrderRequest": {
             "type": "object",
             "required": [
                 "amount",
@@ -2580,6 +2577,7 @@ const docTemplate = `{
                 "email",
                 "email_verified",
                 "full_name",
+                "google_account_id",
                 "id",
                 "phone_number",
                 "phone_number_verified",
@@ -2607,6 +2605,9 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string",
                     "x-nullable": true
+                },
+                "google_account_id": {
+                    "$ref": "#/definitions/pgtype.Text"
                 },
                 "id": {
                     "type": "string"

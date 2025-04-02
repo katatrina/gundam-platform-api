@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type createZaloPayOrderRequest struct {
+type createZalopayOrderRequest struct {
 	Amount      int64  `json:"amount" binding:"required,min=1000"`
 	Description string `json:"description" binding:"required,max=256"`
 	RedirectURL string `json:"redirect_url" binding:"required,url"`
@@ -23,7 +23,7 @@ type createZaloPayOrderRequest struct {
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			request	body		createZaloPayOrderRequest			true	"Create ZaloPay order request"
+//	@Param			request	body		createZalopayOrderRequest			true	"Create ZaloPay order request"
 //	@Success		200		{object}	zalopay.CreateOrderZalopayResponse	"Create ZaloPay order response"
 //	@Failure		400		"Bad request"
 //	@Failure		500		"Internal server error"
@@ -32,7 +32,7 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	appUser := authPayload.Subject
 	
-	var req createZaloPayOrderRequest
+	var req createZalopayOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
