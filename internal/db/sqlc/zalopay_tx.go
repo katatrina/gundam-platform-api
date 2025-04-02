@@ -62,7 +62,7 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 			}
 			
 			// Cập nhật trạng thái giao dịch thanh toán thành công
-			_, err = qTx.UpdatePaymentTransactionStatus(ctx, UpdatePaymentTransactionStatusParams{
+			err = qTx.UpdatePaymentTransactionStatus(ctx, UpdatePaymentTransactionStatusParams{
 				Status:                PaymentTransactionStatusSuccessful,
 				ProviderTransactionID: transaction.ProviderTransactionID,
 				Provider:              PaymentTransactionProviderZalopay,

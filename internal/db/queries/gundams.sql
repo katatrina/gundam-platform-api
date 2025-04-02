@@ -50,7 +50,7 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE gg.slug = COALESCE(sqlc.narg('grade_slug')::text, gg.slug)
-  AND (sqlc.narg('status')::text IS NULL OR g.status = sqlc.narg('status')::text)
+  AND (sqlc.narg('status')::text IS NULL OR g.status = sqlc.narg('status')::gundam_status)
 ORDER BY g.created_at DESC;
 
 -- name: GetGundamByID :one

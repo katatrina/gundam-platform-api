@@ -1167,13 +1167,14 @@ paths:
         type: string
       - description: Filter by Gundam status
         enum:
-        - available
-        - selling
+        - in store
+        - published
+        - processing
         - pending auction approval
         - auctioning
-        - exchange
         in: query
         name: status
+        required: true
         type: string
       produces:
       - application/json

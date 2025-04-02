@@ -297,16 +297,17 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "available",
-                            "selling",
+                            "in store",
+                            "published",
+                            "processing",
                             "pending auction approval",
-                            "auctioning",
-                            "exchange"
+                            "auctioning"
                         ],
                         "type": "string",
                         "description": "Filter by Gundam status",
                         "name": "status",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {

@@ -33,7 +33,7 @@ func (server *Server) listGundamGrades(ctx *gin.Context) {
 
 type listGundamsRequest struct {
 	GradeSlug *string `form:"grade"`
-	Status    *string `form:"status"`
+	Status    *string `form:"status" binding:"required,oneof='in store' 'published' 'processing' 'pending auction approval' auctioning"`
 }
 
 type listGundamsResponse []db.ListGundamsWithFiltersRow
@@ -59,7 +59,7 @@ func (req *listGundamsRequest) getStatus() string {
 //	@Tags			gundams
 //	@Produce		json
 //	@Param			grade	query		string				false	"Filter by Gundam grade slug"	example(master-grade)
-//	@Param			status	query		string				false	"Filter by Gundam status"		Enums(available, selling, pending auction approval, auctioning, exchange)
+//	@Param			status	query		string				true	"Filter by Gundam status"		Enums(in store, published, processing, pending auction approval, auctioning)
 //	@Success		200		{object}	listGundamsResponse	"Successfully retrieved list of Gundams"
 //	@Failure		400		"Bad Request - Invalid query parameters"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundams"
@@ -85,8 +85,13 @@ func (server *Server) listGundams(ctx *gin.Context) {
 	
 	gundams, err := server.dbStore.ListGundamsWithFilters(ctx, arg)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, errorResponse(db.ErrRecordNotFound))
+			return
+		}
+		
 		log.Error().Err(err).Msg("failed to list gundams")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

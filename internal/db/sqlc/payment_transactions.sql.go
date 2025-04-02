@@ -88,13 +88,13 @@ func (q *Queries) GetPaymentTransactionByProviderID(ctx context.Context, arg Get
 	return i, err
 }
 
-const updatePaymentTransactionStatus = `-- name: UpdatePaymentTransactionStatus :one
+const updatePaymentTransactionStatus = `-- name: UpdatePaymentTransactionStatus :exec
 UPDATE payment_transactions
 SET status     = $1,
     updated_at = NOW()
 WHERE provider_transaction_id = $2
   AND provider = $3
-  AND user_id = $4 RETURNING id, user_id, amount, transaction_type, provider, provider_transaction_id, status, metadata, created_at, updated_at
+  AND user_id = $4
 `
 
 type UpdatePaymentTransactionStatusParams struct {
@@ -104,25 +104,12 @@ type UpdatePaymentTransactionStatusParams struct {
 	UserID                string                     `json:"user_id"`
 }
 
-func (q *Queries) UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) (PaymentTransaction, error) {
-	row := q.db.QueryRow(ctx, updatePaymentTransactionStatus,
+func (q *Queries) UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) error {
+	_, err := q.db.Exec(ctx, updatePaymentTransactionStatus,
 		arg.Status,
 		arg.ProviderTransactionID,
 		arg.Provider,
 		arg.UserID,
 	)
-	var i PaymentTransaction
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Amount,
-		&i.TransactionType,
-		&i.Provider,
-		&i.ProviderTransactionID,
-		&i.Status,
-		&i.Metadata,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	return err
 }

@@ -310,7 +310,7 @@ FROM gundams g
          JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE gg.slug = COALESCE($1::text, gg.slug)
-  AND ($2::text IS NULL OR g.status = $2::text)
+  AND ($2::text IS NULL OR g.status = $2::gundam_status)
 ORDER BY g.created_at DESC
 `
 
