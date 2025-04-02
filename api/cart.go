@@ -90,6 +90,7 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 //	@Produce		json
 //	@Security		accessToken
 //	@Success		200	{array}	db.ListCartItemsWithDetailsRow	"Successfully retrieved cart items"
+//	@Failure		400	"Bad Request - Invalid input"
 //	@Failure		500	"Internal Server Error - Failed to retrieve cart items"
 //	@Router			/cart/items [get]
 func (server *Server) listCartItems(ctx *gin.Context) {
@@ -98,7 +99,7 @@ func (server *Server) listCartItems(ctx *gin.Context) {
 	cartID, err := server.dbStore.GetOrCreateCartIfNotExists(ctx, userID)
 	if err != nil {
 		log.Err(err).Msg("failed to get or create cart")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

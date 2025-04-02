@@ -129,6 +129,9 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request - Invalid input"
+                    },
                     "500": {
                         "description": "Internal Server Error - Failed to retrieve cart items"
                     }

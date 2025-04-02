@@ -48,7 +48,7 @@ FROM cart_items ci
               ON gi.gundam_id = g.id
                   AND gi.is_primary = true
 WHERE ci.cart_id = $1
-  AND g.status = 'selling'
+  AND g.status = 'published'
   AND g.deleted_at IS NULL;
 
 -- name: RemoveCartItem :exec
