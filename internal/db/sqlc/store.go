@@ -24,6 +24,7 @@ type Store interface {
 	PublishGundamTx(ctx context.Context, arg PublishGundamTxParams) error
 	UnpublishGundamTx(ctx context.Context, arg UnpublishGundamTxParams) error
 	CreateOrderTx(ctx context.Context, arg CreateOrderTxParams) (CreateOrderTxResult, error)
+	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 }
 
 type SQLStore struct {

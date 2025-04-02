@@ -10,9 +10,9 @@ import (
 )
 
 const createPaymentTransaction = `-- name: CreatePaymentTransaction :one
-INSERT INTO payment_transactions (id,
-                                  user_id,
+INSERT INTO payment_transactions (user_id,
                                   amount,
+                                  transaction_type,
                                   provider,
                                   provider_transaction_id,
                                   status,
@@ -21,9 +21,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, amount, transaction_t
 `
 
 type CreatePaymentTransactionParams struct {
-	ID                    int64                      `json:"id"`
 	UserID                string                     `json:"user_id"`
 	Amount                int64                      `json:"amount"`
+	TransactionType       PaymentTransactionType     `json:"transaction_type"`
 	Provider              PaymentTransactionProvider `json:"provider"`
 	ProviderTransactionID string                     `json:"provider_transaction_id"`
 	Status                PaymentTransactionStatus   `json:"status"`
@@ -32,13 +32,84 @@ type CreatePaymentTransactionParams struct {
 
 func (q *Queries) CreatePaymentTransaction(ctx context.Context, arg CreatePaymentTransactionParams) (PaymentTransaction, error) {
 	row := q.db.QueryRow(ctx, createPaymentTransaction,
-		arg.ID,
 		arg.UserID,
 		arg.Amount,
+		arg.TransactionType,
 		arg.Provider,
 		arg.ProviderTransactionID,
 		arg.Status,
 		arg.Metadata,
+	)
+	var i PaymentTransaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.TransactionType,
+		&i.Provider,
+		&i.ProviderTransactionID,
+		&i.Status,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getPaymentTransactionByProviderID = `-- name: GetPaymentTransactionByProviderID :one
+SELECT id, user_id, amount, transaction_type, provider, provider_transaction_id, status, metadata, created_at, updated_at
+FROM payment_transactions
+WHERE provider_transaction_id = $1
+  AND provider = $2
+  AND user_id = $3
+`
+
+type GetPaymentTransactionByProviderIDParams struct {
+	ProviderTransactionID string                     `json:"provider_transaction_id"`
+	Provider              PaymentTransactionProvider `json:"provider"`
+	UserID                string                     `json:"user_id"`
+}
+
+func (q *Queries) GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error) {
+	row := q.db.QueryRow(ctx, getPaymentTransactionByProviderID, arg.ProviderTransactionID, arg.Provider, arg.UserID)
+	var i PaymentTransaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.TransactionType,
+		&i.Provider,
+		&i.ProviderTransactionID,
+		&i.Status,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePaymentTransactionStatus = `-- name: UpdatePaymentTransactionStatus :one
+UPDATE payment_transactions
+SET status     = $1,
+    updated_at = NOW()
+WHERE provider_transaction_id = $2
+  AND provider = $3
+  AND user_id = $4 RETURNING id, user_id, amount, transaction_type, provider, provider_transaction_id, status, metadata, created_at, updated_at
+`
+
+type UpdatePaymentTransactionStatusParams struct {
+	Status                PaymentTransactionStatus   `json:"status"`
+	ProviderTransactionID string                     `json:"provider_transaction_id"`
+	Provider              PaymentTransactionProvider `json:"provider"`
+	UserID                string                     `json:"user_id"`
+}
+
+func (q *Queries) UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) (PaymentTransaction, error) {
+	row := q.db.QueryRow(ctx, updatePaymentTransactionStatus,
+		arg.Status,
+		arg.ProviderTransactionID,
+		arg.Provider,
+		arg.UserID,
 	)
 	var i PaymentTransaction
 	err := row.Scan(

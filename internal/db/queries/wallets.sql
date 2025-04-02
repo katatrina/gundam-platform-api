@@ -15,7 +15,6 @@ WHERE user_id = $1
 
 -- name: AddWalletBalance :one
 UPDATE wallets
-SET balance = balance + $2,
+SET balance    = balance + sqlc.arg(amount),
     updated_at = NOW()
-WHERE id = $1
-    RETURNING *;
+WHERE id = sqlc.arg(wallet_id) RETURNING *;

@@ -1,23 +1,24 @@
-CREATE TABLE "payment_transactions"
-(
-    "id"                      bigserial PRIMARY KEY,
-    "user_id"                 text                         NOT NULL,
-    "amount"                  bigint                       NOT NULL,
-    "provider"                payment_transaction_provider NOT NULL,
-    "provider_transaction_id" text                         NOT NULL,
-    "status"                  text                         NOT NULL DEFAULT 'pending',
-    "metadata"                jsonb,
-    "created_at"              timestamptz                  NOT NULL DEFAULT (now()),
-    "updated_at"              timestamptz                  NOT NULL DEFAULT (now())
-);
-
 -- name: CreatePaymentTransaction :one
-INSERT INTO payment_transactions (id,
-                                  user_id,
+INSERT INTO payment_transactions (user_id,
                                   amount,
+                                  transaction_type,
                                   provider,
                                   provider_transaction_id,
                                   status,
                                   metadata)
 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
 
+-- name: GetPaymentTransactionByProviderID :one
+SELECT *
+FROM payment_transactions
+WHERE provider_transaction_id = $1
+  AND provider = $2
+  AND user_id = $3;
+
+-- name: UpdatePaymentTransactionStatus :exec
+UPDATE payment_transactions
+SET status     = $1,
+    updated_at = NOW()
+WHERE provider_transaction_id = $2
+  AND provider = $3
+  AND user_id = $4;

@@ -70,7 +70,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config *util.Config, maile
 	log.Info().Msg("Notification service created successfully ✅")
 	
 	// Create a new ZaloPay service
-	zalopayService := zalopay.NewZalopayService(store)
+	zalopayService := zalopay.NewZalopayService(store, config)
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
 	server := &Server{
@@ -143,7 +143,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 	}
 	
-	v1.POST("/zalopay/callback", server.handleZalopayCallback)
+	// v1.POST("/zalopay/callback", server.handleZalopayCallback)
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
@@ -199,4 +199,13 @@ func (server *Server) setupRouter() *gin.Engine {
 // Start runs the HTTP server on a specific address.
 func (server *Server) Start(address string) error {
 	return server.router.Run(address)
+}
+
+func (server *Server) SetupZalopayRouter() *gin.Engine {
+	zalopayRouter := gin.New()
+	zalopayRouter.Use(gin.Recovery())
+	
+	zalopayRouter.POST("/v1/zalopay/callback", server.handleZalopayCallback)
+	
+	return zalopayRouter
 }

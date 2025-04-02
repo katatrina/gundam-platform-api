@@ -84,8 +84,8 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		
 		// Trừ tiền từ ví người mua
 		_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
-			ID:      buyerWallet.ID,
-			Balance: -arg.TotalAmount, // Truyền số âm để trừ
+			WalletID: buyerWallet.ID,
+			Amount:   -arg.TotalAmount, // Truyền số âm để trừ
 		})
 		if err != nil {
 			return fmt.Errorf("failed to deduct balance: %w", err)

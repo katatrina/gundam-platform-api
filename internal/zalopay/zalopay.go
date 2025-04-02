@@ -2,6 +2,7 @@ package zalopay
 
 import (
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/util"
 )
 
 const (
@@ -15,13 +16,15 @@ type ZalopayService struct {
 	key1    string
 	key2    string
 	dbStore db.Store
+	config  *util.Config
 }
 
-func NewZalopayService(dbStore db.Store) *ZalopayService {
+func NewZalopayService(dbStore db.Store, config *util.Config) *ZalopayService {
 	return &ZalopayService{
 		appID:   sandboxTestAppID,
 		key1:    sandboxTestKey1,
 		key2:    sandboxTestKey2,
 		dbStore: dbStore,
+		config:  config,
 	}
 }

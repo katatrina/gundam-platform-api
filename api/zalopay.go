@@ -63,6 +63,7 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	transaction := db.CreatePaymentTransactionParams{
 		UserID:                appUser,
 		Amount:                req.Amount,
+		TransactionType:       db.PaymentTransactionTypeWalletDeposit,
 		Provider:              db.PaymentTransactionProviderZalopay,
 		ProviderTransactionID: transID,
 		Status:                db.PaymentTransactionStatusPending,
@@ -90,7 +91,7 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 	
 	// Bước 1: Xác thực callback
 	if !server.zalopayService.VerifyCallback(callbackData) {
-		c.JSON(http.StatusOK, zalopay.ZalopayCallbackResult{
+		c.JSON(http.StatusBadRequest, zalopay.ZalopayCallbackResult{
 			ReturnCode:    -1,
 			ReturnMessage: "mac not equal",
 		})
@@ -98,11 +99,13 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 	}
 	
 	// Bước 2: Xử lý dữ liệu callback
-	// result, err := server.zalopayService.ProcessCallback(callbackData)
-	// if err != nil {
-	// 	log.Printf("Error processing Zalopay callback: %v", err)
-	// }
+	result, err := server.zalopayService.ProcessCallback(c.Request.Context(), callbackData)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to process ZaloPay callback")
+		c.JSON(http.StatusInternalServerError, result)
+		return
+	}
 	
 	// Trả về kết quả cho Zalopay server
-	// c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result)
 }

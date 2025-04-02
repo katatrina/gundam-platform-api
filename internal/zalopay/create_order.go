@@ -38,7 +38,7 @@ func (z *ZalopayService) CreateOrder(appUser string, amount int64, items []map[s
 	// Dữ liệu này sẽ được callback lại cho AppServer khi thanh toán thành công (Nếu không có thì để chuỗi rỗng).
 	embedData, _ := json.Marshal(map[string]interface{}{
 		"preferred_payment_method": []string{},
-		"redirect_url":             redirectURL,
+		"redirecturl":              redirectURL,
 	})
 	
 	// Kết quả hiển thị trên trang cổng thanh toán:
@@ -63,7 +63,8 @@ func (z *ZalopayService) CreateOrder(appUser string, amount int64, items []map[s
 		params.Get("amount"), params.Get("app_time"), params.Get("embed_data"), params.Get("item"))
 	params.Add("mac", hmacutil.HexStringEncode(hmacutil.SHA256, z.key1, data))
 	
-	// params.Add("callback_url", z.callbackURL)
+	params.Add("callback_url", z.config.ZalopayCallbackURL)
+	fmt.Println("callback_url", z.config.ZalopayCallbackURL)
 	
 	// Gọi API ZaloPay
 	// Content-Type: application/x-www-form-urlencoded

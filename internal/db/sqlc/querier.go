@@ -36,6 +36,7 @@ type Querier interface {
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
+	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
 	GetSellerByGundamID(ctx context.Context, id int64) (User, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
@@ -57,6 +58,7 @@ type Querier interface {
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
+	UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) (PaymentTransaction, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	ValidateGundamBeforeCheckout(ctx context.Context, id int64) (ValidateGundamBeforeCheckoutRow, error)

@@ -82,40 +82,53 @@ func main() {
 }
 
 func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, mailer *mailer.GmailSender, firebaseApp *firebase.App) {
-	// Khởi động ngrok tunnel cho Zalopay callback nếu ở môi trường development
-	if appConfig.Environment == util.EnvironmentDevelopment {
-		// Kiểm tra xem NGROK_AUTHTOKEN có được cung cấp hay không
-		if appConfig.NgrokAuthToken == "" {
-			log.Warn().Msg("NGROK_AUTHTOKEN not set in config, skipping ngrok tunnel setup")
-			log.Warn().Msg("Zalopay callback service may not work properly 😣")
-		} else {
-			log.Info().Msg("starting ngrok tunnel for Zalopay callback...")
-			
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			
-			listener, err := ngrok.Listen(ctx,
-				config.HTTPEndpoint(),
-				ngrok.WithAuthtoken(appConfig.NgrokAuthToken),
-			)
-			
-			if err != nil {
-				log.Warn().Err(err).Msg("failed to create ngrok tunnel, Zalopay callback service may not work properly 😣")
-			} else {
-				log.Info().Str("url", listener.URL()).Msg("ngrok tunnel established for Zalopay callback ✅")
-				appConfig.ZalopayCallbackURL = listener.URL() + "/v1/zalopay/callback"
-			}
-		}
-	}
-	
 	server, err := api.NewServer(store, redisDb, appConfig, mailer, firebaseApp)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
 	
-	// Chạy server chính bình thường
-	err = server.Start(appConfig.HTTPServerAddress)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to start HTTP server 😣")
+	// Chạy ngrok tunnel trong một goroutine riêng
+	go setupNgrokTunnel(appConfig, server)
+	
+	// Chạy server chính trên localhost
+	log.Info().Msg("Starting main server on localhost")
+	if err := server.Start(appConfig.HTTPServerAddress); err != nil {
+		log.Fatal().Err(err).Msg("failed to start main HTTP server 😣")
+	}
+}
+
+func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
+	if appConfig.Environment != util.EnvironmentDevelopment || appConfig.NgrokAuthToken == "" {
+		log.Warn().Msg("Skipping ngrok tunnel setup")
+		return
+	}
+	
+	maxRetries := 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		ctx := context.Background()
+		tunnel, err := ngrok.Listen(ctx,
+			config.HTTPEndpoint(),
+			ngrok.WithAuthtoken(appConfig.NgrokAuthToken),
+		)
+		if err != nil {
+			log.Error().Err(err).Int("attempt", attempt+1).Int("maxRetries", maxRetries).Msg("failed to create ngrok tunnel, retrying in 5 seconds...")
+			if attempt < maxRetries-1 {
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			log.Error().Msg("Max retries reached, giving up on ngrok tunnel setup")
+			return
+		}
+		
+		appConfig.ZalopayCallbackURL = tunnel.URL() + "/v1/zalopay/callback"
+		log.Info().Msg("ngrok tunnel established ✅")
+		log.Info().Str("url", tunnel.URL()).Msg("ngrok tunnel URL")
+		log.Info().Str("zalopay_callback_url", appConfig.ZalopayCallbackURL).Msg("Zalopay callback URL")
+		
+		zalopayRouter := server.SetupZalopayRouter()
+		if err := zalopayRouter.RunListener(tunnel); err != nil {
+			log.Error().Err(err).Msg("Zalopay callback server stopped")
+			return
+		}
 	}
 }

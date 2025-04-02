@@ -11,19 +11,18 @@ import (
 
 const addWalletBalance = `-- name: AddWalletBalance :one
 UPDATE wallets
-SET balance = balance + $2,
+SET balance    = balance + $1,
     updated_at = NOW()
-WHERE id = $1
-    RETURNING id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+WHERE id = $2 RETURNING id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 `
 
 type AddWalletBalanceParams struct {
-	ID      int64 `json:"id"`
-	Balance int64 `json:"balance"`
+	Amount   int64 `json:"amount"`
+	WalletID int64 `json:"wallet_id"`
 }
 
 func (q *Queries) AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error) {
-	row := q.db.QueryRow(ctx, addWalletBalance, arg.ID, arg.Balance)
+	row := q.db.QueryRow(ctx, addWalletBalance, arg.Amount, arg.WalletID)
 	var i Wallet
 	err := row.Scan(
 		&i.ID,
