@@ -16,14 +16,14 @@ func (z *ZalopayService) VerifyCallback(callbackData ZaloPayCallbackData) bool {
 }
 
 // ProcessCallback xử lý dữ liệu callback sau khi đã xác thực
-func (z *ZalopayService) ProcessCallback(ctx context.Context, callbackData ZaloPayCallbackData) (*ZalopayCallbackResult, error) {
+func (z *ZalopayService) ProcessCallback(ctx context.Context, callbackData ZaloPayCallbackData) (*ZalopayCallbackResult, *TransactionData, error) {
 	// Parse dữ liệu giao dịch
 	var transData TransactionData
 	if err := json.Unmarshal([]byte(callbackData.Data), &transData); err != nil {
 		return &ZalopayCallbackResult{
 			ReturnCode:    -1,
 			ReturnMessage: "Invalid transaction data",
-		}, err
+		}, nil, err
 	}
 	
 	// Xử lý thanh toán thành công
@@ -36,11 +36,11 @@ func (z *ZalopayService) ProcessCallback(ctx context.Context, callbackData ZaloP
 		return &ZalopayCallbackResult{
 			ReturnCode:    -1,
 			ReturnMessage: "Internal server error",
-		}, err
+		}, nil, err
 	}
 	
 	return &ZalopayCallbackResult{
 		ReturnCode:    1,
 		ReturnMessage: "success",
-	}, nil
+	}, &transData, nil
 }

@@ -2,11 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/katatrina/gundam-BE/internal/zalopay"
 	"github.com/rs/zerolog/log"
 )
@@ -99,14 +102,30 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 	}
 	
 	// Bước 2: Xử lý dữ liệu callback
-	result, err := server.zalopayService.ProcessCallback(c.Request.Context(), callbackData)
+	result, transData, err := server.zalopayService.ProcessCallback(c.Request.Context(), callbackData)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to process ZaloPay callback")
 		c.JSON(http.StatusInternalServerError, result)
 		return
 	}
 	
-	// TODO: Thông báo cho người dùng về kết quả giao dịch
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: transData.AppUser,
+		Title:       fmt.Sprintf("Bạn đã nạp %s VND vào ví thành công", transData.Amount),
+		Message:     fmt.Sprintf("Giao dịch nạp tiền vào ví của bạn đã được xử lý thành công. Mã giao dịch: %s", transData.AppTransID),
+		Type:        "wallet",
+		ReferenceID: transData.AppTransID,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msgf("failed to send notification to user ID %s", transData.AppUser)
+	}
+	
+	log.Info().Msgf("Successfully deposited %s VND into wallet for user ID %s", transData.Amount, transData.AppUser)
 	
 	// Trả về kết quả cho Zalopay server
 	c.JSON(http.StatusOK, result)
