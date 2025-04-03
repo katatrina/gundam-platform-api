@@ -309,8 +309,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by Gundam status",
                         "name": "status",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -353,11 +352,11 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "available",
-                            "selling",
+                            "in store",
+                            "published",
+                            "processing",
                             "pending auction approval",
-                            "auctioning",
-                            "exchange"
+                            "auctioning"
                         ],
                         "type": "string",
                         "description": "Filter by Gundam status",
@@ -1686,7 +1685,8 @@ const docTemplate = `{
                 "items_subtotal",
                 "note",
                 "payment_method",
-                "seller_id"
+                "seller_id",
+                "total_amount"
             ],
             "properties": {
                 "buyer_address_id": {
@@ -1730,6 +1730,11 @@ const docTemplate = `{
                 "seller_id": {
                     "description": "ID of the seller\nexample: user123",
                     "type": "string"
+                },
+                "total_amount": {
+                    "description": "Total order amount (including delivery fee)\nminimum: 0\nexample: 530000",
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -1823,7 +1828,22 @@ const docTemplate = `{
         "api.getGundamBySlugResponse": {
             "type": "object",
             "required": [
-                "accessories"
+                "accessories",
+                "condition",
+                "created_at",
+                "description",
+                "grade",
+                "id",
+                "image_urls",
+                "manufacturer",
+                "name",
+                "owner_id",
+                "price",
+                "scale",
+                "slug",
+                "status",
+                "updated_at",
+                "weight"
             ],
             "properties": {
                 "accessories": {
@@ -1832,8 +1852,53 @@ const docTemplate = `{
                         "$ref": "#/definitions/db.GundamAccessory"
                     }
                 },
-                "gundam": {
-                    "$ref": "#/definitions/db.GetGundamBySlugRow"
+                "condition": {
+                    "$ref": "#/definitions/db.GundamCondition"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "grade": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "manufacturer": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "$ref": "#/definitions/db.GundamScale"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.GundamStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
                 }
             }
         },
@@ -2053,76 +2118,6 @@ const docTemplate = `{
                 "DeliveryOverralStatusFailed",
                 "DeliveryOverralStatusReturn"
             ]
-        },
-        "db.GetGundamBySlugRow": {
-            "type": "object",
-            "required": [
-                "condition",
-                "created_at",
-                "description",
-                "grade",
-                "id",
-                "image_urls",
-                "manufacturer",
-                "name",
-                "owner_id",
-                "price",
-                "scale",
-                "slug",
-                "status",
-                "updated_at",
-                "weight"
-            ],
-            "properties": {
-                "condition": {
-                    "$ref": "#/definitions/db.GundamCondition"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "grade": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "image_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "manufacturer": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "scale": {
-                    "$ref": "#/definitions/db.GundamScale"
-                },
-                "slug": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/db.GundamStatus"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "weight": {
-                    "type": "integer"
-                }
-            }
         },
         "db.GundamAccessory": {
             "type": "object",
@@ -2414,13 +2409,13 @@ const docTemplate = `{
             "required": [
                 "created_at",
                 "expected_delivery_time",
-                "fromID",
+                "from_delivery_id",
                 "ghn_order_code",
                 "id",
                 "order_id",
                 "overall_status",
                 "status",
-                "toID",
+                "to_delivery_id",
                 "updated_at"
             ],
             "properties": {
@@ -2430,7 +2425,7 @@ const docTemplate = `{
                 "expected_delivery_time": {
                     "type": "string"
                 },
-                "fromID": {
+                "from_delivery_id": {
                     "type": "integer"
                 },
                 "ghn_order_code": {
@@ -2448,7 +2443,7 @@ const docTemplate = `{
                 "status": {
                     "$ref": "#/definitions/pgtype.Text"
                 },
-                "toID": {
+                "to_delivery_id": {
                     "type": "integer"
                 },
                 "updated_at": {

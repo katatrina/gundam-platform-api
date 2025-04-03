@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 	
-	firebase "firebase.google.com/go/v4"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/mailer"
-	"github.com/katatrina/gundam-BE/internal/notification"
 	"github.com/katatrina/gundam-BE/internal/phone_number"
 	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/katatrina/gundam-BE/internal/zalopay"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
@@ -32,12 +31,12 @@ type Server struct {
 	redisDb                *redis.Client
 	phoneNumberService     *phone_number.PhoneNumberService
 	mailService            *mailer.GmailSender
-	notificationService    *notification.NotificationService
+	taskDistributor        *worker.RedisTaskDistributor
 	zalopayService         *zalopay.ZalopayService
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, config *util.Config, mailer *mailer.GmailSender, firebaseApp *firebase.App) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, config *util.Config, mailer *mailer.GmailSender) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -62,13 +61,6 @@ func NewServer(store db.Store, redisDb *redis.Client, config *util.Config, maile
 	}
 	log.Info().Msg("Phone service created successfully ✅")
 	
-	// Create a new notification service
-	notificationService, err := notification.NewNotificationService(context.Background(), firebaseApp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create notification service: %w", err)
-	}
-	log.Info().Msg("Notification service created successfully ✅")
-	
 	// Create a new ZaloPay service
 	zalopayService := zalopay.NewZalopayService(store, config)
 	log.Info().Msg("ZaloPay service created successfully ✅")
@@ -82,7 +74,7 @@ func NewServer(store db.Store, redisDb *redis.Client, config *util.Config, maile
 		phoneNumberService:     phoneNumberService,
 		redisDb:                redisDb,
 		mailService:            mailer,
-		notificationService:    notificationService,
+		taskDistributor:        taskDistributor,
 		zalopayService:         zalopayService,
 	}
 	
@@ -175,8 +167,6 @@ func (server *Server) setupRouter() *gin.Engine {
 		cartGroup.GET("/items", server.listCartItems)
 		cartGroup.DELETE("/items/:id", server.deleteCartItem)
 	}
-	
-	v1.POST("checkout", authMiddleware(server.tokenMaker), server.createOrder)
 	
 	otpGroup := v1.Group("/otp")
 	{

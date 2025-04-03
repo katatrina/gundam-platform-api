@@ -25,6 +25,7 @@ type Config struct {
 	GoogleClientID      string        `mapstructure:"GOOGLE_CLIENT_ID"`
 	CloudinaryURL       string        `mapstructure:"CLOUDINARY_URL"`
 	RedisServerAddress  string        `mapstructure:"REDIS_SERVER_ADDRESS"`
+	RedisServerPassword string        `mapstructure:"REDIS_SERVER_PASSWORD"`
 	DiscordBotToken     string        `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID"`
 	GmailSMTPUsername   string        `mapstructure:"GMAIL_SMTP_USERNAME"`

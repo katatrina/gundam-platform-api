@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"os"
 	"time"
 	
 	firebase "firebase.google.com/go/v4"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"golang.ngrok.com/ngrok/config"
@@ -58,6 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to validate db connection string 😣")
 	}
+	defer connPool.Close()
 	
 	pingErr := connPool.Ping(context.Background())
 	if pingErr != nil {
@@ -72,17 +76,31 @@ func main() {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
+	defer redisDb.Close()
 	
 	mailService, err := mailer.NewGmailSender(appConfig.GmailSMTPUsername, appConfig.GmailSMTPPassword, appConfig, redisDb)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create mail service 😣")
 	}
 	
-	runHTTPServer(&appConfig, store, redisDb, mailService, firebaseApp)
+	redisOpt := asynq.RedisClientOpt{
+		Addr: appConfig.RedisServerAddress,
+	}
+	if appConfig.Environment == "production" {
+		redisOpt.Password = appConfig.RedisServerPassword
+		redisOpt.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+	
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+	
+	go runRedisTaskProcessor(redisOpt, store, firebaseApp)
+	runHTTPServer(&appConfig, store, redisDb, taskDistributor, mailService)
 }
 
-func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, mailer *mailer.GmailSender, firebaseApp *firebase.App) {
-	server, err := api.NewServer(store, redisDb, appConfig, mailer, firebaseApp)
+func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, mailer *mailer.GmailSender) {
+	server, err := api.NewServer(store, redisDb, taskDistributor, appConfig, mailer)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
@@ -131,4 +149,16 @@ func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
 			return
 		}
 	}
+}
+
+// runRedisTaskProcessor creates a new task processor and starts it.
+func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, firebaseApp)
+	
+	err := taskProcessor.Start()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start task processor 😣")
+	}
+	
+	log.Info().Msg("task processor started 😎")
 }

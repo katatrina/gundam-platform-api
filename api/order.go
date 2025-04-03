@@ -7,10 +7,11 @@ import (
 	"time"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
-	"github.com/katatrina/gundam-BE/internal/notification"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,6 +47,11 @@ type createOrderRequest struct {
 	// minimum: 0
 	// example: 500000
 	ItemsSubtotal int64 `json:"items_subtotal" binding:"required,min=0"`
+	
+	// Total order amount (including delivery fee)
+	// minimum: 0
+	// example: 530000
+	TotalAmount int64 `json:"total_amount" binding:"required,min=0"`
 	
 	// Optional note for the order
 	// maxLength: 255
@@ -138,6 +144,15 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		return
 	}
 	
+	// Kiểm tra xem tổng giá trị đơn hàng có hợp lệ không
+	if req.TotalAmount != (realItemsSubtotal + req.DeliveryFee) {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error":   "Total amount mismatch",
+			"details": fmt.Sprintf("Submitted total amount (%d) does not match calculated total amount (%d)", req.TotalAmount, realItemsSubtotal+req.DeliveryFee),
+		})
+		return
+	}
+	
 	// Lấy thông tin địa chỉ người mua
 	buyerAddress, err := server.dbStore.GetUserAddressByID(ctx, db.GetUserAddressByIDParams{
 		ID:     req.BuyerAddressID,
@@ -156,7 +171,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	}
 	
 	// Lấy thông tin địa chỉ lấy hàng của người bán
-	pickupAddress, err := server.dbStore.GetUserPickupAddress(ctx, req.SellerID)
+	sellerAddress, err := server.dbStore.GetUserPickupAddress(ctx, req.SellerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			log.Err(err).Msg("seller pickup address not found")
@@ -169,18 +184,15 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		return
 	}
 	
-	// Tính tổng giá trị đơn hàng (bao gồm cả phí vận chuyển)
-	totalOrderAmount := req.ItemsSubtotal + req.DeliveryFee
-	
 	// Chuẩn bị tham số cho transaction createOrder
 	arg := db.CreateOrderTxParams{
 		BuyerID:              userID,
 		BuyerAddress:         buyerAddress,
 		SellerID:             req.SellerID,
-		PickupAddress:        pickupAddress,
+		SellerAddress:        sellerAddress,
 		ItemsSubtotal:        req.ItemsSubtotal, // Tổng giá trị các sản phẩm
 		DeliveryFee:          req.DeliveryFee,   // Phí vận chuyển
-		TotalAmount:          totalOrderAmount,  // Tổng giá trị đơn hàng (bao gồm phí vận chuyển)
+		TotalAmount:          req.TotalAmount,   // Tổng giá trị đơn hàng (bao gồm phí vận chuyển)
 		ExpectedDeliveryTime: req.ExpectedDeliveryTime,
 		PaymentMethod:        db.PaymentMethod(req.PaymentMethod),
 		Note: pgtype.Text{
@@ -200,35 +212,37 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	
 	log.Info().Msgf("Order created successfully: %v", result)
 	
-	// Gửi thông báo cho người mua
-	err = server.notificationService.SendNotification(ctx.Request.Context(), &notification.Notification{
-		RecipientID: result.Order.BuyerID,
-		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
-		Message:     fmt.Sprintf("Đơn hàng của bạn đã được tạo thành công với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.TotalAmount),
-		Type:        "order",
-		ReferenceID: result.Order.ID.String(),
-		IsRead:      false,
-	})
-	if err != nil {
-		log.Err(err).Msg("failed to send notification to buyer")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+	opts := []asynq.Option{
+		asynq.ProcessIn(5 * time.Second),
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
 	}
 	
-	// Gửi thông báo cho người bán
-	err = server.notificationService.SendNotification(ctx.Request.Context(), &notification.Notification{
-		RecipientID: result.Order.SellerID,
-		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.ID),
-		Message:     fmt.Sprintf("Bạn đã nhận được một đơn hàng mới với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.ID, result.Order.ItemsSubtotal),
+	// Gửi thông báo cho người mua
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.Code),
+		Message:     fmt.Sprintf("Đơn hàng của bạn đã được tạo thành công với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.Code, result.Order.TotalAmount),
 		Type:        "order",
-		ReferenceID: result.Order.ID.String(),
-		IsRead:      false,
-	})
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+	}
+	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
+	
+	// Gửi thông báo cho người bán
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.SellerID,
+		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.Code),
+		Message:     fmt.Sprintf("Bạn đã nhận được một đơn hàng mới với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.Code, result.Order.ItemsSubtotal),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
 	if err != nil {
 		log.Err(err).Msg("failed to send notification to seller")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
 	}
+	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
 	
 	// Trả về kết quả cho client
 	ctx.JSON(http.StatusCreated, result)

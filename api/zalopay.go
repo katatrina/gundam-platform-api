@@ -106,6 +106,8 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 		return
 	}
 	
+	// TODO: Thông báo cho người dùng về kết quả giao dịch
+	
 	// Trả về kết quả cho Zalopay server
 	c.JSON(http.StatusOK, result)
 }

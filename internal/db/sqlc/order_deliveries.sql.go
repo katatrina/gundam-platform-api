@@ -18,9 +18,9 @@ INSERT INTO order_deliveries (order_id,
                               expected_delivery_time,
                               status,
                               overall_status,
-                              "fromID",
-                              "toID")
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, "fromID", "toID", created_at, updated_at
+                              from_delivery_id,
+                              to_delivery_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 `
 
 type CreateOrderDeliveryParams struct {
@@ -29,8 +29,8 @@ type CreateOrderDeliveryParams struct {
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
-	FromID               int64                     `json:"fromID"`
-	ToID                 int64                     `json:"toID"`
+	FromDeliveryID       int64                     `json:"from_delivery_id"`
+	ToDeliveryID         int64                     `json:"to_delivery_id"`
 }
 
 func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDeliveryParams) (OrderDelivery, error) {
@@ -40,8 +40,8 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 		arg.ExpectedDeliveryTime,
 		arg.Status,
 		arg.OverallStatus,
-		arg.FromID,
-		arg.ToID,
+		arg.FromDeliveryID,
+		arg.ToDeliveryID,
 	)
 	var i OrderDelivery
 	err := row.Scan(
@@ -51,8 +51,8 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 		&i.ExpectedDeliveryTime,
 		&i.Status,
 		&i.OverallStatus,
-		&i.FromID,
-		&i.ToID,
+		&i.FromDeliveryID,
+		&i.ToDeliveryID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

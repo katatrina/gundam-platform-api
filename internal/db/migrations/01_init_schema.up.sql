@@ -273,8 +273,8 @@ CREATE TABLE "order_deliveries"
     "expected_delivery_time" timestamptz NOT NULL,
     "status"                 text,
     "overall_status"         delivery_overral_status,
-    "fromID"                 bigint      NOT NULL,
-    "toID"                   bigint      NOT NULL,
+    "from_delivery_id"       bigint      NOT NULL,
+    "to_delivery_id"         bigint      NOT NULL,
     "created_at"             timestamptz NOT NULL DEFAULT (now()),
     "updated_at"             timestamptz NOT NULL DEFAULT (now())
 );
@@ -398,10 +398,10 @@ ALTER TABLE "order_deliveries"
     ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
 
 ALTER TABLE "order_deliveries"
-    ADD FOREIGN KEY ("fromID") REFERENCES "delivery_information" ("id");
+    ADD FOREIGN KEY ("from_delivery_id") REFERENCES "delivery_information" ("id");
 
 ALTER TABLE "order_deliveries"
-    ADD FOREIGN KEY ("toID") REFERENCES "delivery_information" ("id");
+    ADD FOREIGN KEY ("to_delivery_id") REFERENCES "delivery_information" ("id");
 
 ALTER TABLE "wallets"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");

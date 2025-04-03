@@ -727,8 +727,8 @@ type OrderDelivery struct {
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
-	FromID               int64                     `json:"fromID"`
-	ToID                 int64                     `json:"toID"`
+	FromDeliveryID       int64                     `json:"from_delivery_id"`
+	ToDeliveryID         int64                     `json:"to_delivery_id"`
 	CreatedAt            time.Time                 `json:"created_at"`
 	UpdatedAt            time.Time                 `json:"updated_at"`
 }

@@ -138,6 +138,13 @@ definitions:
           ID of the seller
           example: user123
         type: string
+      total_amount:
+        description: |-
+          Total order amount (including delivery fee)
+          minimum: 0
+          example: 530000
+        minimum: 0
+        type: integer
     required:
     - buyer_address_id
     - delivery_fee
@@ -147,6 +154,7 @@ definitions:
     - note
     - payment_method
     - seller_id
+    - total_amount
     type: object
   api.createUserAddressRequest:
     properties:
@@ -216,10 +224,55 @@ definitions:
         items:
           $ref: '#/definitions/db.GundamAccessory'
         type: array
-      gundam:
-        $ref: '#/definitions/db.GetGundamBySlugRow'
+      condition:
+        $ref: '#/definitions/db.GundamCondition'
+      created_at:
+        type: string
+      description:
+        type: string
+      grade:
+        type: string
+      id:
+        type: integer
+      image_urls:
+        items:
+          type: string
+        type: array
+      manufacturer:
+        type: string
+      name:
+        type: string
+      owner_id:
+        type: string
+      price:
+        type: integer
+      scale:
+        $ref: '#/definitions/db.GundamScale'
+      slug:
+        type: string
+      status:
+        $ref: '#/definitions/db.GundamStatus'
+      updated_at:
+        type: string
+      weight:
+        type: integer
     required:
     - accessories
+    - condition
+    - created_at
+    - description
+    - grade
+    - id
+    - image_urls
+    - manufacturer
+    - name
+    - owner_id
+    - price
+    - scale
+    - slug
+    - status
+    - updated_at
+    - weight
     type: object
   api.loginUserRequest:
     properties:
@@ -372,57 +425,6 @@ definitions:
     - DeliveryOverralStatusDelivered
     - DeliveryOverralStatusFailed
     - DeliveryOverralStatusReturn
-  db.GetGundamBySlugRow:
-    properties:
-      condition:
-        $ref: '#/definitions/db.GundamCondition'
-      created_at:
-        type: string
-      description:
-        type: string
-      grade:
-        type: string
-      id:
-        type: integer
-      image_urls:
-        items:
-          type: string
-        type: array
-      manufacturer:
-        type: string
-      name:
-        type: string
-      owner_id:
-        type: string
-      price:
-        type: integer
-      scale:
-        $ref: '#/definitions/db.GundamScale'
-      slug:
-        type: string
-      status:
-        $ref: '#/definitions/db.GundamStatus'
-      updated_at:
-        type: string
-      weight:
-        type: integer
-    required:
-    - condition
-    - created_at
-    - description
-    - grade
-    - id
-    - image_urls
-    - manufacturer
-    - name
-    - owner_id
-    - price
-    - scale
-    - slug
-    - status
-    - updated_at
-    - weight
-    type: object
   db.GundamAccessory:
     properties:
       created_at:
@@ -636,7 +638,7 @@ definitions:
         type: string
       expected_delivery_time:
         type: string
-      fromID:
+      from_delivery_id:
         type: integer
       ghn_order_code:
         $ref: '#/definitions/pgtype.Text'
@@ -648,20 +650,20 @@ definitions:
         $ref: '#/definitions/db.NullDeliveryOverralStatus'
       status:
         $ref: '#/definitions/pgtype.Text'
-      toID:
+      to_delivery_id:
         type: integer
       updated_at:
         type: string
     required:
     - created_at
     - expected_delivery_time
-    - fromID
+    - from_delivery_id
     - ghn_order_code
     - id
     - order_id
     - overall_status
     - status
-    - toID
+    - to_delivery_id
     - updated_at
     type: object
   db.OrderItem:
@@ -1176,7 +1178,6 @@ paths:
         - auctioning
         in: query
         name: status
-        required: true
         type: string
       produces:
       - application/json
@@ -1206,11 +1207,11 @@ paths:
         type: string
       - description: Filter by Gundam status
         enum:
-        - available
-        - selling
+        - in store
+        - published
+        - processing
         - pending auction approval
         - auctioning
-        - exchange
         in: query
         name: status
         type: string

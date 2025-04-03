@@ -3,9 +3,10 @@ package worker
 import (
 	"context"
 	
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go/v4"
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
-	"github.com/katatrina/gundam-BE/internal/storage"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,17 +19,20 @@ const (
 	QueueDefault  = "default"
 )
 
-type TaskProcessor interface {
-	Start() error
-}
-
 type RedisTaskProcessor struct {
-	server    *asynq.Server
-	dbStore   db.Store
-	fileStore storage.FileStore
+	server          *asynq.Server
+	store           db.Store
+	firestoreClient *firestore.Client
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, dbStore db.Store, fileStore storage.FileStore) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App) *RedisTaskProcessor {
+	// Initialize Firestore client
+	firestoreClient, err := firebaseApp.Firestore(context.Background())
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create firestore client 😣")
+		return nil
+	}
+	
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -45,14 +49,17 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, dbStore db.Store, file
 	)
 	
 	return &RedisTaskProcessor{
-		server:  server,
-		dbStore: dbStore,
+		server:          server,
+		store:           store,
+		firestoreClient: firestoreClient,
 	}
 }
 
 // Start registers the task handlers for the mux, attaches the mux to the asynq server, and starts the server.
 func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
+	
+	mux.HandleFunc(TaskSendNotification, processor.ProcessTaskSendNotification)
 	
 	return processor.server.Start(mux)
 }

@@ -14,7 +14,7 @@ type CreateOrderTxParams struct {
 	BuyerID              string
 	BuyerAddress         UserAddress
 	SellerID             string
-	PickupAddress        UserAddress
+	SellerAddress        UserAddress
 	ItemsSubtotal        int64
 	TotalAmount          int64
 	DeliveryFee          int64
@@ -66,7 +66,6 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		
 		// 2. Tạo order
 		orderCode := util.GenerateOrderCode() // Bỏ qua kiểm tra unique
-		fmt.Println("orderCode:", orderCode, ", length:", len(orderCode))
 		order, err := qTx.CreateOrder(ctx, CreateOrderParams{
 			ID:            orderID,
 			Code:          orderCode,
@@ -108,6 +107,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		if err != nil {
 			return fmt.Errorf("failed to create buyer wallet entry: %w", err)
 		}
+		result.BuyerEntry = buyerEntry
 		
 		// 3. Tạo các order items
 		for _, gundam := range arg.Gundams {
@@ -147,8 +147,8 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		orderDelivery, err := qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
 			OrderID:              order.ID.String(),
 			ExpectedDeliveryTime: arg.ExpectedDeliveryTime,
-			FromID:               sellerDelivery.ID,
-			ToID:                 buyerDelivery.ID,
+			FromDeliveryID:       sellerDelivery.ID,
+			ToDeliveryID:         buyerDelivery.ID,
 		})
 		if err != nil {
 			return err
@@ -156,14 +156,16 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		result.OrderDelivery = orderDelivery
 		
 		// 7. Tạo order transaction
-		if _, err = qTx.CreateOrderTransaction(ctx, CreateOrderTransactionParams{
+		orderTrans, err := qTx.CreateOrderTransaction(ctx, CreateOrderTransactionParams{
 			OrderID:      order.ID.String(),
 			Amount:       arg.TotalAmount,
 			Status:       OrderTransactionStatusPending,
 			BuyerEntryID: buyerEntry.ID,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("failed to create order transaction: %w", err)
 		}
+		result.OrderTransaction = orderTrans
 		
 		return nil
 	})
@@ -190,14 +192,14 @@ func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxPara
 	
 	sellerDelivery, err = qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
 		UserID:        arg.SellerID,
-		FullName:      arg.PickupAddress.FullName,
-		PhoneNumber:   arg.PickupAddress.PhoneNumber,
-		ProvinceName:  arg.PickupAddress.ProvinceName,
-		DistrictName:  arg.PickupAddress.DistrictName,
-		GhnDistrictID: arg.PickupAddress.GhnDistrictID,
-		WardName:      arg.PickupAddress.WardName,
-		GhnWardCode:   arg.PickupAddress.GhnWardCode,
-		Detail:        arg.PickupAddress.Detail,
+		FullName:      arg.SellerAddress.FullName,
+		PhoneNumber:   arg.SellerAddress.PhoneNumber,
+		ProvinceName:  arg.SellerAddress.ProvinceName,
+		DistrictName:  arg.SellerAddress.DistrictName,
+		GhnDistrictID: arg.SellerAddress.GhnDistrictID,
+		WardName:      arg.SellerAddress.WardName,
+		GhnWardCode:   arg.SellerAddress.GhnWardCode,
+		Detail:        arg.SellerAddress.Detail,
 	})
 	return
 }
