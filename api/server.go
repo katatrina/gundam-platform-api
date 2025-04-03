@@ -120,6 +120,8 @@ func (server *Server) setupRouter() *gin.Engine {
 		
 		userGroup.Use(authMiddleware(server.tokenMaker))
 		userGroup.POST("become-seller", server.becomeSeller)
+		
+		userGroup.GET(":id/wallet", server.getUserWallet)
 	}
 	
 	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))

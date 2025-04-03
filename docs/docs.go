@@ -1171,6 +1171,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/:id/wallet/": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get user wallet information details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Get user wallet information details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User wallet information",
+                        "schema": {
+                            "$ref": "#/definitions/db.Wallet"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/users/become-seller": {
             "post": {
                 "security": [
@@ -2779,6 +2825,41 @@ const docTemplate = `{
                 "UserRoleModerator",
                 "UserRoleAdmin"
             ]
+        },
+        "db.Wallet": {
+            "type": "object",
+            "required": [
+                "balance",
+                "created_at",
+                "currency",
+                "id",
+                "non_withdrawable_amount",
+                "updated_at",
+                "user_id"
+            ],
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "non_withdrawable_amount": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
         },
         "db.WalletEntry": {
             "type": "object",

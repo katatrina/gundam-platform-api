@@ -854,6 +854,31 @@ definitions:
     - UserRoleSeller
     - UserRoleModerator
     - UserRoleAdmin
+  db.Wallet:
+    properties:
+      balance:
+        type: integer
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: integer
+      non_withdrawable_amount:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - balance
+    - created_at
+    - currency
+    - id
+    - non_withdrawable_amount
+    - updated_at
+    - user_id
+    type: object
   db.WalletEntry:
     properties:
       amount:
@@ -1752,6 +1777,35 @@ paths:
       summary: Create a new user
       tags:
       - authentication
+  /users/:id/wallet/:
+    get:
+      consumes:
+      - application/json
+      description: Get user wallet information details
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User wallet information
+          schema:
+            $ref: '#/definitions/db.Wallet'
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Get user wallet information details
+      tags:
+      - wallet
   /users/{id}:
     get:
       description: Get detailed information about a specific user
