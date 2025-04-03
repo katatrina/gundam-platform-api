@@ -84,6 +84,13 @@ definitions:
     required:
     - gundam_id
     type: object
+  api.checkEmailRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   api.createOrderRequest:
     properties:
       buyer_address_id:
@@ -1151,11 +1158,12 @@ paths:
       - application/json
       description: Checks if an email already exists in the database
       parameters:
-      - description: Email that needs to be checked
-        in: query
-        name: email
+      - description: Check email request
+        in: body
+        name: request
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/api.checkEmailRequest'
       produces:
       - application/json
       responses:

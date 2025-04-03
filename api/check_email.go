@@ -17,7 +17,7 @@ type checkEmailRequest struct {
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			email	query		string	true	"Email that needs to be checked"
+//	@Param			request	body		checkEmailRequest	true	"Check email request"
 //	@Success		200		{object}	map[string]bool
 //	@Router			/check-email [get]
 func (server *Server) checkEmailExists(ctx *gin.Context) {
@@ -33,7 +33,6 @@ func (server *Server) checkEmailExists(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, gin.H{
 				"exists": false,
 			})
-			
 			return
 		}
 		

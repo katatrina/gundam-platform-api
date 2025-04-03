@@ -234,11 +234,13 @@ const docTemplate = `{
                 "summary": "Check Email Exists",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Email that needs to be checked",
-                        "name": "email",
-                        "in": "query",
-                        "required": true
+                        "description": "Check email request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.checkEmailRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -1790,6 +1792,17 @@ const docTemplate = `{
             "properties": {
                 "gundam_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.checkEmailRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
                 }
             }
         },
