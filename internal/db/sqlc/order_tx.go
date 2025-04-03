@@ -65,9 +65,11 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		}
 		
 		// 2. Tạo order
+		orderCode := util.GenerateOrderCode() // Bỏ qua kiểm tra unique
+		fmt.Println("orderCode:", orderCode, ", length:", len(orderCode))
 		order, err := qTx.CreateOrder(ctx, CreateOrderParams{
 			ID:            orderID,
-			Code:          util.GenerateOrderCode(), // Bỏ qua kiểm tra unique
+			Code:          orderCode,
 			BuyerID:       arg.BuyerID,
 			SellerID:      arg.SellerID,
 			ItemsSubtotal: arg.ItemsSubtotal,

@@ -51,6 +51,7 @@ type Querier interface {
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error)
 	ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error)
+	ListOrdersByUserID(ctx context.Context, buyerID string) ([]Order, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error

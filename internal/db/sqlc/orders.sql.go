@@ -70,6 +70,46 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	return i, err
 }
 
+const listOrdersByUserID = `-- name: ListOrdersByUserID :many
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+FROM orders
+WHERE buyer_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListOrdersByUserID(ctx context.Context, buyerID string) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersByUserID, buyerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Order{}
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.ItemsSubtotal,
+			&i.DeliveryFee,
+			&i.TotalAmount,
+			&i.Status,
+			&i.PaymentMethod,
+			&i.Note,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const validateGundamBeforeCheckout = `-- name: ValidateGundamBeforeCheckout :one
 SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.status, g.created_at, g.updated_at, g.deleted_at,
        CASE

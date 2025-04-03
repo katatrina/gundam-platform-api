@@ -227,17 +227,17 @@ CREATE TABLE "seller_subscriptions"
 CREATE TABLE "orders"
 (
     "id"             uuid PRIMARY KEY,
-    "code"           varchar(14) UNIQUE NOT NULL,
-    "buyer_id"       text               NOT NULL,
-    "seller_id"      text               NOT NULL,
-    "items_subtotal" bigint             NOT NULL,
-    "delivery_fee"   bigint             NOT NULL,
-    "total_amount"   bigint             NOT NULL,
-    "status"         order_status       NOT NULL DEFAULT 'pending',
-    "payment_method" payment_method     NOT NULL,
+    "code"           text UNIQUE    NOT NULL,
+    "buyer_id"       text           NOT NULL,
+    "seller_id"      text           NOT NULL,
+    "items_subtotal" bigint         NOT NULL,
+    "delivery_fee"   bigint         NOT NULL,
+    "total_amount"   bigint         NOT NULL,
+    "status"         order_status   NOT NULL DEFAULT 'pending',
+    "payment_method" payment_method NOT NULL,
     "note"           text,
-    "created_at"     timestamptz        NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz        NOT NULL DEFAULT (now())
+    "created_at"     timestamptz    NOT NULL DEFAULT (now()),
+    "updated_at"     timestamptz    NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "order_items"
@@ -306,7 +306,7 @@ CREATE TABLE "wallet_entries"
 CREATE TABLE "order_transactions"
 (
     "id"              bigserial PRIMARY KEY,
-    "order_id"        varchar(14)              NOT NULL,
+    "order_id"        text                     NOT NULL,
     "amount"          bigint                   NOT NULL,
     "status"          order_transaction_status NOT NULL DEFAULT 'pending',
     "buyer_entry_id"  bigint                   NOT NULL,

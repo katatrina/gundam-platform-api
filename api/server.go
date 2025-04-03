@@ -133,6 +133,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))
 	{
 		orderGroup.POST("", server.createOrder)
+		orderGroup.GET("", server.listOrders)
 	}
 	
 	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
@@ -142,8 +143,6 @@ func (server *Server) setupRouter() *gin.Engine {
 			zalopayGroup.POST("/create", server.createZalopayOrder)
 		}
 	}
-	
-	// v1.POST("/zalopay/callback", server.handleZalopayCallback)
 	
 	v1.GET("/grades", server.listGundamGrades)
 	

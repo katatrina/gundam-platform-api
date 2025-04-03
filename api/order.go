@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -101,7 +102,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		if !result.Valid {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 				"error":   "One or more items in your cart are no longer available",
-				"details": fmt.Sprintf("Gundam ID %d is not available for purchase", gundamID),
+				"details": fmt.Sprintf("Gundam ID %d is not available for purchasing", gundamID),
 			})
 			return
 		}
@@ -111,6 +112,15 @@ func (server *Server) createOrder(ctx *gin.Context) {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 				"error":   "Seller does not own one or more items",
 				"details": fmt.Sprintf("Gundam ID %d is not owned by the specified seller", gundamID),
+			})
+			return
+		}
+		
+		// Tránh seller mua sản phẩm của chính mình
+		if result.Gundam.OwnerID == userID {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error":   "Seller cannot purchase their own items",
+				"details": fmt.Sprintf("Gundam ID %d is owned by the seller", gundamID),
 			})
 			return
 		}
@@ -134,6 +144,12 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		UserID: userID,
 	})
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			log.Err(err).Msg("buyer address not found")
+			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(errors.New("buyer address not found")))
+			return
+		}
+		
 		log.Err(err).Msg("failed to get user address by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -142,6 +158,12 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	// Lấy thông tin địa chỉ lấy hàng của người bán
 	pickupAddress, err := server.dbStore.GetUserPickupAddress(ctx, req.SellerID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			log.Err(err).Msg("seller pickup address not found")
+			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(errors.New("seller pickup address not found")))
+			return
+		}
+		
 		log.Err(err).Msg("failed to get user pickup address")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -172,9 +194,11 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	result, err := server.dbStore.CreateOrderTx(ctx, arg)
 	if err != nil {
 		log.Err(err).Msg("failed to create order")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
+	
+	log.Info().Msgf("Order created successfully: %v", result)
 	
 	// Gửi thông báo cho người mua
 	err = server.notificationService.SendNotification(ctx.Request.Context(), &notification.Notification{
@@ -208,4 +232,19 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	
 	// Trả về kết quả cho client
 	ctx.JSON(http.StatusCreated, result)
+}
+
+func (server *Server) listOrders(ctx *gin.Context) {
+	// Lấy userID từ token xác thực
+	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
+	
+	// Thực hiện truy vấn để lấy danh sách đơn hàng
+	orders, err := server.dbStore.ListOrdersByUserID(ctx, userID)
+	if err != nil {
+		log.Err(err).Msg("failed to list orders")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, orders)
 }

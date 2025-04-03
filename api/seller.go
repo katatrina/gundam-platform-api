@@ -39,7 +39,7 @@ func (server *Server) becomeSeller(ctx *gin.Context) {
 	seller, err := server.dbStore.BecomeSellerTx(ctx, userID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to become seller")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

@@ -221,7 +221,7 @@ const docTemplate = `{
         },
         "/check-email": {
             "get": {
-                "description": "Kiểm tra xem email đã được đăng ký trong hệ thống chưa",
+                "description": "Checks if an email already exists in the database",
                 "consumes": [
                     "application/json"
                 ],
@@ -231,11 +231,11 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Kiểm tra sự tồn tại của email",
+                "summary": "Check Email Exists",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Email cần kiểm tra",
+                        "description": "Email that needs to be checked",
                         "name": "email",
                         "in": "query",
                         "required": true

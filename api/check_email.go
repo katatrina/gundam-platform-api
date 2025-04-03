@@ -12,12 +12,12 @@ type checkEmailRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-//	@Summary		Kiểm tra sự tồn tại của email
-//	@Description	Kiểm tra xem email đã được đăng ký trong hệ thống chưa
+//	@Summary		Check Email Exists
+//	@Description	Checks if an email already exists in the database
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			email	query		string	true	"Email cần kiểm tra"
+//	@Param			email	query		string	true	"Email that needs to be checked"
 //	@Success		200		{object}	map[string]bool
 //	@Router			/check-email [get]
 func (server *Server) checkEmailExists(ctx *gin.Context) {

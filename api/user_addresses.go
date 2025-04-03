@@ -190,7 +190,7 @@ func (server *Server) updateUserAddress(ctx *gin.Context) {
 	params := new(updateUserAddressPathParams)
 	if err := ctx.ShouldBindUri(params); err != nil {
 		log.Err(err).Msg("failed to bind uri")
-		ctx.Status(http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
