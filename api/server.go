@@ -153,6 +153,11 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
 		}
+		
+		sellerOrderGroup := sellerGroup.Group("orders")
+		{
+			sellerOrderGroup.GET("", server.listOrdersBySeller)
+		}
 	}
 	
 	gundamGroup := v1.Group("/gundams")

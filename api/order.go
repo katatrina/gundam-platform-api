@@ -248,6 +248,16 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, result)
 }
 
+//	@Summary		List all purchase orders of the normal user
+//	@Description	List all purchase orders of the normal user
+//	@Tags			orders
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Success		200	array	db.Order	"List of orders"
+//	@Failure		400	"Bad request"
+//	@Failure		500	"Internal server error"
+//	@Router			/orders [get]
 func (server *Server) listOrders(ctx *gin.Context) {
 	// Lấy userID từ token xác thực
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject

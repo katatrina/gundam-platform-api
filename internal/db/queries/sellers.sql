@@ -35,3 +35,9 @@ FROM gundams g
 WHERE owner_id = $1
   AND (sqlc.narg('name')::text IS NULL OR g.name ILIKE concat('%', sqlc.narg('name')::text, '%'))
 ORDER BY g.created_at DESC;
+
+-- name: ListOrdersBySellerID :many
+SELECT *
+FROM orders
+WHERE seller_id = $1
+ORDER BY created_at DESC;

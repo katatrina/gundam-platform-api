@@ -151,3 +151,43 @@ func (q *Queries) ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySe
 	}
 	return items, nil
 }
+
+const listOrdersBySellerID = `-- name: ListOrdersBySellerID :many
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+FROM orders
+WHERE seller_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListOrdersBySellerID(ctx context.Context, sellerID string) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersBySellerID, sellerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Order{}
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.ItemsSubtotal,
+			&i.DeliveryFee,
+			&i.TotalAmount,
+			&i.Status,
+			&i.PaymentMethod,
+			&i.Note,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -283,3 +283,26 @@ func (server *Server) unpublishGundam(ctx *gin.Context) {
 		"gundam_id": gundam.ID,
 	})
 }
+
+//	@Summary		List all sale orders for a specific seller
+//	@Description	Get all sale orders that belong to the specified seller ID
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Success		200			"Successfully retrieved list of orders"
+//	@Failure		500			"Internal server error"
+//	@Router			/sellers/:sellerID/orders [get]
+func (server *Server) listOrdersBySeller(ctx *gin.Context) {
+	sellerID := ctx.Param("sellerID")
+	
+	orders, err := server.dbStore.ListOrdersBySellerID(ctx, sellerID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to list orders by seller")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, orders)
+}
