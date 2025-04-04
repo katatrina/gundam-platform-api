@@ -13,8 +13,9 @@ const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (order_id,
                          gundam_id,
                          price,
-                         quantity)
-VALUES ($1, $2, $3, $4) RETURNING id, order_id, gundam_id, quantity, price, created_at
+                         quantity,
+                         weight)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, order_id, gundam_id, quantity, price, weight, created_at
 `
 
 type CreateOrderItemParams struct {
@@ -22,6 +23,7 @@ type CreateOrderItemParams struct {
 	GundamID int64  `json:"gundam_id"`
 	Price    int64  `json:"price"`
 	Quantity int64  `json:"quantity"`
+	Weight   int64  `json:"weight"`
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
@@ -30,6 +32,7 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		arg.GundamID,
 		arg.Price,
 		arg.Quantity,
+		arg.Weight,
 	)
 	var i OrderItem
 	err := row.Scan(
@@ -38,7 +41,42 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 		&i.GundamID,
 		&i.Quantity,
 		&i.Price,
+		&i.Weight,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getOrderItems = `-- name: GetOrderItems :many
+SELECT id, order_id, gundam_id, quantity, price, weight, created_at
+FROM order_items
+WHERE order_id = $1
+`
+
+func (q *Queries) GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error) {
+	rows, err := q.db.Query(ctx, getOrderItems, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OrderItem{}
+	for rows.Next() {
+		var i OrderItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.GundamID,
+			&i.Quantity,
+			&i.Price,
+			&i.Weight,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

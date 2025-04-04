@@ -247,6 +247,7 @@ CREATE TABLE "order_items"
     "gundam_id"  bigint      NOT NULL,
     "quantity"   bigint      NOT NULL DEFAULT 1,
     "price"      bigint      NOT NULL,
+    "weight"     bigint      NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -300,7 +301,8 @@ CREATE TABLE "wallet_entries"
     "amount"         bigint                NOT NULL,
     "status"         wallet_entry_status   NOT NULL DEFAULT 'pending',
     "created_at"     timestamptz           NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz           NOT NULL DEFAULT (now())
+    "updated_at"     timestamptz           NOT NULL DEFAULT (now()),
+    "completed_at"   timestamptz
 );
 
 CREATE TABLE "order_transactions"
@@ -312,7 +314,8 @@ CREATE TABLE "order_transactions"
     "buyer_entry_id"  bigint                   NOT NULL,
     "seller_entry_id" bigint,
     "created_at"      timestamptz              NOT NULL DEFAULT (now()),
-    "updated_at"      timestamptz              NOT NULL DEFAULT (now())
+    "updated_at"      timestamptz              NOT NULL DEFAULT (now()),
+    "completed_at"    timestamptz
 );
 
 CREATE TABLE "payment_transactions"

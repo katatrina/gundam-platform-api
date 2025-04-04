@@ -36,6 +36,23 @@ func (q *Queries) AddWalletBalance(ctx context.Context, arg AddWalletBalancePara
 	return i, err
 }
 
+const addWalletNonWithdrawableAmount = `-- name: AddWalletNonWithdrawableAmount :exec
+UPDATE wallets
+SET non_withdrawable_amount = non_withdrawable_amount + $1,
+    updated_at              = NOW()
+WHERE id = $2
+`
+
+type AddWalletNonWithdrawableAmountParams struct {
+	Amount   int64 `json:"amount"`
+	WalletID int64 `json:"wallet_id"`
+}
+
+func (q *Queries) AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error {
+	_, err := q.db.Exec(ctx, addWalletNonWithdrawableAmount, arg.Amount, arg.WalletID)
+	return err
+}
+
 const createWallet = `-- name: CreateWallet :exec
 INSERT INTO wallets (user_id)
 VALUES ($1)

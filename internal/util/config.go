@@ -33,6 +33,8 @@ type Config struct {
 	ZalopayCallbackURL  string        `mapstructure:"ZALOPAY_CALLBACK_URL"`
 	Environment         string        `mapstructure:"ENVIRONMENT"`
 	NgrokAuthToken      string        `mapstructure:"NGROK_AUTH_TOKEN"`
+	GHNShopID           string        `mapstructure:"GHN_SHOP_ID"`
+	GHNToken            string        `mapstructure:"GHN_TOKEN"`
 }
 
 // LoadConfig reads configuration from file or environment variables.

@@ -856,6 +856,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/:sellerID/orders/:orderID/confirm": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Confirm an order for the specified seller. This endpoint checks the order's status before proceeding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Confirm an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully confirmed order",
+                        "schema": {
+                            "$ref": "#/definitions/db.ConfirmOrderTxResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid order ID or seller ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Order does not belong to this seller",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Order is not in pending status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/:sellerID/subscriptions/active": {
             "get": {
                 "security": [
@@ -2203,6 +2283,57 @@ const docTemplate = `{
                 }
             }
         },
+        "db.ConfirmOrderTxResult": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_delivery",
+                "order_items",
+                "order_transaction",
+                "seller_entry"
+            ],
+            "properties": {
+                "order": {
+                    "description": "Đơn hàng đã được cập nhật",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Order"
+                        }
+                    ]
+                },
+                "order_delivery": {
+                    "description": "Thông tin giao hàng đã được cập nhật với mã GHN",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderDelivery"
+                        }
+                    ]
+                },
+                "order_items": {
+                    "description": "Các mặt hàng trong đơn hàng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                },
+                "order_transaction": {
+                    "description": "Giao dịch đơn hàng đã được cập nhật với seller_entry_id",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderTransaction"
+                        }
+                    ]
+                },
+                "seller_entry": {
+                    "description": "Bút toán cộng tiền cho người bán (pending)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.WalletEntry"
+                        }
+                    ]
+                }
+            }
+        },
         "db.CreateOrderTxResult": {
             "type": "object",
             "required": [
@@ -2590,7 +2721,8 @@ const docTemplate = `{
                 "id",
                 "order_id",
                 "price",
-                "quantity"
+                "quantity",
+                "weight"
             ],
             "properties": {
                 "created_at": {
@@ -2609,6 +2741,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "quantity": {
+                    "type": "integer"
+                },
+                "weight": {
                     "type": "integer"
                 }
             }
@@ -2639,6 +2774,7 @@ const docTemplate = `{
             "required": [
                 "amount",
                 "buyer_entry_id",
+                "completed_at",
                 "created_at",
                 "id",
                 "order_id",
@@ -2652,6 +2788,9 @@ const docTemplate = `{
                 },
                 "buyer_entry_id": {
                     "type": "integer"
+                },
+                "completed_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 },
                 "created_at": {
                     "type": "string"
@@ -2878,6 +3017,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "amount",
+                "completed_at",
                 "created_at",
                 "entry_type",
                 "id",
@@ -2890,6 +3030,9 @@ const docTemplate = `{
             "properties": {
                 "amount": {
                     "type": "integer"
+                },
+                "completed_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 },
                 "created_at": {
                     "type": "string"
@@ -2982,6 +3125,19 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": {}
         },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
         "pgtype.Int8": {
             "type": "object",
             "properties": {
@@ -2997,6 +3153,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinity_modifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
                     "type": "string"
                 },
                 "valid": {

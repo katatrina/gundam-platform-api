@@ -58,3 +58,75 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 	)
 	return i, err
 }
+
+const getOrderDelivery = `-- name: GetOrderDelivery :one
+SELECT id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+FROM order_deliveries
+WHERE order_id = $1
+`
+
+func (q *Queries) GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error) {
+	row := q.db.QueryRow(ctx, getOrderDelivery, orderID)
+	var i OrderDelivery
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.GhnOrderCode,
+		&i.ExpectedDeliveryTime,
+		&i.Status,
+		&i.OverallStatus,
+		&i.FromDeliveryID,
+		&i.ToDeliveryID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateOrderDelivery = `-- name: UpdateOrderDelivery :one
+UPDATE order_deliveries
+SET ghn_order_code         = COALESCE($1, ghn_order_code),
+    expected_delivery_time = COALESCE($2, expected_delivery_time),
+    status                 = COALESCE($3, status),
+    overall_status         = COALESCE($4, overall_status),
+    from_delivery_id       = COALESCE($5, from_delivery_id),
+    to_delivery_id         = COALESCE($6, to_delivery_id),
+    updated_at             = now()
+WHERE id = $7 RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+`
+
+type UpdateOrderDeliveryParams struct {
+	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
+	ExpectedDeliveryTime pgtype.Timestamptz        `json:"expected_delivery_time"`
+	Status               pgtype.Text               `json:"status"`
+	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
+	FromDeliveryID       pgtype.Int8               `json:"from_delivery_id"`
+	ToDeliveryID         pgtype.Int8               `json:"to_delivery_id"`
+	ID                   int64                     `json:"id"`
+}
+
+func (q *Queries) UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error) {
+	row := q.db.QueryRow(ctx, updateOrderDelivery,
+		arg.GhnOrderCode,
+		arg.ExpectedDeliveryTime,
+		arg.Status,
+		arg.OverallStatus,
+		arg.FromDeliveryID,
+		arg.ToDeliveryID,
+		arg.ID,
+	)
+	var i OrderDelivery
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.GhnOrderCode,
+		&i.ExpectedDeliveryTime,
+		&i.Status,
+		&i.OverallStatus,
+		&i.FromDeliveryID,
+		&i.ToDeliveryID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

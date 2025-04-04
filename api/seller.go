@@ -2,14 +2,18 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
 
@@ -305,4 +309,86 @@ func (server *Server) listOrdersBySeller(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, orders)
+}
+
+type confirmOrderRequestParams struct {
+	SellerID string `uri:"sellerID" binding:"required"`
+	OrderID  string `uri:"orderID" binding:"required"`
+}
+
+//	@Summary		Confirm an order
+//	@Description	Confirm an order for the specified seller. This endpoint checks the order's status before proceeding.
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			orderID		path	string	true	"Order ID"
+//	@Security		accessToken
+//	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
+//	@Failure		400	{object}	map[string]string		"Invalid order ID or seller ID"
+//	@Failure		403	{object}	map[string]string		"Order does not belong to this seller"
+//	@Failure		409	{object}	map[string]string		"Order is not in pending status"
+//	@Failure		500	{object}	map[string]string		"Internal server error"
+//	@Router			/sellers/:sellerID/orders/:orderID/confirm [patch]
+func (server *Server) confirmOrder(ctx *gin.Context) {
+	var url confirmOrderRequestParams
+	if err := ctx.ShouldBindUri(&url); err != nil {
+		log.Error().Err(err).Msg("Failed to bind URI")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	orderID, err := uuid.Parse(url.OrderID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse order ID")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	result, err := server.dbStore.ConfirmOrderTx(ctx, db.ConfirmOrderTxParams{
+		OrderID:        orderID,
+		SellerID:       url.SellerID,
+		CreateGHNOrder: server.ghnService.CreateOrder,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, db.ErrOrderNotPendingStatus):
+			ctx.JSON(http.StatusConflict, errorResponse(err))
+			return
+		case errors.Is(err, db.ErrOrderNotBelongToUser):
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		default:
+			log.Error().Err(err).Msg("failed to confirm order")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	}
+	
+	log.Info().Msgf("Order confirmed: %s", result.Order.Code)
+	
+	// Thông báo cho người dùng về việc đơn hàng đã được xác nhận thành công
+	opts := []asynq.Option{
+		asynq.ProcessIn(3 * time.Second),
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Gửi thông báo cho người mua
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Đơn hàng #%s đã được xác nhận", result.Order.Code),
+		Message: fmt.Sprintf("Đơn hàng #%s đã được người bán xác nhận và đang được chuẩn bị giao cho đơn vị vận chuyển GHN. Bạn có thể theo dõi đơn hàng với mã vận đơn %s, dự kiến giao hàng vào %s.",
+			result.Order.Code,
+			result.OrderDelivery.GhnOrderCode,
+			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+	}
+	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
+	
+	ctx.JSON(http.StatusOK, result)
 }

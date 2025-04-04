@@ -13,7 +13,9 @@ import (
 type Querier interface {
 	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
 	AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error)
+	AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
+	ConfirmOrder(ctx context.Context, arg ConfirmOrderParams) (Order, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
@@ -32,11 +34,15 @@ type Querier interface {
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
+	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
+	GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error)
+	GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
+	GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderForUpdateParams) (Order, error)
 	GetSellerByGundamID(ctx context.Context, id int64) (User, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
@@ -60,6 +66,8 @@ type Querier interface {
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
+	UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error)
+	UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error)
 	UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)

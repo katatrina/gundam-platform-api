@@ -739,6 +739,7 @@ type OrderItem struct {
 	GundamID  int64     `json:"gundam_id"`
 	Quantity  int64     `json:"quantity"`
 	Price     int64     `json:"price"`
+	Weight    int64     `json:"weight"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -751,6 +752,7 @@ type OrderTransaction struct {
 	SellerEntryID pgtype.Int8            `json:"seller_entry_id"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`
+	CompletedAt   pgtype.Timestamptz     `json:"completed_at"`
 }
 
 type PaymentTransaction struct {
@@ -842,4 +844,5 @@ type WalletEntry struct {
 	Status        WalletEntryStatus   `json:"status"`
 	CreatedAt     time.Time           `json:"created_at"`
 	UpdatedAt     time.Time           `json:"updated_at"`
+	CompletedAt   pgtype.Timestamptz  `json:"completed_at"`
 }

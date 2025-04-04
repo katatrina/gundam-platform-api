@@ -12,6 +12,38 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const confirmOrder = `-- name: ConfirmOrder :one
+UPDATE orders
+SET status = 'packaging'
+WHERE id = $1
+  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+`
+
+type ConfirmOrderParams struct {
+	OrderID  uuid.UUID `json:"order_id"`
+	SellerID string    `json:"seller_id"`
+}
+
+func (q *Queries) ConfirmOrder(ctx context.Context, arg ConfirmOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, confirmOrder, arg.OrderID, arg.SellerID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.DeliveryFee,
+		&i.TotalAmount,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (id,
                     code,
@@ -52,6 +84,39 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		arg.PaymentMethod,
 		arg.Note,
 	)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.DeliveryFee,
+		&i.TotalAmount,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSalesOrderForUpdate = `-- name: GetSalesOrderForUpdate :one
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+FROM orders
+WHERE id = $1
+  AND seller_id = $2
+    FOR UPDATE
+`
+
+type GetSalesOrderForUpdateParams struct {
+	OrderID  uuid.UUID `json:"order_id"`
+	SellerID string    `json:"seller_id"`
+}
+
+func (q *Queries) GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderForUpdateParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getSalesOrderForUpdate, arg.OrderID, arg.SellerID)
 	var i Order
 	err := row.Scan(
 		&i.ID,

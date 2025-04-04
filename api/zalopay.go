@@ -116,8 +116,8 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 	
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: transData.AppUser,
-		Title:       fmt.Sprintf("Bạn đã nạp %s VND vào ví thành công", transData.Amount),
-		Message:     fmt.Sprintf("Giao dịch nạp tiền vào ví của bạn đã được xử lý thành công. Mã giao dịch: %s", transData.AppTransID),
+		Title:       fmt.Sprintf("Nạp tiền thành công: %s VND", transData.Amount),
+		Message:     fmt.Sprintf("Nạp tiền thành công: %s VND đã được thêm vào ví của bạn qua ZaloPay. Số dư mới có thể sử dụng để thanh toán đơn hàng hoặc tham gia đấu giá. Mã giao dịch: %s", transData.Amount, transData.AppTransID),
 		Type:        "wallet",
 		ReferenceID: transData.AppTransID,
 	}, opts...)

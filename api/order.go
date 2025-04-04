@@ -221,8 +221,8 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	// Gửi thông báo cho người mua
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
-		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.Code),
-		Message:     fmt.Sprintf("Đơn hàng của bạn đã được tạo thành công với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.Code, result.Order.TotalAmount),
+		Title:       fmt.Sprintf("Đơn hàng #%s đã được tạo thành công", result.Order.Code),
+		Message:     fmt.Sprintf("Đơn hàng #%s đã được tạo thành công với tổng giá trị %d VND. Người bán sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Bạn có thể theo dõi trạng thái đơn hàng trong mục Đơn mua.", result.Order.Code, result.Order.TotalAmount),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)
@@ -234,8 +234,8 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	// Gửi thông báo cho người bán
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.SellerID,
-		Title:       fmt.Sprintf("Đơn hàng mới #%s", result.Order.Code),
-		Message:     fmt.Sprintf("Bạn đã nhận được một đơn hàng mới với mã #%s. Tổng giá trị đơn hàng là %d VND.", result.Order.Code, result.Order.ItemsSubtotal),
+		Title:       fmt.Sprintf("Đơn hàng mới #%s cần xác nhận", result.Order.Code),
+		Message:     fmt.Sprintf("Bạn có đơn hàng mới #%s với giá trị %d VND. Vui lòng xác nhận đơn hàng trong thời gian sớm nhất để chuẩn bị giao cho đơn vị vận chuyển GHN.", result.Order.Code, result.Order.ItemsSubtotal),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)

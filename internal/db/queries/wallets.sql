@@ -18,3 +18,9 @@ UPDATE wallets
 SET balance    = balance + sqlc.arg(amount),
     updated_at = NOW()
 WHERE id = sqlc.arg(wallet_id) RETURNING *;
+
+-- name: AddWalletNonWithdrawableAmount :exec
+UPDATE wallets
+SET non_withdrawable_amount = non_withdrawable_amount + sqlc.arg(amount),
+    updated_at              = NOW()
+WHERE id = sqlc.arg(wallet_id);

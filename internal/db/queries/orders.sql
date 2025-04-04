@@ -27,3 +27,16 @@ SELECT *
 FROM orders
 WHERE buyer_id = $1
 ORDER BY created_at DESC;
+
+-- name: GetSalesOrderForUpdate :one
+SELECT *
+FROM orders
+WHERE id = sqlc.arg('order_id')
+  AND seller_id = sqlc.arg('seller_id')
+    FOR UPDATE;
+
+-- name: ConfirmOrder :one
+UPDATE orders
+SET status = 'packaging'
+WHERE id = sqlc.arg('order_id')
+  AND seller_id = sqlc.arg('seller_id') RETURNING *;

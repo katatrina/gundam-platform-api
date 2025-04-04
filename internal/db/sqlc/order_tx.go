@@ -7,6 +7,7 @@ import (
 	
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/katatrina/gundam-BE/internal/ghn"
 	"github.com/katatrina/gundam-BE/internal/util"
 )
 
@@ -22,12 +23,6 @@ type CreateOrderTxParams struct {
 	PaymentMethod        PaymentMethod
 	Note                 pgtype.Text
 	Gundams              []Gundam
-}
-
-type GundamOrderItem struct {
-	ID       int64
-	Price    int64
-	Quantity int32
 }
 
 type CreateOrderTxResult struct {
@@ -117,6 +112,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 				GundamID: gundam.ID,
 				Price:    gundam.Price,
 				Quantity: gundam.Quantity,
+				Weight:   gundam.Weight,
 			})
 			if err != nil {
 				return err
@@ -202,4 +198,230 @@ func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxPara
 		Detail:        arg.SellerAddress.Detail,
 	})
 	return
+}
+
+func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress, receiverAddress DeliveryInformation) ghn.CreateGHNOrderRequest {
+	ghnOrder := ghn.OrderInfo{
+		ID:            order.ID.String(),
+		Code:          order.Code,
+		BuyerID:       order.BuyerID,
+		SellerID:      order.SellerID,
+		ItemsSubtotal: order.ItemsSubtotal,
+		DeliveryFee:   order.DeliveryFee,
+		TotalAmount:   order.TotalAmount,
+		Status:        string(order.Status),
+		PaymentMethod: string(order.PaymentMethod),
+	}
+	if order.Note.Valid {
+		ghnOrder.Note = order.Note.String
+	}
+	
+	ghnOrderItems := make([]ghn.OrderItemInfo, len(orderItems))
+	for i, item := range orderItems {
+		ghnOrderItems[i] = ghn.OrderItemInfo{
+			OrderID:  item.OrderID,
+			GundamID: item.GundamID,
+			Price:    item.Price,
+			Quantity: item.Quantity,
+			Weight:   item.Weight,
+		}
+	}
+	
+	ghnSenderAddress := ghn.AddressInfo{
+		UserID:        senderAddress.UserID,
+		FullName:      senderAddress.FullName,
+		PhoneNumber:   senderAddress.PhoneNumber,
+		ProvinceName:  senderAddress.ProvinceName,
+		DistrictName:  senderAddress.DistrictName,
+		GhnDistrictID: senderAddress.GhnDistrictID,
+		WardName:      senderAddress.WardName,
+		GhnWardCode:   senderAddress.GhnWardCode,
+		Detail:        senderAddress.Detail,
+	}
+	
+	ghnReceiverAddress := ghn.AddressInfo{
+		UserID:        receiverAddress.UserID,
+		FullName:      receiverAddress.FullName,
+		PhoneNumber:   receiverAddress.PhoneNumber,
+		ProvinceName:  receiverAddress.ProvinceName,
+		DistrictName:  receiverAddress.DistrictName,
+		GhnDistrictID: receiverAddress.GhnDistrictID,
+		WardName:      receiverAddress.WardName,
+		GhnWardCode:   receiverAddress.GhnWardCode,
+		Detail:        receiverAddress.Detail,
+	}
+	
+	return ghn.CreateGHNOrderRequest{
+		Order:           ghnOrder,
+		OrderItems:      ghnOrderItems,
+		SenderAddress:   ghnSenderAddress,
+		ReceiverAddress: ghnReceiverAddress,
+	}
+}
+
+// ConfirmOrderTxParams chứa các tham số cần thiết để xác nhận đơn hàng từ người bán
+type ConfirmOrderTxParams struct {
+	OrderID        uuid.UUID   // ID của đơn hàng cần xác nhận
+	SellerID       string      // ID của người bán xác nhận đơn hàng
+	CreateGHNOrder interface{} // Hàm callback để tạo đơn hàng trên GHN
+}
+
+// ConfirmOrderTxResult chứa kết quả trả về sau khi xác nhận đơn hàng
+type ConfirmOrderTxResult struct {
+	Order            Order            `json:"order"`             // Đơn hàng đã được cập nhật
+	OrderItems       []OrderItem      `json:"order_items"`       // Các mặt hàng trong đơn hàng
+	OrderDelivery    OrderDelivery    `json:"order_delivery"`    // Thông tin giao hàng đã được cập nhật với mã GHN
+	SellerEntry      WalletEntry      `json:"seller_entry"`      // Bút toán cộng tiền cho người bán (pending)
+	OrderTransaction OrderTransaction `json:"order_transaction"` // Giao dịch đơn hàng đã được cập nhật với seller_entry_id
+}
+
+// ConfirmOrderTx xử lý việc người bán xác nhận đơn hàng
+// Quy trình bao gồm: cập nhật trạng thái đơn hàng, tạo đơn hàng trên GHN,
+// cộng tiền vào non_withdrawable_amount của người bán và tạo bút toán tương ứng
+func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error) {
+	var result ConfirmOrderTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Lấy thông tin đơn hàng và kiểm tra trạng thái
+		order, err := qTx.GetSalesOrderForUpdate(ctx, GetSalesOrderForUpdateParams{
+			OrderID:  arg.OrderID,
+			SellerID: arg.SellerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+		
+		if order.SellerID != arg.SellerID {
+			return ErrOrderNotBelongToUser
+		}
+		
+		// Chỉ xác nhận đơn hàng ở trạng thái pending
+		if order.Status != OrderStatusPending {
+			return ErrOrderNotPendingStatus
+		}
+		
+		// TODO: Có thể kiểm tra chi tiết hơn nếu muốn
+		
+		// 2. Lấy thông tin các mặt hàng trong đơn hàng
+		orderItems, err := qTx.GetOrderItems(ctx, arg.OrderID.String())
+		if err != nil {
+			return fmt.Errorf("failed to get order items: %w", err)
+		}
+		result.OrderItems = orderItems
+		
+		// 3. Lấy thông tin giao hàng
+		orderDelivery, err := qTx.GetOrderDelivery(ctx, arg.OrderID.String())
+		if err != nil {
+			return fmt.Errorf("failed to get order delivery: %w", err)
+		}
+		
+		// Lấy địa chỉ người gửi
+		senderAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.FromDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get sender address: %w", err)
+		}
+		
+		// Lấy địa chỉ người nhận
+		receiverAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.ToDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get receiver address: %w", err)
+		}
+		
+		// 4. Tạo đơn hàng bên GHN
+		
+		// Chuyển đổi dữ liệu từ db sang ghn
+		ghnOrderRequest := ConvertToGHNOrderRequest(order, orderItems, senderAddress, receiverAddress)
+		
+		// Gọi hàm tạo đơn hàng GHN
+		createGHNOrderFn := arg.CreateGHNOrder.(func(context.Context, ghn.CreateGHNOrderRequest) (*ghn.CreateGHNOrderResponse, error))
+		ghnResponse, err := createGHNOrderFn(ctx, ghnOrderRequest)
+		if err != nil {
+			return fmt.Errorf("failed to create GHN order: %w", err)
+		}
+		
+		// 5. Cập nhật trạng thái đơn hàng thành "packaging"
+		updatedOrder, err := qTx.ConfirmOrder(ctx, ConfirmOrderParams{
+			OrderID:  arg.OrderID,
+			SellerID: arg.SellerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to confirm order: %w", err)
+		}
+		result.Order = updatedOrder
+		
+		// 6. Cập nhật thông tin giao hàng với mã đơn GHN
+		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
+			ID: orderDelivery.ID,
+			GhnOrderCode: pgtype.Text{
+				String: ghnResponse.Data.OrderCode,
+				Valid:  true,
+			},
+			Status: pgtype.Text{String: "ready_to_pick", Valid: true}, // Hardcode status vì GHN không trả về
+			OverallStatus: NullDeliveryOverralStatus{
+				DeliveryOverralStatus: DeliveryOverralStatusPicking,
+				Valid:                 true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order delivery: %w", err)
+		}
+		result.OrderDelivery = updatedDelivery
+		
+		// TODO: So sánh phí vận chuyển từ GHN với phí đã thanh toán
+		// TODO: So sánh thời gian giao hàng dự kiến với giá trị đã lưu
+		
+		// 7. Lấy ví của người bán để cập nhật số dư
+		sellerWallet, err := qTx.GetWalletForUpdate(ctx, arg.SellerID)
+		if err != nil {
+			return fmt.Errorf("failed to get seller wallet: %w", err)
+		}
+		
+		// 8. Cộng tiền vào non_withdrawable_amount của người bán
+		// Đây là số tiền người bán sẽ nhận được sau khi người mua xác nhận đã nhận hàng thành công
+		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
+			Amount:   order.ItemsSubtotal,
+			WalletID: sellerWallet.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to add non-withdrawable amount: %w", err)
+		}
+		
+		// 9. Tạo bút toán (wallet entry) cho người bán với trạng thái pending
+		// Amount là số dương (+) vì đây là bút toán cộng tiền
+		sellerEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID: sellerWallet.ID,
+			ReferenceID: pgtype.Text{
+				String: updatedOrder.Code,
+				Valid:  true,
+			},
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypePaymentReceived,
+			Amount:        order.ItemsSubtotal,      // Số dương (+)
+			Status:        WalletEntryStatusPending, // Chờ xác nhận giao hàng thành công
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create seller wallet entry: %w", err)
+		}
+		result.SellerEntry = sellerEntry
+		
+		// 10. Cập nhật seller_entry_id trong order_transaction
+		// Liên kết bút toán với giao dịch đơn hàng
+		orderTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
+			SellerEntryID: pgtype.Int8{
+				Int64: sellerEntry.ID,
+				Valid: true,
+			},
+			OrderID: updatedOrder.ID.String(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order transaction seller entry: %w", err)
+		}
+		result.OrderTransaction = orderTransaction
+		
+		return nil
+	})
+	
+	return result, err
 }

@@ -62,3 +62,28 @@ func (q *Queries) CreateDeliveryInformation(ctx context.Context, arg CreateDeliv
 	)
 	return i, err
 }
+
+const getDeliveryInformation = `-- name: GetDeliveryInformation :one
+SELECT id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, created_at
+FROM delivery_information
+WHERE id = $1
+`
+
+func (q *Queries) GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error) {
+	row := q.db.QueryRow(ctx, getDeliveryInformation, id)
+	var i DeliveryInformation
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.ProvinceName,
+		&i.DistrictName,
+		&i.GhnDistrictID,
+		&i.WardName,
+		&i.GhnWardCode,
+		&i.Detail,
+		&i.CreatedAt,
+	)
+	return i, err
+}

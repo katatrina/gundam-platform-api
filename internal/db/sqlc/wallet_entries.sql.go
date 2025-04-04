@@ -18,7 +18,7 @@ INSERT INTO wallet_entries (wallet_id,
                             entry_type,
                             amount,
                             status)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
 `
 
 type CreateWalletEntryParams struct {
@@ -50,6 +50,7 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }

@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOrderTransaction = `-- name: CreateOrderTransaction :one
@@ -14,7 +16,7 @@ INSERT INTO order_transactions (order_id,
                                 amount,
                                 status,
                                 buyer_entry_id)
-VALUES ($1, $2, $3, $4) RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at
+VALUES ($1, $2, $3, $4) RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
 `
 
 type CreateOrderTransactionParams struct {
@@ -41,6 +43,48 @@ func (q *Queries) CreateOrderTransaction(ctx context.Context, arg CreateOrderTra
 		&i.SellerEntryID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const updateOrderTransaction = `-- name: UpdateOrderTransaction :one
+UPDATE order_transactions
+SET amount          = COALESCE($1, amount),
+    status          = COALESCE($2, status),
+    buyer_entry_id  = COALESCE($3, buyer_entry_id),
+    seller_entry_id = COALESCE($4, seller_entry_id),
+    updated_at      = now()
+WHERE order_id = $5 RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
+`
+
+type UpdateOrderTransactionParams struct {
+	Amount        pgtype.Int8                `json:"amount"`
+	Status        NullOrderTransactionStatus `json:"status"`
+	BuyerEntryID  pgtype.Int8                `json:"buyer_entry_id"`
+	SellerEntryID pgtype.Int8                `json:"seller_entry_id"`
+	OrderID       string                     `json:"order_id"`
+}
+
+func (q *Queries) UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error) {
+	row := q.db.QueryRow(ctx, updateOrderTransaction,
+		arg.Amount,
+		arg.Status,
+		arg.BuyerEntryID,
+		arg.SellerEntryID,
+		arg.OrderID,
+	)
+	var i OrderTransaction
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.Amount,
+		&i.Status,
+		&i.BuyerEntryID,
+		&i.SellerEntryID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }

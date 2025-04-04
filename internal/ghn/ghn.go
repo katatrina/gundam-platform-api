@@ -1,0 +1,18 @@
+package ghn
+
+const (
+	// GHNBaseURL is the base URL for GHN API
+	GHNBaseURL = "https://dev-online-gateway.ghn.vn/shiip/public-api/v2"
+)
+
+type GHNService struct {
+	Token  string
+	ShopID string
+}
+
+func NewGHNService(token, shopID string) *GHNService {
+	return &GHNService{
+		Token:  token,
+		ShopID: shopID,
+	}
+}
