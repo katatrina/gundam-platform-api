@@ -390,5 +390,21 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	}
 	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
 	
+	// Gửi thông báo cho người bán
+	// TODO: Cần chỉnh sửa lại message
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: url.SellerID, // hoặc result.Order.SellerID nếu có trong result
+		Title:       fmt.Sprintf("Đơn hàng #%s đã được xác nhận thành công", result.Order.Code),
+		Message: fmt.Sprintf("Bạn đã xác nhận đơn hàng #%s thành công. Đơn hàng đã được tạo trên hệ thống GHN với mã vận đơn %s. Vui lòng chuẩn bị hàng và chờ nhân viên GHN đến lấy hàng.",
+			result.Order.Code,
+			result.OrderDelivery.GhnOrderCode),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+	}
+	log.Info().Msgf("Notification sent to seller: %s", url.SellerID)
+	
 	ctx.JSON(http.StatusOK, result)
 }
