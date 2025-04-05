@@ -542,6 +542,7 @@ const (
 	WalletEntryTypeWithdrawal      WalletEntryType = "withdrawal"
 	WalletEntryTypePayment         WalletEntryType = "payment"
 	WalletEntryTypePaymentReceived WalletEntryType = "payment_received"
+	WalletEntryTypeNonWithdrawable WalletEntryType = "non_withdrawable"
 	WalletEntryTypeRefund          WalletEntryType = "refund"
 	WalletEntryTypeRefundDeduction WalletEntryType = "refund_deduction"
 	WalletEntryTypeAuctionLock     WalletEntryType = "auction_lock"

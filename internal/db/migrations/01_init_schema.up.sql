@@ -54,6 +54,7 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
   'withdrawal',
   'payment',
   'payment_received',
+  'non_withdrawable',
   'refund',
   'refund_deduction',
   'auction_lock',

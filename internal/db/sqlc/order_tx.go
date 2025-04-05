@@ -43,7 +43,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		
 		// Kể từ đây, chúng ta sẽ giả sử đơn hàng được thanh toán bằng ví.
 		
-		// 1. Kiểm tra và cập nhật số dư ví của người mua (nếu thanh toán bằng ví)
+		// 1. Kiểm tra và cập nhật số dư ví của người mua
 		buyerWallet, err = qTx.GetWalletForUpdate(ctx, arg.BuyerID)
 		if err != nil {
 			return fmt.Errorf("failed to get buyer wallet: %w", err)
@@ -55,9 +55,6 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		}
 		
 		orderID, _ := uuid.NewV7() // Có thể không cần kiểm tra error
-		if err != nil {
-			return fmt.Errorf("failed to generate order ID: %w", err)
-		}
 		
 		// 2. Tạo order
 		orderCode := util.GenerateOrderCode() // Bỏ qua kiểm tra unique
@@ -386,6 +383,22 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 		})
 		if err != nil {
 			return fmt.Errorf("failed to add non-withdrawable amount: %w", err)
+		}
+		
+		// Tạo bút toán cho non_withdrawable_amount với status completed
+		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID: sellerWallet.ID,
+			ReferenceID: pgtype.Text{
+				String: updatedOrder.Code,
+				Valid:  true,
+			},
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypeNonWithdrawable,
+			Amount:        order.ItemsSubtotal,
+			Status:        WalletEntryStatusCompleted, // Completed vì đã cộng ngay
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create non-withdrawable wallet entry: %w", err)
 		}
 		
 		// 9. Tạo bút toán (wallet entry) cho người bán với trạng thái pending
