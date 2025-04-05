@@ -346,9 +346,8 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	}
 	
 	result, err := server.dbStore.ConfirmOrderTx(ctx, db.ConfirmOrderTxParams{
-		OrderID:        orderID,
-		SellerID:       url.SellerID,
-		CreateGHNOrder: server.ghnService.CreateOrder,
+		OrderID:  orderID,
+		SellerID: url.SellerID,
 	})
 	if err != nil {
 		switch {
@@ -378,10 +377,7 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
 		Title:       fmt.Sprintf("Đơn hàng #%s đã được xác nhận", result.Order.Code),
-		Message: fmt.Sprintf("Đơn hàng #%s đã được người bán xác nhận và đang được chuẩn bị giao cho đơn vị vận chuyển GHN. Bạn có thể theo dõi đơn hàng với mã vận đơn %s, dự kiến giao hàng vào %s.",
-			result.Order.Code,
-			result.OrderDelivery.GhnOrderCode,
-			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
+		Message:     fmt.Sprintf("Đơn hàng #%s của bạn đã được người bán xác nhận và đang được chuẩn bị. Chúng tôi sẽ thông báo khi đơn hàng được giao cho đơn vị vận chuyển."),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)
@@ -391,13 +387,10 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
 	
 	// Gửi thông báo cho người bán
-	// TODO: Cần chỉnh sửa lại message
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
-		RecipientID: url.SellerID, // hoặc result.Order.SellerID nếu có trong result
-		Title:       fmt.Sprintf("Đơn hàng #%s đã được xác nhận thành công", result.Order.Code),
-		Message: fmt.Sprintf("Bạn đã xác nhận đơn hàng #%s thành công. Đơn hàng đã được tạo trên hệ thống GHN với mã vận đơn %s. Vui lòng chuẩn bị hàng và chờ nhân viên GHN đến lấy hàng.",
-			result.Order.Code,
-			result.OrderDelivery.GhnOrderCode),
+		RecipientID: result.Order.SellerID,
+		Title:       fmt.Sprintf("Đã xác nhận đơn hàng #%s", result.Order.Code),
+		Message:     fmt.Sprintf("Bạn đã xác nhận đơn hàng #%s. Số tiền %d VNĐ đã được chuyển vào số dư tạm thời của bạn. Số tiền này sẽ được chuyển vào số dư khả dụng sau khi người mua xác nhận đã nhận hàng thành công.", result.Order.Code, result.SellerEntry.Amount),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)
