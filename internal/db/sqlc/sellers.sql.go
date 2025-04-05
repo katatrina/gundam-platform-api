@@ -153,7 +153,7 @@ func (q *Queries) ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySe
 }
 
 const listOrdersBySellerID = `-- name: ListOrdersBySellerID :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 FROM orders
 WHERE seller_id = $1
 ORDER BY created_at DESC
@@ -179,6 +179,8 @@ func (q *Queries) ListOrdersBySellerID(ctx context.Context, sellerID string) ([]
 			&i.Status,
 			&i.PaymentMethod,
 			&i.Note,
+			&i.IsPackaged,
+			&i.PackagingImages,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

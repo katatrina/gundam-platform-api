@@ -227,18 +227,20 @@ CREATE TABLE "seller_subscriptions"
 
 CREATE TABLE "orders"
 (
-    "id"             uuid PRIMARY KEY,
-    "code"           text UNIQUE    NOT NULL,
-    "buyer_id"       text           NOT NULL,
-    "seller_id"      text           NOT NULL,
-    "items_subtotal" bigint         NOT NULL,
-    "delivery_fee"   bigint         NOT NULL,
-    "total_amount"   bigint         NOT NULL,
-    "status"         order_status   NOT NULL DEFAULT 'pending',
-    "payment_method" payment_method NOT NULL,
-    "note"           text,
-    "created_at"     timestamptz    NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz    NOT NULL DEFAULT (now())
+    "id"               uuid PRIMARY KEY,
+    "code"             text UNIQUE    NOT NULL,
+    "buyer_id"         text           NOT NULL,
+    "seller_id"        text           NOT NULL,
+    "items_subtotal"   bigint         NOT NULL,
+    "delivery_fee"     bigint         NOT NULL,
+    "total_amount"     bigint         NOT NULL,
+    "status"           order_status   NOT NULL DEFAULT 'pending',
+    "payment_method"   payment_method NOT NULL,
+    "note"             text,
+    "is_packaged"      bool           NOT NULL DEFAULT false,
+    "packaging_images" text[],
+    "created_at"       timestamptz    NOT NULL DEFAULT (now()),
+    "updated_at"       timestamptz    NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "order_items"
@@ -273,6 +275,7 @@ CREATE TABLE "order_deliveries"
     "order_id"               text        NOT NULL,
     "ghn_order_code"         text,
     "expected_delivery_time" timestamptz NOT NULL,
+    "expected_pickup_time"   timestamptz,
     "status"                 text,
     "overall_status"         delivery_overral_status,
     "from_delivery_id"       bigint      NOT NULL,

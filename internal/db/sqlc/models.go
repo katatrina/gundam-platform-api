@@ -707,18 +707,20 @@ type GundamImage struct {
 }
 
 type Order struct {
-	ID            uuid.UUID     `json:"id"`
-	Code          string        `json:"code"`
-	BuyerID       string        `json:"buyer_id"`
-	SellerID      string        `json:"seller_id"`
-	ItemsSubtotal int64         `json:"items_subtotal"`
-	DeliveryFee   int64         `json:"delivery_fee"`
-	TotalAmount   int64         `json:"total_amount"`
-	Status        OrderStatus   `json:"status"`
-	PaymentMethod PaymentMethod `json:"payment_method"`
-	Note          pgtype.Text   `json:"note"`
-	CreatedAt     time.Time     `json:"created_at"`
-	UpdatedAt     time.Time     `json:"updated_at"`
+	ID              uuid.UUID     `json:"id"`
+	Code            string        `json:"code"`
+	BuyerID         string        `json:"buyer_id"`
+	SellerID        string        `json:"seller_id"`
+	ItemsSubtotal   int64         `json:"items_subtotal"`
+	DeliveryFee     int64         `json:"delivery_fee"`
+	TotalAmount     int64         `json:"total_amount"`
+	Status          OrderStatus   `json:"status"`
+	PaymentMethod   PaymentMethod `json:"payment_method"`
+	Note            pgtype.Text   `json:"note"`
+	IsPackaged      bool          `json:"is_packaged"`
+	PackagingImages []string      `json:"packaging_images"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
 }
 
 type OrderDelivery struct {
@@ -726,6 +728,7 @@ type OrderDelivery struct {
 	OrderID              string                    `json:"order_id"`
 	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
+	ExpectedPickupTime   pgtype.Timestamptz        `json:"expected_pickup_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`

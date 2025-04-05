@@ -16,7 +16,7 @@ const confirmOrder = `-- name: ConfirmOrder :one
 UPDATE orders
 SET status = 'packaging'
 WHERE id = $1
-  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 
 type ConfirmOrderParams struct {
@@ -38,6 +38,8 @@ func (q *Queries) ConfirmOrder(ctx context.Context, arg ConfirmOrderParams) (Ord
 		&i.Status,
 		&i.PaymentMethod,
 		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImages,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -55,7 +57,7 @@ INSERT INTO orders (id,
                     status,
                     payment_method,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 
 type CreateOrderParams struct {
@@ -96,6 +98,8 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.Status,
 		&i.PaymentMethod,
 		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImages,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -103,7 +107,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 }
 
 const getSalesOrderForUpdate = `-- name: GetSalesOrderForUpdate :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 FROM orders
 WHERE id = $1
   AND seller_id = $2
@@ -129,6 +133,8 @@ func (q *Queries) GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderF
 		&i.Status,
 		&i.PaymentMethod,
 		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImages,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -136,7 +142,7 @@ func (q *Queries) GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderF
 }
 
 const listOrdersByUserID = `-- name: ListOrdersByUserID :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 FROM orders
 WHERE buyer_id = $1
 ORDER BY created_at DESC
@@ -162,6 +168,8 @@ func (q *Queries) ListOrdersByUserID(ctx context.Context, buyerID string) ([]Ord
 			&i.Status,
 			&i.PaymentMethod,
 			&i.Note,
+			&i.IsPackaged,
+			&i.PackagingImages,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
