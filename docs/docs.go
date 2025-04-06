@@ -465,6 +465,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/gin.H"
                         }
                     },
+                    "404": {
+                        "description": "Something not found",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
                     "422": {
                         "description": "Invalid items or price mismatch",
                         "schema": {
@@ -1160,6 +1166,15 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Seller does not own this gundam",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Gundam not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

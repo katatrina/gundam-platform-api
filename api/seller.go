@@ -162,6 +162,7 @@ func (server *Server) getCurrentActiveSubscription(ctx *gin.Context) {
 //	@Success		200	{object}	map[string]interface{}	"Successfully published gundam"
 //	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
 //	@Failure		403	{object}	map[string]string		"Seller does not own this gundam"
+//	@Failure		404	{object}	map[string]string		"Gundam not found"
 //	@Failure		409	{object}	map[string]string		"Subscription limit exceeded<br/>Subscription expired<br/>Gundam is not available for publishing"
 //	@Failure		500	{object}	map[string]string		"Internal server error"
 //	@Router			/sellers/{sellerID}/gundams/{gundamID}/publish [patch]
@@ -199,6 +200,12 @@ func (server *Server) publishGundam(ctx *gin.Context) {
 	
 	gundam, err := server.dbStore.GetGundamByID(ctx, gundamID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = errors.New("gundam not found")
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
 		log.Error().Err(err).Msg("Failed to get gundam")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -348,27 +355,44 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 		return
 	}
 	
-	result, err := server.dbStore.ConfirmOrderTx(ctx, db.ConfirmOrderTxParams{
+	order, err := server.dbStore.GetSalesOrderBySellerID(ctx.Request.Context(), db.GetSalesOrderBySellerIDParams{
 		OrderID:  orderID,
 		SellerID: url.SellerID,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, db.ErrRecordNotFound):
-			err = errors.New("order not found")
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order ID %s not found", orderID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
-		case errors.Is(err, db.ErrOrderNotPendingStatus):
-			ctx.JSON(http.StatusConflict, errorResponse(err))
-			return
-		case errors.Is(err, db.ErrOrderNotBelongToUser):
-			ctx.JSON(http.StatusForbidden, errorResponse(err))
-			return
-		default:
-			log.Error().Err(err).Msg("failed to confirm order")
-			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
 		}
+		
+		log.Error().Err(err).Msg("Failed to get order")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền sở hữu đơn hàng
+	if order.SellerID != url.SellerID {
+		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, url.SellerID)
+		ctx.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra trạng thái đơn hàng
+	if order.Status != db.OrderStatusPending {
+		err = fmt.Errorf("order %s is not in pending status", order.Code)
+		ctx.JSON(http.StatusConflict, errorResponse(err))
+		return
+	}
+	
+	result, err := server.dbStore.ConfirmOrderTx(ctx, db.ConfirmOrderTxParams{
+		Order:    &order,
+		SellerID: url.SellerID,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to confirm order")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
 	}
 	
 	log.Info().Msgf("Order confirmed: %s", result.Order.Code)
@@ -457,8 +481,6 @@ func (server *Server) packageOrder(c *gin.Context) {
 		return
 	}
 	
-	fmt.Println(req.PackageImages)
-	
 	// Validate that at least one image is provided
 	if len(req.PackageImages) == 0 {
 		err = errors.New("at least one package image is required")
@@ -471,7 +493,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = errors.New("order not found")
+			err = fmt.Errorf("order ID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -483,19 +505,22 @@ func (server *Server) packageOrder(c *gin.Context) {
 	
 	// Kiểm tra quyền sở hữu đơn hàng
 	if order.SellerID != url.SellerID {
-		c.JSON(http.StatusForbidden, errorResponse(db.ErrOrderNotBelongToUser))
+		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, url.SellerID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	
 	// Kiểm tra trạng thái đơn hàng
 	if order.Status != db.OrderStatusPackaging {
-		c.JSON(http.StatusConflict, errorResponse(db.ErrOrderNotInPackagingStatus))
+		err = fmt.Errorf("order %s is not in packaging status", order.Code)
+		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}
 	
 	// Kiểm tra trạng thái đã đóng gói
 	if order.IsPackaged {
-		c.JSON(http.StatusConflict, errorResponse(db.ErrOrderAlreadyPackaged))
+		err = fmt.Errorf("order %s is already packaged", order.Code)
+		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}
 	

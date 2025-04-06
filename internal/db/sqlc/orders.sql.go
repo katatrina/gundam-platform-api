@@ -134,7 +134,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	return i, err
 }
 
-const getSalesOrderForUpdate = `-- name: GetSalesOrderForUpdate :one
+const getSalesOrderBySellerID = `-- name: GetSalesOrderBySellerID :one
 SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 FROM orders
 WHERE id = $1
@@ -142,13 +142,13 @@ WHERE id = $1
     FOR UPDATE
 `
 
-type GetSalesOrderForUpdateParams struct {
+type GetSalesOrderBySellerIDParams struct {
 	OrderID  uuid.UUID `json:"order_id"`
 	SellerID string    `json:"seller_id"`
 }
 
-func (q *Queries) GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderForUpdateParams) (Order, error) {
-	row := q.db.QueryRow(ctx, getSalesOrderForUpdate, arg.OrderID, arg.SellerID)
+func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getSalesOrderBySellerID, arg.OrderID, arg.SellerID)
 	var i Order
 	err := row.Scan(
 		&i.ID,
@@ -215,7 +215,7 @@ const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
 SET is_packaged      = COALESCE($1, is_packaged),
     packaging_images = COALESCE($2, packaging_images)
-    WHERE id = $3 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+WHERE id = $3 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 
 type UpdateOrderParams struct {

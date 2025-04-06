@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"mime/multipart"
 	"time"
@@ -268,8 +267,8 @@ func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress
 
 // ConfirmOrderTxParams chứa các tham số cần thiết để xác nhận đơn hàng từ người bán
 type ConfirmOrderTxParams struct {
-	OrderID  uuid.UUID // ID của đơn hàng cần xác nhận
-	SellerID string    // ID của người bán xác nhận đơn hàng
+	Order    *Order // Đơn hàng cần xác nhận
+	SellerID string // ID của người bán xác nhận đơn hàng
 }
 
 // ConfirmOrderTxResult chứa kết quả trả về sau khi xác nhận đơn hàng
@@ -287,41 +286,16 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		var err error
 		
-		// 1. Lấy thông tin đơn hàng và kiểm tra trạng thái
-		order, err := qTx.GetSalesOrderForUpdate(ctx, GetSalesOrderForUpdateParams{
-			OrderID:  arg.OrderID,
-			SellerID: arg.SellerID,
-		})
-		if err != nil {
-			if errors.Is(err, ErrRecordNotFound) {
-				return ErrRecordNotFound
-			}
-			
-			return fmt.Errorf("failed to get order: %w", err)
-		}
-		
-		// Kiểm tra xem đơn hàng có thuộc về người bán không
-		if order.SellerID != arg.SellerID {
-			return ErrOrderNotBelongToUser
-		}
-		
-		// Chỉ xác nhận đơn hàng ở trạng thái pending
-		if order.Status != OrderStatusPending {
-			return ErrOrderNotPendingStatus
-		}
-		
-		// TODO: Có thể kiểm tra chi tiết hơn nếu muốn
-		
-		// 2. Lấy thông tin các mặt hàng trong đơn hàng
-		orderItems, err := qTx.GetOrderItems(ctx, arg.OrderID.String())
+		// 1. Lấy thông tin các mặt hàng trong đơn hàng
+		orderItems, err := qTx.GetOrderItems(ctx, arg.Order.ID.String())
 		if err != nil {
 			return fmt.Errorf("failed to get order items: %w", err)
 		}
 		result.OrderItems = orderItems
 		
-		// 3. Cập nhật trạng thái đơn hàng thành "packaging"
+		// 2. Cập nhật trạng thái đơn hàng thành "packaging"
 		updatedOrder, err := qTx.ConfirmOrderByID(ctx, ConfirmOrderByIDParams{
-			OrderID:  arg.OrderID,
+			OrderID:  arg.Order.ID,
 			SellerID: arg.SellerID,
 		})
 		if err != nil {
@@ -329,16 +303,16 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 		}
 		result.Order = updatedOrder
 		
-		// 4. Lấy ví của người bán để cập nhật số dư
+		// 3. Lấy ví của người bán để cập nhật số dư
 		sellerWallet, err := qTx.GetWalletForUpdate(ctx, arg.SellerID)
 		if err != nil {
 			return fmt.Errorf("failed to get seller wallet: %w", err)
 		}
 		
-		// 5. Cộng tiền hàng vào non_withdrawable_amount của người bán
+		// 4. Cộng tiền hàng vào non_withdrawable_amount của người bán
 		// Đây là số tiền người bán sẽ nhận được sau khi người mua xác nhận đã nhận hàng thành công
 		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
-			Amount:   order.ItemsSubtotal,
+			Amount:   updatedOrder.ItemsSubtotal,
 			WalletID: sellerWallet.ID,
 		})
 		if err != nil {
@@ -354,7 +328,7 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			},
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypeNonWithdrawable,
-			Amount:        order.ItemsSubtotal,
+			Amount:        updatedOrder.ItemsSubtotal,
 			Status:        WalletEntryStatusCompleted, // Completed vì đã cộng ngay
 			CompletedAt: pgtype.Timestamptz{
 				Time:  time.Now(),
@@ -365,7 +339,7 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			return fmt.Errorf("failed to create non-withdrawable wallet entry: %w", err)
 		}
 		
-		// 6. Tạo bút toán (wallet entry) cho người bán với trạng thái pending
+		// 5. Tạo bút toán (wallet entry) cho người bán với trạng thái pending
 		// Amount là số dương (+) vì đây là bút toán cộng tiền
 		sellerEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID: sellerWallet.ID,
@@ -375,15 +349,15 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			},
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypePaymentReceived,
-			Amount:        order.ItemsSubtotal,      // Số dương (+)
-			Status:        WalletEntryStatusPending, // Chờ người mua xác nhận nhận hàng thành công
+			Amount:        updatedOrder.ItemsSubtotal, // Số dương (+)
+			Status:        WalletEntryStatusPending,   // Chờ người mua xác nhận nhận hàng thành công
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create seller wallet entry: %w", err)
 		}
 		result.SellerEntry = sellerEntry
 		
-		// 7. Cập nhật seller_entry_id trong order_transaction
+		// 6. Cập nhật seller_entry_id trong order_transaction
 		// Liên kết bút toán với giao dịch đơn hàng
 		orderTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
 			SellerEntryID: pgtype.Int8{

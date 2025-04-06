@@ -25,10 +25,6 @@ var (
 	ErrSubscriptionLimitExceeded = errors.New("subscription limit exceeded")
 	ErrSubscriptionExpired       = errors.New("subscription has expired")
 	ErrCartItemExists            = errors.New("item already exists in cart")
-	ErrOrderNotPendingStatus     = errors.New("order is not in pending status")
-	ErrOrderNotBelongToUser      = errors.New("order does not belong to the user")
-	ErrOrderNotInPackagingStatus = errors.New("order is not in packaging status")
-	ErrOrderAlreadyPackaged      = errors.New("order is already packaged")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name

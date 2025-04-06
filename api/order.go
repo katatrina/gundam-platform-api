@@ -75,6 +75,7 @@ func (r *createOrderRequest) getNote() string {
 //	@Param			createOrderRequest	body		createOrderRequest		true	"Order details"
 //	@Success		201					{object}	db.CreateOrderTxResult	"Order created successfully"
 //	@Failure		400					{object}	gin.H					"Invalid request data"
+//	@Failure		404					{object}	gin.H					"Something not found"
 //	@Failure		401					{object}	gin.H					"Unauthorized"
 //	@Failure		422					{object}	gin.H					"Invalid items or price mismatch"
 //	@Failure		500					{object}	gin.H					"Internal server error"
@@ -99,6 +100,14 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		// Kiểm tra xem gundam có hợp lệ để thanh toán không
 		result, err := server.dbStore.ValidateGundamBeforeCheckout(ctx, gundamID)
 		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"error":   "Gundam not found",
+					"details": fmt.Sprintf("Gundam ID %d not found", gundamID),
+				})
+				return
+			}
+			
 			log.Err(err).Msg("failed to validate gundam before checkout")
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
@@ -160,8 +169,9 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("cannot find buyer address with ID %d for user with ID %s", req.BuyerAddressID, userID)
 			log.Err(err).Msg("buyer address not found")
-			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(errors.New("buyer address not found")))
+			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		

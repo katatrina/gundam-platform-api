@@ -44,7 +44,7 @@ type Querier interface {
 	GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error)
 	GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
-	GetSalesOrderForUpdate(ctx context.Context, arg GetSalesOrderForUpdateParams) (Order, error)
+	GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error)
 	GetSellerByGundamID(ctx context.Context, id int64) (User, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)

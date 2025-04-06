@@ -28,7 +28,7 @@ FROM orders
 WHERE buyer_id = $1
 ORDER BY created_at DESC;
 
--- name: GetSalesOrderForUpdate :one
+-- name: GetSalesOrderBySellerID :one
 SELECT *
 FROM orders
 WHERE id = sqlc.arg('order_id')
