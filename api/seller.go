@@ -525,10 +525,10 @@ func (server *Server) packageOrder(c *gin.Context) {
 	}
 	
 	arg := db.PackageOrderTxParams{
-		Order:            &order,
-		PackageImages:    req.PackageImages,
-		UploadImagesFunc: server.uploadFileToCloudinary,
-		CreateGHNOrder:   server.ghnService.CreateOrder,
+		Order:               &order,
+		PackageImages:       req.PackageImages,
+		UploadImagesFunc:    server.uploadFileToCloudinary,
+		CreateDeliveryOrder: server.deliveryService.CreateOrder,
 	}
 	
 	result, err := server.dbStore.PackageOrderTx(c.Request.Context(), arg)

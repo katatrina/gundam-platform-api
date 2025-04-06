@@ -8,7 +8,7 @@ import (
 	
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/katatrina/gundam-BE/internal/ghn"
+	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -206,8 +206,8 @@ func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxPara
 	return
 }
 
-func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress, receiverAddress DeliveryInformation) ghn.CreateGHNOrderRequest {
-	ghnOrder := ghn.OrderInfo{
+func ConvertToDeliveryCreateOrderRequest(order Order, orderItems []OrderItem, senderAddress, receiverAddress DeliveryInformation) delivery.CreateOrderRequest {
+	ghnOrder := delivery.OrderInfo{
 		ID:            order.ID.String(),
 		Code:          order.Code,
 		BuyerID:       order.BuyerID,
@@ -222,9 +222,9 @@ func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress
 		ghnOrder.Note = order.Note.String
 	}
 	
-	ghnOrderItems := make([]ghn.OrderItemInfo, len(orderItems))
+	ghnOrderItems := make([]delivery.OrderItemInfo, len(orderItems))
 	for i, item := range orderItems {
-		ghnOrderItems[i] = ghn.OrderItemInfo{
+		ghnOrderItems[i] = delivery.OrderItemInfo{
 			OrderID:  item.OrderID,
 			GundamID: item.GundamID,
 			Price:    item.Price,
@@ -233,7 +233,7 @@ func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress
 		}
 	}
 	
-	ghnSenderAddress := ghn.AddressInfo{
+	ghnSenderAddress := delivery.AddressInfo{
 		UserID:        senderAddress.UserID,
 		FullName:      senderAddress.FullName,
 		PhoneNumber:   senderAddress.PhoneNumber,
@@ -245,7 +245,7 @@ func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress
 		Detail:        senderAddress.Detail,
 	}
 	
-	ghnReceiverAddress := ghn.AddressInfo{
+	ghnReceiverAddress := delivery.AddressInfo{
 		UserID:        receiverAddress.UserID,
 		FullName:      receiverAddress.FullName,
 		PhoneNumber:   receiverAddress.PhoneNumber,
@@ -257,7 +257,7 @@ func ConvertToGHNOrderRequest(order Order, orderItems []OrderItem, senderAddress
 		Detail:        receiverAddress.Detail,
 	}
 	
-	return ghn.CreateGHNOrderRequest{
+	return delivery.CreateOrderRequest{
 		Order:           ghnOrder,
 		OrderItems:      ghnOrderItems,
 		SenderAddress:   ghnSenderAddress,
@@ -378,10 +378,10 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 }
 
 type PackageOrderTxParams struct {
-	Order            *Order
-	PackageImages    []*multipart.FileHeader
-	UploadImagesFunc func(key string, value string, folder string, files ...*multipart.FileHeader) ([]string, error)
-	CreateGHNOrder   interface{}
+	Order               *Order
+	PackageImages       []*multipart.FileHeader
+	UploadImagesFunc    func(key string, value string, folder string, files ...*multipart.FileHeader) ([]string, error)
+	CreateDeliveryOrder func(ctx context.Context, request delivery.CreateOrderRequest) (*delivery.CreateOrderResponse, error)
 }
 
 type PackageOrderTxResult struct {
@@ -437,11 +437,10 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 		}
 		
 		// Chuyển đổi dữ liệu từ db sang ghn
-		ghnOrderRequest := ConvertToGHNOrderRequest(updatedOrder, orderItems, senderAddress, receiverAddress)
+		createOrderRequest := ConvertToDeliveryCreateOrderRequest(updatedOrder, orderItems, senderAddress, receiverAddress)
 		
 		// 5. Gọi hàm tạo đơn hàng GHN
-		createGHNOrderFn := arg.CreateGHNOrder.(func(context.Context, ghn.CreateGHNOrderRequest) (*ghn.CreateGHNOrderResponse, error))
-		ghnResponse, err := createGHNOrderFn(ctx, ghnOrderRequest)
+		ghnResponse, err := arg.CreateDeliveryOrder(ctx, createOrderRequest)
 		if err != nil {
 			return fmt.Errorf("failed to create GHN order: %w", err)
 		}

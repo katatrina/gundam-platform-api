@@ -7,7 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
-	"github.com/katatrina/gundam-BE/internal/ghn"
+	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/katatrina/gundam-BE/internal/phone_number"
 	"github.com/katatrina/gundam-BE/internal/storage"
@@ -34,7 +34,7 @@ type Server struct {
 	mailService            *mailer.GmailSender
 	taskDistributor        *worker.RedisTaskDistributor
 	zalopayService         *zalopay.ZalopayService
-	ghnService             *ghn.GHNService
+	deliveryService        delivery.IDeliveryProvider
 }
 
 // NewServer creates a new HTTP server and set up routing.
@@ -68,7 +68,7 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
 	// Create a new GHN service
-	ghnService := ghn.NewGHNService(config.GHNToken, config.GHNShopID)
+	ghnService := delivery.NewGHNService(config.GHNToken, config.GHNShopID)
 	log.Info().Msg("GHN service created successfully ✅")
 	
 	server := &Server{
@@ -82,7 +82,7 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 		mailService:            mailer,
 		taskDistributor:        taskDistributor,
 		zalopayService:         zalopayService,
-		ghnService:             ghnService,
+		deliveryService:        ghnService,
 	}
 	
 	server.setupRouter()
