@@ -167,6 +167,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			sellerOrderGroup.GET("", server.listOrdersBySeller)
 			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)
+			sellerOrderGroup.PATCH(":orderID/package", server.packageOrder)
 		}
 	}
 	

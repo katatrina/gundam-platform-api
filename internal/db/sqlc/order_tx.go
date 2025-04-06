@@ -2,13 +2,16 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"mime/multipart"
 	"time"
 	
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/katatrina/gundam-BE/internal/ghn"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/rs/zerolog/log"
 )
 
 type CreateOrderTxParams struct {
@@ -95,6 +98,10 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			EntryType:     WalletEntryTypePayment,
 			Amount:        -arg.TotalAmount, // Số âm (-) vì đây là bút toán trừ tiền
 			Status:        WalletEntryStatusCompleted,
+			CompletedAt: pgtype.Timestamptz{
+				Time:  time.Now(),
+				Valid: true,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create buyer wallet entry: %w", err)
@@ -138,7 +145,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 		
 		// 6. Tạo order delivery
 		// Các cột status, overall_status, ghn_order_code sẽ được cập nhật sau
-		// khi người bán xác nhận và đóng gói đơn hàng
+		// khi người bán xác nhận và đóng gói đơn hàng.
 		orderDelivery, err := qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
 			OrderID:              order.ID.String(),
 			ExpectedDeliveryTime: arg.ExpectedDeliveryTime,
@@ -274,8 +281,6 @@ type ConfirmOrderTxResult struct {
 }
 
 // ConfirmOrderTx xử lý việc người bán xác nhận đơn hàng
-// Quy trình bao gồm: cập nhật trạng thái đơn hàng, tạo đơn hàng trên GHN,
-// cộng tiền vào non_withdrawable_amount của người bán và tạo bút toán tương ứng
 func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error) {
 	var result ConfirmOrderTxResult
 	
@@ -288,6 +293,10 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			SellerID: arg.SellerID,
 		})
 		if err != nil {
+			if errors.Is(err, ErrRecordNotFound) {
+				return ErrRecordNotFound
+			}
+			
 			return fmt.Errorf("failed to get order: %w", err)
 		}
 		
@@ -311,7 +320,7 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 		result.OrderItems = orderItems
 		
 		// 3. Cập nhật trạng thái đơn hàng thành "packaging"
-		updatedOrder, err := qTx.ConfirmOrder(ctx, ConfirmOrderParams{
+		updatedOrder, err := qTx.ConfirmOrderByID(ctx, ConfirmOrderByIDParams{
 			OrderID:  arg.OrderID,
 			SellerID: arg.SellerID,
 		})
@@ -326,7 +335,7 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			return fmt.Errorf("failed to get seller wallet: %w", err)
 		}
 		
-		// 5. Cộng tiền vào non_withdrawable_amount của người bán
+		// 5. Cộng tiền hàng vào non_withdrawable_amount của người bán
 		// Đây là số tiền người bán sẽ nhận được sau khi người mua xác nhận đã nhận hàng thành công
 		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
 			Amount:   order.ItemsSubtotal,
@@ -347,6 +356,10 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			EntryType:     WalletEntryTypeNonWithdrawable,
 			Amount:        order.ItemsSubtotal,
 			Status:        WalletEntryStatusCompleted, // Completed vì đã cộng ngay
+			CompletedAt: pgtype.Timestamptz{
+				Time:  time.Now(),
+				Valid: true,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create non-withdrawable wallet entry: %w", err)
@@ -383,6 +396,112 @@ func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxPar
 			return fmt.Errorf("failed to update order transaction seller entry: %w", err)
 		}
 		result.OrderTransaction = orderTransaction
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type PackageOrderTxParams struct {
+	Order            *Order
+	PackageImages    []*multipart.FileHeader
+	UploadImagesFunc func(key string, value string, folder string, files ...*multipart.FileHeader) ([]string, error)
+	CreateGHNOrder   interface{}
+}
+
+type PackageOrderTxResult struct {
+	Order         Order         `json:"order"`
+	OrderDelivery OrderDelivery `json:"order_delivery"`
+}
+
+func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error) {
+	var result PackageOrderTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Upload packaging images and store the URLs
+		packageImages, err := arg.UploadImagesFunc("packaging images", arg.Order.Code, util.FolderOrders, arg.PackageImages...)
+		if err != nil {
+			return err
+		}
+		
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			IsPackaged: pgtype.Bool{
+				Bool:  true,
+				Valid: true,
+			},
+			PackagingImages: packageImages,
+			OrderID:         arg.Order.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order: %w", err)
+		}
+		result.Order = updatedOrder
+		
+		// 2. Lấy thông tin các mặt hàng trong đơn hàng
+		orderItems, err := qTx.GetOrderItems(ctx, updatedOrder.ID.String())
+		if err != nil {
+			return fmt.Errorf("failed to get order items: %w", err)
+		}
+		
+		// 3. Lấy thông tin giao hàng
+		orderDelivery, err := qTx.GetOrderDelivery(ctx, updatedOrder.ID.String())
+		if err != nil {
+			return fmt.Errorf("failed to get order delivery: %w", err)
+		}
+		
+		// 4. Lấy địa chỉ người gửi
+		senderAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.FromDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get sender address: %w", err)
+		}
+		
+		// 5. Lấy địa chỉ người nhận
+		receiverAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.ToDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get receiver address: %w", err)
+		}
+		
+		// Chuyển đổi dữ liệu từ db sang ghn
+		ghnOrderRequest := ConvertToGHNOrderRequest(updatedOrder, orderItems, senderAddress, receiverAddress)
+		
+		// 5. Gọi hàm tạo đơn hàng GHN
+		createGHNOrderFn := arg.CreateGHNOrder.(func(context.Context, ghn.CreateGHNOrderRequest) (*ghn.CreateGHNOrderResponse, error))
+		ghnResponse, err := createGHNOrderFn(ctx, ghnOrderRequest)
+		if err != nil {
+			return fmt.Errorf("failed to create GHN order: %w", err)
+		}
+		
+		// So sánh phí vận chuyển từ GHN với phí đã thanh toán
+		if updatedOrder.DeliveryFee != ghnResponse.Data.TotalFee {
+			log.Warn().Msgf("Delivery fee mismatch: %d != %d", updatedOrder.DeliveryFee, ghnResponse.Data.TotalFee)
+		}
+		// So sánh thời gian giao hàng dự kiến với giá trị đã lưu
+		if orderDelivery.ExpectedDeliveryTime != ghnResponse.Data.ExpectedDeliveryTime {
+			log.Warn().Msgf("Expected delivery time mismatch: %v != %v", orderDelivery.ExpectedDeliveryTime, ghnResponse.Data.ExpectedDeliveryTime)
+		}
+		
+		// 6. Cập nhật thông tin giao hàng với mã đơn GHN
+		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
+			ID: orderDelivery.ID,
+			GhnOrderCode: pgtype.Text{
+				String: ghnResponse.Data.OrderCode,
+				Valid:  true,
+			},
+			ExpectedDeliveryTime: pgtype.Timestamptz{
+				Time:  ghnResponse.Data.ExpectedDeliveryTime,
+				Valid: true,
+			},
+			Status: pgtype.Text{String: "ready_to_pick", Valid: true}, // Hardcode status vì GHN không trả về
+			OverallStatus: NullDeliveryOverralStatus{
+				DeliveryOverralStatus: DeliveryOverralStatusPicking,
+				Valid:                 true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order delivery: %w", err)
+		}
+		result.OrderDelivery = updatedDelivery
 		
 		return nil
 	})

@@ -194,7 +194,7 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Param			sellerID				path		string	true	"User ID"
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
-//	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, second hand)
+//	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, used)
 //	@Param			manufacturer			formData	string	true	"Manufacturer name"
 //	@Param			scale					formData	string	true	"Gundam scale"	Enums(1/144, 1/100, 1/60)
 //	@Param			weight					formData	integer	true	"Weight in grams"

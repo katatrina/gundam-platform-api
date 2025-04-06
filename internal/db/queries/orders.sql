@@ -35,8 +35,19 @@ WHERE id = sqlc.arg('order_id')
   AND seller_id = sqlc.arg('seller_id')
     FOR UPDATE;
 
--- name: ConfirmOrder :one
+-- name: ConfirmOrderByID :one
 UPDATE orders
 SET status = 'packaging'
 WHERE id = sqlc.arg('order_id')
   AND seller_id = sqlc.arg('seller_id') RETURNING *;
+
+-- name: GetOrderByID :one
+SELECT *
+FROM orders
+WHERE id = $1;
+
+-- name: UpdateOrder :one
+UPDATE orders
+SET is_packaged      = COALESCE(sqlc.narg('is_packaged'), is_packaged),
+    packaging_images = COALESCE(sqlc.narg('packaging_images'), packaging_images)
+WHERE id = sqlc.arg('order_id') RETURNING *;

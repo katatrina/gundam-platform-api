@@ -3,11 +3,13 @@ package api
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -326,6 +328,7 @@ type confirmOrderRequestParams struct {
 //	@Security		accessToken
 //	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
 //	@Failure		400	{object}	map[string]string		"Invalid order ID or seller ID"
+//	@Failure		404	{object}	map[string]string		"Order not found"
 //	@Failure		403	{object}	map[string]string		"Order does not belong to this seller"
 //	@Failure		409	{object}	map[string]string		"Order is not in pending status"
 //	@Failure		500	{object}	map[string]string		"Internal server error"
@@ -351,6 +354,10 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	})
 	if err != nil {
 		switch {
+		case errors.Is(err, db.ErrRecordNotFound):
+			err = errors.New("order not found")
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
 		case errors.Is(err, db.ErrOrderNotPendingStatus):
 			ctx.JSON(http.StatusConflict, errorResponse(err))
 			return
@@ -400,4 +407,125 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	log.Info().Msgf("Notification sent to seller: %s", url.SellerID)
 	
 	ctx.JSON(http.StatusOK, result)
+}
+
+type packageOrderRequestParams struct {
+	SellerID string `uri:"sellerID" binding:"required"`
+	OrderID  string `uri:"orderID" binding:"required"`
+}
+
+type packageOrderRequestBody struct {
+	PackageImages []*multipart.FileHeader `form:"package_images" binding:"required"`
+	// Lược bỏ package weight và package size (length, width, height)
+}
+
+//	@Summary		Package an order
+//	@Description	Package an order for the specified seller. This endpoint checks the order's status before proceeding.
+//	@Tags			sellers
+//	@Produce		json
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			orderID		path	string	true	"Order ID"
+//	@Security		accessToken
+//	@Param			package_images	formData	file					true	"Package images"
+//	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order"
+//	@Failure		400				{object}	map[string]string		"Invalid order ID or seller ID<br/>At least one package image is required"
+//	@Failure		404				{object}	map[string]string		"Order not found"
+//	@Failure		403				{object}	map[string]string		"Order does not belong to this seller"
+//	@Failure		409				{object}	map[string]string		"Order is not in packaging status<br/>Order is already packaged"
+//	@Failure		500				{object}	map[string]string		"Internal server error"
+//	@Router			/sellers/:sellerID/orders/:orderID/package [patch]
+func (server *Server) packageOrder(c *gin.Context) {
+	var url packageOrderRequestParams
+	if err := c.ShouldBindUri(&url); err != nil {
+		log.Error().Err(err).Msg("Failed to bind URI")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	orderID, err := uuid.Parse(url.OrderID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse order ID")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Bind form data including multipart files
+	var req packageOrderRequestBody
+	if err = c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
+		log.Error().Err(err).Msg("Failed to bind form data")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	fmt.Println(req.PackageImages)
+	
+	// Validate that at least one image is provided
+	if len(req.PackageImages) == 0 {
+		err = errors.New("at least one package image is required")
+		log.Error().Err(err).Msg("No package images provided")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Validate that the order belongs to the seller
+	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = errors.New("order not found")
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("Failed to get order")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền sở hữu đơn hàng
+	if order.SellerID != url.SellerID {
+		c.JSON(http.StatusForbidden, errorResponse(db.ErrOrderNotBelongToUser))
+		return
+	}
+	
+	// Kiểm tra trạng thái đơn hàng
+	if order.Status != db.OrderStatusPackaging {
+		c.JSON(http.StatusConflict, errorResponse(db.ErrOrderNotInPackagingStatus))
+		return
+	}
+	
+	// Kiểm tra trạng thái đã đóng gói
+	if order.IsPackaged {
+		c.JSON(http.StatusConflict, errorResponse(db.ErrOrderAlreadyPackaged))
+		return
+	}
+	
+	arg := db.PackageOrderTxParams{
+		Order:            &order,
+		PackageImages:    req.PackageImages,
+		UploadImagesFunc: server.uploadFileToCloudinary,
+		CreateGHNOrder:   server.ghnService.CreateOrder,
+	}
+	
+	result, err := server.dbStore.PackageOrderTx(c.Request.Context(), arg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to package order")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Gửi thông báo cho người mua
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Đơn hàng #%s đã được đóng gói", result.Order.Code),
+		Message: fmt.Sprintf("Đơn hàng #%s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
+			result.Order.Code,
+			result.OrderDelivery.GhnOrderCode,
+			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	})
+	
+	// TODO: Có thể gửi thông báo cho người bán
+	
+	c.JSON(http.StatusOK, result)
 }

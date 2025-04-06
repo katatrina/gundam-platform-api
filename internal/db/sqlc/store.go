@@ -26,6 +26,7 @@ type Store interface {
 	CreateOrderTx(ctx context.Context, arg CreateOrderTxParams) (CreateOrderTxResult, error)
 	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 	ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error)
+	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
 }
 
 type SQLStore struct {

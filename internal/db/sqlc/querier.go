@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -15,7 +16,7 @@ type Querier interface {
 	AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error)
 	AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
-	ConfirmOrder(ctx context.Context, arg ConfirmOrderParams) (Order, error)
+	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
@@ -39,6 +40,7 @@ type Querier interface {
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
+	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error)
 	GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
@@ -66,6 +68,7 @@ type Querier interface {
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
+	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error)
 	UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error)
 	UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) error

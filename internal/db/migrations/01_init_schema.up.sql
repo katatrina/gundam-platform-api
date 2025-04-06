@@ -275,7 +275,6 @@ CREATE TABLE "order_deliveries"
     "order_id"               text        NOT NULL,
     "ghn_order_code"         text,
     "expected_delivery_time" timestamptz NOT NULL,
-    "expected_pickup_time"   timestamptz,
     "status"                 text,
     "overall_status"         delivery_overral_status,
     "from_delivery_id"       bigint      NOT NULL,

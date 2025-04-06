@@ -728,7 +728,6 @@ type OrderDelivery struct {
 	OrderID              string                    `json:"order_id"`
 	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
-	ExpectedPickupTime   pgtype.Timestamptz        `json:"expected_pickup_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`

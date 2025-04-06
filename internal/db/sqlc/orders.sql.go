@@ -12,20 +12,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const confirmOrder = `-- name: ConfirmOrder :one
+const confirmOrderByID = `-- name: ConfirmOrderByID :one
 UPDATE orders
 SET status = 'packaging'
 WHERE id = $1
   AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 
-type ConfirmOrderParams struct {
+type ConfirmOrderByIDParams struct {
 	OrderID  uuid.UUID `json:"order_id"`
 	SellerID string    `json:"seller_id"`
 }
 
-func (q *Queries) ConfirmOrder(ctx context.Context, arg ConfirmOrderParams) (Order, error) {
-	row := q.db.QueryRow(ctx, confirmOrder, arg.OrderID, arg.SellerID)
+func (q *Queries) ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error) {
+	row := q.db.QueryRow(ctx, confirmOrderByID, arg.OrderID, arg.SellerID)
 	var i Order
 	err := row.Scan(
 		&i.ID,
@@ -86,6 +86,34 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		arg.PaymentMethod,
 		arg.Note,
 	)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.DeliveryFee,
+		&i.TotalAmount,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImages,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrderByID = `-- name: GetOrderByID :one
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+FROM orders
+WHERE id = $1
+`
+
+func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error) {
+	row := q.db.QueryRow(ctx, getOrderByID, id)
 	var i Order
 	err := row.Scan(
 		&i.ID,
@@ -181,6 +209,41 @@ func (q *Queries) ListOrdersByUserID(ctx context.Context, buyerID string) ([]Ord
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateOrder = `-- name: UpdateOrder :one
+UPDATE orders
+SET is_packaged      = COALESCE($1, is_packaged),
+    packaging_images = COALESCE($2, packaging_images)
+    WHERE id = $3 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+`
+
+type UpdateOrderParams struct {
+	IsPackaged      pgtype.Bool `json:"is_packaged"`
+	PackagingImages []string    `json:"packaging_images"`
+	OrderID         uuid.UUID   `json:"order_id"`
+}
+
+func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, updateOrder, arg.IsPackaged, arg.PackagingImages, arg.OrderID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.DeliveryFee,
+		&i.TotalAmount,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImages,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const validateGundamBeforeCheckout = `-- name: ValidateGundamBeforeCheckout :one

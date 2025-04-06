@@ -17,8 +17,9 @@ INSERT INTO wallet_entries (wallet_id,
                             reference_type,
                             entry_type,
                             amount,
-                            status)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+                            status,
+                            completed_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
 `
 
 type CreateWalletEntryParams struct {
@@ -28,6 +29,7 @@ type CreateWalletEntryParams struct {
 	EntryType     WalletEntryType     `json:"entry_type"`
 	Amount        int64               `json:"amount"`
 	Status        WalletEntryStatus   `json:"status"`
+	CompletedAt   pgtype.Timestamptz  `json:"completed_at"`
 }
 
 func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error) {
@@ -38,6 +40,7 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 		arg.EntryType,
 		arg.Amount,
 		arg.Status,
+		arg.CompletedAt,
 	)
 	var i WalletEntry
 	err := row.Scan(

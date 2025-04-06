@@ -34,6 +34,7 @@ type createUserAddressRequest struct {
 //	@Param			request	body		createUserAddressRequest	false	"Address creation request"
 //	@Success		201		{object}	db.UserAddress				"Address created successfully"
 //	@Failure		400		"Invalid request body"
+//	@Failure		404		"User not found"
 //	@Failure		500		"Internal server error"
 //	@Router			/users/{id}/addresses [post]
 func (server *Server) createUserAddress(ctx *gin.Context) {
@@ -42,6 +43,19 @@ func (server *Server) createUserAddress(ctx *gin.Context) {
 	req := new(createUserAddressRequest)
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	
+	// Check if the user exists
+	_, err := server.dbStore.GetUserByID(context.Background(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

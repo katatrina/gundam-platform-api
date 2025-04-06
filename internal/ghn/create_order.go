@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 // Định nghĩa các cấu trúc dữ liệu riêng cho package ghn
@@ -51,25 +52,25 @@ type CreateGHNOrderRequest struct {
 }
 
 type CreateGHNOrderResponse struct {
-	Code    int    `json:"code"`
+	Code    int64  `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		OrderCode            string `json:"order_code"`
-		SortCode             string `json:"sort_code"`
-		TransType            string `json:"trans_type"`
-		WardEncode           string `json:"ward_encode"`
-		DistrictEncode       string `json:"district_encode"`
-		ExpectedDeliveryTime string `json:"expected_delivery_time"`
-		TotalFee             int    `json:"total_fee"`
+		OrderCode            string    `json:"order_code"`
+		SortCode             string    `json:"sort_code"`
+		TransType            string    `json:"trans_type"`
+		WardEncode           string    `json:"ward_encode"`
+		DistrictEncode       string    `json:"district_encode"`
+		ExpectedDeliveryTime time.Time `json:"expected_delivery_time"`
+		TotalFee             int64     `json:"total_fee"`
 		Fee                  struct {
-			MainService  int `json:"main_service"`
-			Insurance    int `json:"insurance"`
-			StationDo    int `json:"station_do"`
-			StationPu    int `json:"station_pu"`
-			Return       int `json:"return"`
-			R2S          int `json:"r2s"`
-			Coupon       int `json:"coupon"`
-			CodFailedFee int `json:"cod_failed_fee"`
+			MainService  int64 `json:"main_service"`
+			Insurance    int64 `json:"insurance"`
+			StationDo    int64 `json:"station_do"`
+			StationPu    int64 `json:"station_pu"`
+			Return       int64 `json:"return"`
+			R2S          int64 `json:"r2s"`
+			Coupon       int64 `json:"coupon"`
+			CodFailedFee int64 `json:"cod_failed_fee"`
 		} `json:"fee"`
 	} `json:"data"`
 }
@@ -103,17 +104,17 @@ func (s *GHNService) CreateOrder(ctx context.Context, arg CreateGHNOrderRequest)
 		"return_ward_name":     arg.SenderAddress.WardName,
 		"return_province_name": arg.SenderAddress.ProvinceName,
 		"client_order_code":    arg.Order.Code,
-		"cod_amount":           0, // Đã thanh toán bằng ví
+		"cod_amount":           int64(0), // Đã thanh toán bằng ví
 		"content":              "Mô hình Gundam",
 		"weight":               totalWeight,
 		// Sử dụng giá trị mặc định cho toàn bộ đơn hàng
-		"length":          40, // cm
-		"width":           30,
-		"height":          20,
-		"service_type_id": 2, // Chọn loại dịch vụ "Hàng nhẹ" cho đơn giản
-		"payment_type_id": 2, // Người mua thanh toán phí dịch vụ
+		"length":          int64(40), // cm
+		"width":           int64(30),
+		"height":          int64(20),
+		"service_type_id": int64(2), // Chọn loại dịch vụ "Hàng nhẹ" cho đơn giản
+		"payment_type_id": int64(2), // Người mua thanh toán phí dịch vụ
 		"required_note":   "CHOXEMHANGKHONGTHU",
-		"insurance_value": 0, // Không thêm phí bảo hiểm cho môi trường test
+		"insurance_value": int64(0), // Không thêm phí bảo hiểm cho môi trường test
 		// TODO: Thêm các thông tin khác nếu cần thiết
 	}
 	
@@ -160,7 +161,7 @@ func (s *GHNService) CreateOrder(ctx context.Context, arg CreateGHNOrderRequest)
 	}
 	
 	// Kiểm tra code trong response body
-	if response.Code != http.StatusOK {
+	if response.Code != int64(http.StatusOK) {
 		return nil, fmt.Errorf("GHN API returned business error: code=%d, message=%s",
 			response.Code, response.Message)
 	}

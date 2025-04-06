@@ -403,10 +403,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/db.Order'
         description: Đơn hàng đã được cập nhật
-      order_delivery:
-        allOf:
-        - $ref: '#/definitions/db.OrderDelivery'
-        description: Thông tin giao hàng đã được cập nhật với mã GHN
       order_items:
         description: Các mặt hàng trong đơn hàng
         items:
@@ -422,7 +418,6 @@ definitions:
         description: Bút toán cộng tiền cho người bán (pending)
     required:
     - order
-    - order_delivery
     - order_items
     - order_transaction
     - seller_entry
@@ -641,10 +636,16 @@ definitions:
         type: integer
       id:
         type: string
+      is_packaged:
+        type: boolean
       items_subtotal:
         type: integer
       note:
         $ref: '#/definitions/pgtype.Text'
+      packaging_images:
+        items:
+          type: string
+        type: array
       payment_method:
         $ref: '#/definitions/db.PaymentMethod'
       seller_id:
@@ -661,8 +662,10 @@ definitions:
     - created_at
     - delivery_fee
     - id
+    - is_packaged
     - items_subtotal
     - note
+    - packaging_images
     - payment_method
     - seller_id
     - status
@@ -789,6 +792,16 @@ definitions:
     - OrderTransactionStatusCompleted
     - OrderTransactionStatusRefunded
     - OrderTransactionStatusFailed
+  db.PackageOrderTxResult:
+    properties:
+      order:
+        $ref: '#/definitions/db.Order'
+      order_delivery:
+        $ref: '#/definitions/db.OrderDelivery'
+    required:
+    - order
+    - order_delivery
+    type: object
   db.PaymentMethod:
     enum:
     - cod
@@ -972,6 +985,7 @@ definitions:
     - withdrawal
     - payment
     - payment_received
+    - non_withdrawable
     - refund
     - refund_deduction
     - auction_lock
@@ -984,6 +998,7 @@ definitions:
     - WalletEntryTypeWithdrawal
     - WalletEntryTypePayment
     - WalletEntryTypePaymentReceived
+    - WalletEntryTypeNonWithdrawable
     - WalletEntryTypeRefund
     - WalletEntryTypeRefundDeduction
     - WalletEntryTypeAuctionLock
@@ -1544,7 +1559,7 @@ paths:
         enum:
         - new
         - open box
-        - second hand
+        - used
         in: formData
         name: condition
         required: true
@@ -1670,6 +1685,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "409":
           description: Order is not in pending status
           schema:
@@ -1685,6 +1706,69 @@ paths:
       security:
       - accessToken: []
       summary: Confirm an order
+      tags:
+      - sellers
+  /sellers/:sellerID/orders/:orderID/package:
+    patch:
+      description: Package an order for the specified seller. This endpoint checks
+        the order's status before proceeding.
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: string
+      - description: Package images
+        in: formData
+        name: package_images
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully packaged order
+          schema:
+            $ref: '#/definitions/db.PackageOrderTxResult'
+        "400":
+          description: Invalid order ID or seller ID<br/>At least one package image
+            is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Order does not belong to this seller
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Order is not in packaging status<br/>Order is already packaged
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - accessToken: []
+      summary: Package an order
       tags:
       - sellers
   /sellers/:sellerID/subscriptions/active:
@@ -2025,6 +2109,8 @@ paths:
             $ref: '#/definitions/db.UserAddress'
         "400":
           description: Invalid request body
+        "404":
+          description: User not found
         "500":
           description: Internal server error
       summary: Create a new user address

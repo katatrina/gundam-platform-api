@@ -20,7 +20,7 @@ INSERT INTO order_deliveries (order_id,
                               overall_status,
                               from_delivery_id,
                               to_delivery_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, ghn_order_code, expected_delivery_time, expected_pickup_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 `
 
 type CreateOrderDeliveryParams struct {
@@ -49,7 +49,6 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 		&i.OrderID,
 		&i.GhnOrderCode,
 		&i.ExpectedDeliveryTime,
-		&i.ExpectedPickupTime,
 		&i.Status,
 		&i.OverallStatus,
 		&i.FromDeliveryID,
@@ -61,7 +60,7 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 }
 
 const getOrderDelivery = `-- name: GetOrderDelivery :one
-SELECT id, order_id, ghn_order_code, expected_delivery_time, expected_pickup_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+SELECT id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 FROM order_deliveries
 WHERE order_id = $1
 `
@@ -74,7 +73,6 @@ func (q *Queries) GetOrderDelivery(ctx context.Context, orderID string) (OrderDe
 		&i.OrderID,
 		&i.GhnOrderCode,
 		&i.ExpectedDeliveryTime,
-		&i.ExpectedPickupTime,
 		&i.Status,
 		&i.OverallStatus,
 		&i.FromDeliveryID,
@@ -94,7 +92,7 @@ SET ghn_order_code         = COALESCE($1, ghn_order_code),
     from_delivery_id       = COALESCE($5, from_delivery_id),
     to_delivery_id         = COALESCE($6, to_delivery_id),
     updated_at             = now()
-WHERE id = $7 RETURNING id, order_id, ghn_order_code, expected_delivery_time, expected_pickup_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+WHERE id = $7 RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 `
 
 type UpdateOrderDeliveryParams struct {
@@ -123,7 +121,6 @@ func (q *Queries) UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDelive
 		&i.OrderID,
 		&i.GhnOrderCode,
 		&i.ExpectedDeliveryTime,
-		&i.ExpectedPickupTime,
 		&i.Status,
 		&i.OverallStatus,
 		&i.FromDeliveryID,

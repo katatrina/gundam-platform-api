@@ -731,7 +731,7 @@ const docTemplate = `{
                         "enum": [
                             "new",
                             "open box",
-                            "second hand"
+                            "used"
                         ],
                         "type": "string",
                         "description": "Condition of the Gundam",
@@ -915,8 +915,110 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "404": {
+                        "description": "Order not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "409": {
                         "description": "Order is not in pending status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sellers/:sellerID/orders/:orderID/package": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Package an order for the specified seller. This endpoint checks the order's status before proceeding.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Package an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Package images",
+                        "name": "package_images",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully packaged order",
+                        "schema": {
+                            "$ref": "#/definitions/db.PackageOrderTxResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid order ID or seller ID\u003cbr/\u003eAt least one package image is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Order does not belong to this seller",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Order is not in packaging status\u003cbr/\u003eOrder is already packaged",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1520,6 +1622,9 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request body"
+                    },
+                    "404": {
+                        "description": "User not found"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -2287,7 +2392,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "order",
-                "order_delivery",
                 "order_items",
                 "order_transaction",
                 "seller_entry"
@@ -2298,14 +2402,6 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/db.Order"
-                        }
-                    ]
-                },
-                "order_delivery": {
-                    "description": "Thông tin giao hàng đã được cập nhật với mã GHN",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.OrderDelivery"
                         }
                     ]
                 },
@@ -2619,8 +2715,10 @@ const docTemplate = `{
                 "created_at",
                 "delivery_fee",
                 "id",
+                "is_packaged",
                 "items_subtotal",
                 "note",
+                "packaging_images",
                 "payment_method",
                 "seller_id",
                 "status",
@@ -2643,11 +2741,20 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_packaged": {
+                    "type": "boolean"
+                },
                 "items_subtotal": {
                     "type": "integer"
                 },
                 "note": {
                     "$ref": "#/definitions/pgtype.Text"
+                },
+                "packaging_images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "payment_method": {
                     "$ref": "#/definitions/db.PaymentMethod"
@@ -2826,6 +2933,21 @@ const docTemplate = `{
                 "OrderTransactionStatusRefunded",
                 "OrderTransactionStatusFailed"
             ]
+        },
+        "db.PackageOrderTxResult": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_delivery"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_delivery": {
+                    "$ref": "#/definitions/db.OrderDelivery"
+                }
+            }
         },
         "db.PaymentMethod": {
             "type": "string",
@@ -3080,6 +3202,7 @@ const docTemplate = `{
                 "withdrawal",
                 "payment",
                 "payment_received",
+                "non_withdrawable",
                 "refund",
                 "refund_deduction",
                 "auction_lock",
@@ -3092,6 +3215,7 @@ const docTemplate = `{
                 "WalletEntryTypeWithdrawal",
                 "WalletEntryTypePayment",
                 "WalletEntryTypePaymentReceived",
+                "WalletEntryTypeNonWithdrawable",
                 "WalletEntryTypeRefund",
                 "WalletEntryTypeRefundDeduction",
                 "WalletEntryTypeAuctionLock",
