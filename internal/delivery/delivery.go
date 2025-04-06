@@ -11,6 +11,7 @@ const (
 
 type IDeliveryProvider interface {
 	CreateOrder(ctx context.Context, request CreateOrderRequest) (*CreateOrderResponse, error)
+	GetOrderDetails(ctx context.Context, orderCode string) (*GetOrderDetailsResponse, error)
 }
 
 type GHNService struct {

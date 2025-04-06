@@ -67,3 +67,11 @@ type CreateOrderResponse struct {
 		} `json:"fee"`
 	} `json:"data"`
 }
+
+type GetOrderDetailsResponse struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		Status string `json:"status"`
+	} `json:"data"`
+}
