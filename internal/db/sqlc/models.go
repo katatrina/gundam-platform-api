@@ -197,7 +197,7 @@ const (
 	OrderStatusPackaging  OrderStatus = "packaging"
 	OrderStatusDelivering OrderStatus = "delivering"
 	OrderStatusDelivered  OrderStatus = "delivered"
-	OrderStatusSuccessful OrderStatus = "successful"
+	OrderStatusCompleted  OrderStatus = "completed"
 	OrderStatusFailed     OrderStatus = "failed"
 	OrderStatusCanceled   OrderStatus = "canceled"
 )
@@ -367,9 +367,9 @@ func (ns NullPaymentTransactionProvider) Value() (driver.Value, error) {
 type PaymentTransactionStatus string
 
 const (
-	PaymentTransactionStatusPending    PaymentTransactionStatus = "pending"
-	PaymentTransactionStatusSuccessful PaymentTransactionStatus = "successful"
-	PaymentTransactionStatusFailed     PaymentTransactionStatus = "failed"
+	PaymentTransactionStatusPending   PaymentTransactionStatus = "pending"
+	PaymentTransactionStatusCompleted PaymentTransactionStatus = "completed"
+	PaymentTransactionStatusFailed    PaymentTransactionStatus = "failed"
 )
 
 func (e *PaymentTransactionStatus) Scan(src interface{}) error {

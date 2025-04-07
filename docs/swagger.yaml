@@ -737,7 +737,7 @@ definitions:
     - packaging
     - delivering
     - delivered
-    - successful
+    - completed
     - failed
     - canceled
     type: string
@@ -746,7 +746,7 @@ definitions:
     - OrderStatusPackaging
     - OrderStatusDelivering
     - OrderStatusDelivered
-    - OrderStatusSuccessful
+    - OrderStatusCompleted
     - OrderStatusFailed
     - OrderStatusCanceled
   db.OrderTransaction:

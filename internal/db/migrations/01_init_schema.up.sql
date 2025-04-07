@@ -31,7 +31,7 @@ CREATE TYPE "order_status" AS ENUM (
   'packaging',
   'delivering',
   'delivered',
-  'successful',
+  'completed',
   'failed',
   'canceled'
 );
@@ -92,7 +92,7 @@ CREATE TYPE "payment_transaction_provider" AS ENUM (
 
 CREATE TYPE "payment_transaction_status" AS ENUM (
   'pending',
-  'successful',
+  'completed',
   'failed'
 );
 

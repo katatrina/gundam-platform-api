@@ -220,6 +220,12 @@ func (t *OrderTracker) checkOrderStatus() {
 					}
 					log.Info().Msgf("Notification sent to buyer: %s", orderDelivery.BuyerID)
 					
+					/* TODO: Thêm task xử lý hoàn tất đơn hàng (cộng tiền cho người bán, đánh dấu đơn hàng là hoàn tất, v.v.)
+					với deadline là 7 ngày sau khi đơn hàng được giao thành công.
+					Nếu người mua không xác nhận trong 7 ngày, tự động đánh dấu đơn hàng là hoàn tất.
+					Nếu người mua xác nhận đã nhận hàng, hủy task này.
+					*/
+					
 					// Gửi thông báo cho người bán
 					err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 						RecipientID: orderDelivery.SellerID,

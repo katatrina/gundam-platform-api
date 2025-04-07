@@ -2877,7 +2877,7 @@ const docTemplate = `{
                 "packaging",
                 "delivering",
                 "delivered",
-                "successful",
+                "completed",
                 "failed",
                 "canceled"
             ],
@@ -2886,7 +2886,7 @@ const docTemplate = `{
                 "OrderStatusPackaging",
                 "OrderStatusDelivering",
                 "OrderStatusDelivered",
-                "OrderStatusSuccessful",
+                "OrderStatusCompleted",
                 "OrderStatusFailed",
                 "OrderStatusCanceled"
             ]

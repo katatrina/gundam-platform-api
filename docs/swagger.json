@@ -2875,7 +2875,7 @@
                 "packaging",
                 "delivering",
                 "delivered",
-                "successful",
+                "completed",
                 "failed",
                 "canceled"
             ],
@@ -2884,7 +2884,7 @@
                 "OrderStatusPackaging",
                 "OrderStatusDelivering",
                 "OrderStatusDelivered",
-                "OrderStatusSuccessful",
+                "OrderStatusCompleted",
                 "OrderStatusFailed",
                 "OrderStatusCanceled"
             ]

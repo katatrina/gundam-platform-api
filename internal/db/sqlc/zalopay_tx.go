@@ -24,7 +24,7 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 		}
 		
 		// Nếu đã xử lý rồi thì không làm gì nữa
-		if transaction.Status == PaymentTransactionStatusSuccessful {
+		if transaction.Status == PaymentTransactionStatusCompleted {
 			return nil
 		}
 		
@@ -63,7 +63,7 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 			
 			// Cập nhật trạng thái giao dịch thanh toán thành công
 			err = qTx.UpdatePaymentTransactionStatus(ctx, UpdatePaymentTransactionStatusParams{
-				Status:                PaymentTransactionStatusSuccessful,
+				Status:                PaymentTransactionStatusCompleted,
 				ProviderTransactionID: transaction.ProviderTransactionID,
 				Provider:              PaymentTransactionProviderZalopay,
 				UserID:                transaction.UserID,
