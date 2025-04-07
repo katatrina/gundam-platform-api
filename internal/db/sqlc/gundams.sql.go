@@ -393,7 +393,8 @@ func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageU
 
 const updateGundam = `-- name: UpdateGundam :exec
 UPDATE gundams
-SET status = coalesce($1, status)
+SET status = coalesce($1, status),
+    updated_at = now()
 WHERE id = $2
 `
 

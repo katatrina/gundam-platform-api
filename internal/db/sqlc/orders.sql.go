@@ -14,7 +14,8 @@ import (
 
 const confirmOrderByID = `-- name: ConfirmOrderByID :one
 UPDATE orders
-SET status = 'packaging'
+SET status = 'packaging',
+    updated_at = now()
 WHERE id = $1
   AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
@@ -215,7 +216,8 @@ const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
 SET is_packaged      = COALESCE($1, is_packaged),
     packaging_images = COALESCE($2, packaging_images),
-    status           = COALESCE($3, status)
+    status           = COALESCE($3, status),
+    updated_at       = now()
 WHERE id = $4 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 

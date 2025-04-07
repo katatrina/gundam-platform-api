@@ -41,4 +41,5 @@ SELECT od.id,
 FROM order_deliveries od
          JOIN orders o ON od.order_id = o.id::text
 WHERE od.overall_status IN ('picking', 'delivering', 'return')
-  AND od.delivery_tracking_code IS NOT NULL;
+  AND od.delivery_tracking_code IS NOT NULL
+ORDER BY od.created_at DESC;

@@ -37,7 +37,8 @@ WHERE id = sqlc.arg('order_id')
 
 -- name: ConfirmOrderByID :one
 UPDATE orders
-SET status = 'packaging'
+SET status = 'packaging',
+    updated_at = now()
 WHERE id = sqlc.arg('order_id')
   AND seller_id = sqlc.arg('seller_id') RETURNING *;
 
@@ -50,5 +51,6 @@ WHERE id = $1;
 UPDATE orders
 SET is_packaged      = COALESCE(sqlc.narg('is_packaged'), is_packaged),
     packaging_images = COALESCE(sqlc.narg('packaging_images'), packaging_images),
-    status           = COALESCE(sqlc.narg('status'), status)
+    status           = COALESCE(sqlc.narg('status'), status),
+    updated_at       = now()
 WHERE id = sqlc.arg('order_id') RETURNING *;

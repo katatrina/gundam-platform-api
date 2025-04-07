@@ -24,13 +24,15 @@ ORDER BY is_primary DESC, is_pickup_address DESC, created_at DESC;
 
 -- name: UnsetPrimaryAddress :exec
 UPDATE user_addresses
-SET is_primary = false
+SET is_primary = false,
+    updated_at = now()
 WHERE user_id = $1
   AND is_primary = true;
 
 -- name: UnsetPickupAddress :exec
 UPDATE user_addresses
-SET is_pickup_address = false
+SET is_pickup_address = false,
+    updated_at        = now()
 WHERE user_id = $1
   AND is_pickup_address = true;
 
@@ -45,10 +47,10 @@ SET full_name         = COALESCE(sqlc.narg('full_name'), full_name),
     ghn_ward_code     = COALESCE(sqlc.narg('ghn_ward_code'), ghn_ward_code),
     detail            = COALESCE(sqlc.narg('detail'), detail),
     is_primary        = COALESCE(sqlc.narg('is_primary'), is_primary),
-    is_pickup_address = COALESCE(sqlc.narg('is_pickup_address'), is_pickup_address)
+    is_pickup_address = COALESCE(sqlc.narg('is_pickup_address'), is_pickup_address),
+    updated_at        = now()
 WHERE id = sqlc.arg('address_id')
-  AND user_id = sqlc.arg('user_id')
-RETURNING *;
+  AND user_id = sqlc.arg('user_id') RETURNING *;
 
 -- name: DeleteUserAddress :exec
 DELETE

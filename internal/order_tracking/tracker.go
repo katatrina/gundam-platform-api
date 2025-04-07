@@ -44,6 +44,11 @@ func (t *OrderTracker) Start() error {
 		gocron.DurationJob(10*time.Second),
 		gocron.NewTask(
 			func() {
+				// log.Info().
+				// 	Str("job", "order_status_tracking").
+				// 	Time("start_time", time.Now()).
+				// 	Msg("Starting order status check job")
+				
 				t.checkOrderStatus()
 			},
 		),

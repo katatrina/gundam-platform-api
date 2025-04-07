@@ -224,7 +224,8 @@ func (q *Queries) ListUserAddresses(ctx context.Context, userID string) ([]UserA
 
 const unsetPickupAddress = `-- name: UnsetPickupAddress :exec
 UPDATE user_addresses
-SET is_pickup_address = false
+SET is_pickup_address = false,
+    updated_at        = now()
 WHERE user_id = $1
   AND is_pickup_address = true
 `
@@ -236,7 +237,8 @@ func (q *Queries) UnsetPickupAddress(ctx context.Context, userID string) error {
 
 const unsetPrimaryAddress = `-- name: UnsetPrimaryAddress :exec
 UPDATE user_addresses
-SET is_primary = false
+SET is_primary = false,
+    updated_at = now()
 WHERE user_id = $1
   AND is_primary = true
 `
@@ -257,10 +259,10 @@ SET full_name         = COALESCE($1, full_name),
     ghn_ward_code     = COALESCE($7, ghn_ward_code),
     detail            = COALESCE($8, detail),
     is_primary        = COALESCE($9, is_primary),
-    is_pickup_address = COALESCE($10, is_pickup_address)
+    is_pickup_address = COALESCE($10, is_pickup_address),
+    updated_at        = now()
 WHERE id = $11
-  AND user_id = $12
-RETURNING id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
+  AND user_id = $12 RETURNING id, user_id, full_name, phone_number, province_name, district_name, ghn_district_id, ward_name, ghn_ward_code, detail, is_primary, is_pickup_address, created_at, updated_at
 `
 
 type UpdateUserAddressParams struct {

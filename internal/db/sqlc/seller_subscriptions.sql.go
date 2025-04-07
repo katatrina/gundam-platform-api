@@ -86,9 +86,11 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 
 const updateCurrentActiveSubscriptionForSeller = `-- name: UpdateCurrentActiveSubscriptionForSeller :exec
 UPDATE seller_subscriptions
-SET listings_used = COALESCE($1, listings_used)
+SET listings_used = COALESCE($1, listings_used),
+    updated_at    = now()
 WHERE id = $2
   AND seller_id = $3
+  AND is_active = true
 `
 
 type UpdateCurrentActiveSubscriptionForSellerParams struct {

@@ -96,5 +96,6 @@ WHERE gundam_id = $1;
 
 -- name: UpdateGundam :exec
 UPDATE gundams
-SET status = coalesce(sqlc.narg('status'), status)
+SET status = coalesce(sqlc.narg('status'), status),
+    updated_at = now()
 WHERE id = sqlc.arg('id');
