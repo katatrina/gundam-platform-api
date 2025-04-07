@@ -63,38 +63,42 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 const getActiveOrderDeliveries = `-- name: GetActiveOrderDeliveries :many
 SELECT od.id,
        o.id AS order_id,
-       od.delivery_tracking_code,
-       od.expected_delivery_time,
+       o.code AS order_code,
+       o.buyer_id,
+       o.seller_id,
+       o.items_subtotal,
        od.status,
        od.overall_status,
        od.from_delivery_id,
        od.to_delivery_id,
+       od.delivery_tracking_code,
+       od.expected_delivery_time,
        od.created_at,
-       od.updated_at,
-       o.code AS order_code,
-       o.buyer_id,
-       o.seller_id
+       od.updated_at
 FROM order_deliveries od
          JOIN orders o ON od.order_id = o.id::text
-WHERE od.overall_status IN ('picking', 'delivering', 'return')
+WHERE od.overall_status IN ('picking', 'delivering')
   AND od.delivery_tracking_code IS NOT NULL
+  AND od.updated_at > NOW() - INTERVAL '30 days'
 ORDER BY od.created_at DESC
+LIMIT 100
 `
 
 type GetActiveOrderDeliveriesRow struct {
 	ID                   int64                     `json:"id"`
 	OrderID              uuid.UUID                 `json:"order_id"`
-	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
-	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
+	OrderCode            string                    `json:"order_code"`
+	BuyerID              string                    `json:"buyer_id"`
+	SellerID             string                    `json:"seller_id"`
+	ItemsSubtotal        int64                     `json:"items_subtotal"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`
 	ToDeliveryID         int64                     `json:"to_delivery_id"`
+	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	CreatedAt            time.Time                 `json:"created_at"`
 	UpdatedAt            time.Time                 `json:"updated_at"`
-	OrderCode            string                    `json:"order_code"`
-	BuyerID              string                    `json:"buyer_id"`
-	SellerID             string                    `json:"seller_id"`
 }
 
 func (q *Queries) GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error) {
@@ -109,17 +113,18 @@ func (q *Queries) GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrde
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrderID,
-			&i.DeliveryTrackingCode,
-			&i.ExpectedDeliveryTime,
+			&i.OrderCode,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.ItemsSubtotal,
 			&i.Status,
 			&i.OverallStatus,
 			&i.FromDeliveryID,
 			&i.ToDeliveryID,
+			&i.DeliveryTrackingCode,
+			&i.ExpectedDeliveryTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.OrderCode,
-			&i.BuyerID,
-			&i.SellerID,
 		); err != nil {
 			return nil, err
 		}

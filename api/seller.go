@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
@@ -421,7 +422,7 @@ func (server *Server) confirmOrder(ctx *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.SellerID,
 		Title:       fmt.Sprintf("Đã xác nhận đơn hàng #%s", result.Order.Code),
-		Message:     fmt.Sprintf("Bạn đã xác nhận đơn hàng #%s. Số tiền %d VNĐ đã được chuyển vào số dư tạm thời của bạn. Số tiền này sẽ được chuyển vào số dư khả dụng sau khi người mua xác nhận đã nhận hàng thành công.", result.Order.Code, result.SellerEntry.Amount),
+		Message:     fmt.Sprintf("Bạn đã xác nhận đơn hàng #%s. Tổng tiền hàng %s đã được chuyển vào số dư tạm thời của bạn. Số tiền này sẽ được chuyển vào số dư khả dụng sau khi người mua xác nhận đã nhận hàng thành công.", result.Order.Code, util.FormatVND(result.SellerEntry.Amount)),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)

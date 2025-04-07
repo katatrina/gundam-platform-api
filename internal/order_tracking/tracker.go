@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/delivery"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
@@ -82,24 +83,20 @@ func (t *OrderTracker) checkOrderStatus() {
 	for _, orderDelivery := range orderDeliveries {
 		// Kiểm tra xem đơn hàng có mã theo dõi không
 		if orderDelivery.DeliveryTrackingCode.String == "" {
-			log.Warn().Str("order_code", orderDelivery.OrderCode).Msg("order delivery status changed but no tracking code found")
+			log.Warn().Str("order_code", orderDelivery.OrderCode).Msg("order-delivery status changed but no tracking code found")
 			continue
 		}
 		
 		// Kiểm tra trạng thái đơn hàng trên GHN
 		response, err := t.ghnService.GetOrderDetails(ctx, orderDelivery.DeliveryTrackingCode.String)
 		if err != nil {
-			log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Str("delivery_tracking_code", orderDelivery.DeliveryTrackingCode.String).Msg("failed to get orderDelivery details from GHN")
+			log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Str("delivery_tracking_code", orderDelivery.DeliveryTrackingCode.String).Msg("failed to get order details from GHN")
 			continue
 		}
 		
 		// Nếu trạng thái đã thay đổi, cập nhật vào db
 		ghnStatus := response.Data.Status
 		if ghnStatus != orderDelivery.Status.String {
-			// Tính toán overall status mới
-			newOverallStatus := mapGHNStatusToOverallStatus(ghnStatus)
-			oldOverallStatus := orderDelivery.OverallStatus.DeliveryOverralStatus
-			
 			log.Info().
 				Str("order_code", orderDelivery.OrderCode).
 				Str("delivery_tracking_code", orderDelivery.DeliveryTrackingCode.String).
@@ -107,27 +104,42 @@ func (t *OrderTracker) checkOrderStatus() {
 				Str("new_status", response.Data.Status).
 				Msg("order-delivery status changed, updating database...")
 			
-			// Cập nhật status và overall_status vào database
-			updatedOrderDelivery, err := t.store.UpdateOrderDelivery(ctx, db.UpdateOrderDeliveryParams{
+			// Tính toán overall status mới
+			oldOverallStatus := orderDelivery.OverallStatus.DeliveryOverralStatus
+			newOverallStatus := mapGHNStatusToOverallStatus(ghnStatus)
+			isOverallStatusChanged := oldOverallStatus != newOverallStatus
+			
+			// Chuẩn bị tham số cho câu query UPDATE
+			updateParams := db.UpdateOrderDeliveryParams{
 				ID: orderDelivery.ID,
 				Status: pgtype.Text{
 					String: ghnStatus,
 					Valid:  true,
 				},
-				OverallStatus: db.NullDeliveryOverralStatus{
+			}
+			
+			// Chỉ cập nhật overall_status nếu nó thay đổi
+			if isOverallStatusChanged {
+				updateParams.OverallStatus = db.NullDeliveryOverralStatus{
 					DeliveryOverralStatus: newOverallStatus,
 					Valid:                 true,
-				},
-			})
+				}
+			}
+			
+			updatedOrderDelivery, err := t.store.UpdateOrderDelivery(ctx, updateParams)
 			if err != nil {
 				log.Error().Err(err).Str("delivery_tracking_code", orderDelivery.DeliveryTrackingCode.String).Msg("failed to update delivery status")
 				continue
 			}
+			
 			log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery status has been updated to \"%s\"", updatedOrderDelivery.Status.String)
+			if isOverallStatusChanged {
+				log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery overall status has been updated to \"%s\"", updatedOrderDelivery.OverallStatus.DeliveryOverralStatus)
+			}
 			
 			// Xử lý business logic theo quy trình từng bước
 			// Chỉ xử lý khi có sự chuyển đổi giữa các trạng thái tổng quát
-			if oldOverallStatus != newOverallStatus {
+			if isOverallStatusChanged {
 				switch {
 				// Đơn hàng của người bán đã được shipper đến lấy và chuẩn bị giao cho người mua
 				// picking -> delivering
@@ -143,7 +155,6 @@ func (t *OrderTracker) checkOrderStatus() {
 					if err != nil {
 						log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to update order status to delivered")
 					}
-					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery overral status has been updated to \"%s\"", updatedOrderDelivery.OverallStatus.DeliveryOverralStatus)
 					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\"", updatedOrder.Status)
 					
 					opts := []asynq.Option{
@@ -164,7 +175,18 @@ func (t *OrderTracker) checkOrderStatus() {
 					}
 					log.Info().Msgf("Notification sent to buyer: %s", orderDelivery.BuyerID)
 					
-					// TODO: Gửi thông báo cho người bán
+					// Gửi thông báo cho người bán
+					err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+						RecipientID: orderDelivery.SellerID,
+						Title:       fmt.Sprintf("Đơn hàng #%s đã được bàn giao cho đơn vị vận chuyển", orderDelivery.OrderCode),
+						Message:     fmt.Sprintf("Đơn hàng #%s đã được bàn giao cho đơn vị vận chuyển và chuẩn bị giao đến người mua.", orderDelivery.OrderCode),
+						Type:        "order",
+						ReferenceID: orderDelivery.OrderCode,
+					}, opts...)
+					if err != nil {
+						log.Err(err).Msg("failed to send notification to seller")
+					}
+					log.Info().Msgf("Notification sent to seller: %s", orderDelivery.SellerID)
 				
 				case oldOverallStatus == db.DeliveryOverralStatusDelivering && newOverallStatus == db.DeliveryOverralStatusDelivered:
 					// Cập nhật trạng thái đơn hàng thành "delivered"
@@ -178,7 +200,6 @@ func (t *OrderTracker) checkOrderStatus() {
 					if err != nil {
 						log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to update order status to delivered")
 					}
-					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery overral status has been updated to \"%s\"", updatedOrderDelivery.OverallStatus.DeliveryOverralStatus)
 					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\"", updatedOrder.Status)
 					
 					opts := []asynq.Option{
@@ -190,7 +211,7 @@ func (t *OrderTracker) checkOrderStatus() {
 					err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 						RecipientID: orderDelivery.BuyerID,
 						Title:       fmt.Sprintf("Đơn hàng #%s đã được giao thành công", orderDelivery.OrderCode),
-						Message:     fmt.Sprintf("Đơn hàng #%s đã được giao thành công. Cảm ơn bạn đã mua sắm tại nền tảng của chúng tôi!", orderDelivery.OrderCode),
+						Message:     fmt.Sprintf("Đơn hàng #%s đã được giao thành công. Vui lòng kiểm tra và xác nhận đã nhận được hàng trong mục Đơn mua.", orderDelivery.OrderCode),
 						Type:        "order",
 						ReferenceID: orderDelivery.OrderCode,
 					}, opts...)
@@ -203,7 +224,7 @@ func (t *OrderTracker) checkOrderStatus() {
 					err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 						RecipientID: orderDelivery.SellerID,
 						Title:       fmt.Sprintf("Đơn hàng #%s đã được giao thành công", orderDelivery.OrderCode),
-						Message:     fmt.Sprintf("Đơn hàng #%s đã được giao thành công cho người mua.", orderDelivery.OrderCode),
+						Message:     fmt.Sprintf("Đơn hàng #%s đã được giao thành công cho người mua. Số tiền %s VND sẽ được cộng vào số dư khả dụng của bạn sau khi người mua xác nhận đã nhận được hàng.", orderDelivery.OrderCode, util.FormatVND(orderDelivery.ItemsSubtotal)),
 						Type:        "order",
 						ReferenceID: orderDelivery.OrderCode,
 					}, opts...)

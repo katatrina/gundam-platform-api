@@ -27,19 +27,22 @@ WHERE id = sqlc.arg('id') RETURNING *;
 -- name: GetActiveOrderDeliveries :many
 SELECT od.id,
        o.id AS order_id,
-       od.delivery_tracking_code,
-       od.expected_delivery_time,
+       o.code AS order_code,
+       o.buyer_id,
+       o.seller_id,
+       o.items_subtotal,
        od.status,
        od.overall_status,
        od.from_delivery_id,
        od.to_delivery_id,
+       od.delivery_tracking_code,
+       od.expected_delivery_time,
        od.created_at,
-       od.updated_at,
-       o.code AS order_code,
-       o.buyer_id,
-       o.seller_id
+       od.updated_at
 FROM order_deliveries od
          JOIN orders o ON od.order_id = o.id::text
-WHERE od.overall_status IN ('picking', 'delivering', 'return')
+WHERE od.overall_status IN ('picking', 'delivering')
   AND od.delivery_tracking_code IS NOT NULL
-ORDER BY od.created_at DESC;
+  AND od.updated_at > NOW() - INTERVAL '30 days'
+ORDER BY od.created_at DESC
+LIMIT 100;
