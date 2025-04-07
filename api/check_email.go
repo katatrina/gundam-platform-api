@@ -19,7 +19,7 @@ type checkEmailRequest struct {
 //	@Produce		json
 //	@Param			request	body		checkEmailRequest	true	"Check email request"
 //	@Success		200		{object}	map[string]bool
-//	@Router			/check-email [get]
+//	@Router			/check-email [post]
 func (server *Server) checkEmailExists(ctx *gin.Context) {
 	var req checkEmailRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

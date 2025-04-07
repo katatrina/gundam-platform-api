@@ -220,7 +220,7 @@ const docTemplate = `{
             }
         },
         "/check-email": {
-            "get": {
+            "post": {
                 "description": "Checks if an email already exists in the database",
                 "consumes": [
                     "application/json"
@@ -2792,9 +2792,9 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "created_at",
+                "delivery_tracking_code",
                 "expected_delivery_time",
                 "from_delivery_id",
-                "ghn_order_code",
                 "id",
                 "order_id",
                 "overall_status",
@@ -2806,14 +2806,14 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "delivery_tracking_code": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
                 "expected_delivery_time": {
                     "type": "string"
                 },
                 "from_delivery_id": {
                     "type": "integer"
-                },
-                "ghn_order_code": {
-                    "$ref": "#/definitions/pgtype.Text"
                 },
                 "id": {
                     "type": "integer"

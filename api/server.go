@@ -66,10 +66,6 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 	zalopayService := zalopay.NewZalopayService(store, config)
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
-	// Create a new GHN service
-	// ghnService := delivery.NewGHNService(config.GHNToken, config.GHNShopID)
-	// log.Info().Msg("GHN service created successfully ✅")
-	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -191,7 +187,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		otpGroup.POST("/email/verify", server.verifyEmailOTP)
 	}
 	
-	v1.GET("/check-email", server.checkEmailExists)
+	v1.POST("/check-email", server.checkEmailExists)
 	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	

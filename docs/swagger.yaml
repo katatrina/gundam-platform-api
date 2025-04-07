@@ -676,12 +676,12 @@ definitions:
     properties:
       created_at:
         type: string
+      delivery_tracking_code:
+        $ref: '#/definitions/pgtype.Text'
       expected_delivery_time:
         type: string
       from_delivery_id:
         type: integer
-      ghn_order_code:
-        $ref: '#/definitions/pgtype.Text'
       id:
         type: integer
       order_id:
@@ -696,9 +696,9 @@ definitions:
         type: string
     required:
     - created_at
+    - delivery_tracking_code
     - expected_delivery_time
     - from_delivery_id
-    - ghn_order_code
     - id
     - order_id
     - overall_status
@@ -1226,7 +1226,7 @@ paths:
       tags:
       - cart
   /check-email:
-    get:
+    post:
       consumes:
       - application/json
       description: Checks if an email already exists in the database
