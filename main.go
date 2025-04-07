@@ -11,7 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/mailer"
+	ordertracking "github.com/katatrina/gundam-BE/internal/order_tracking"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/redis/go-redis/v9"
@@ -95,12 +97,27 @@ func main() {
 	
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
 	
+	// Tạo GHN service
+	ghnService := delivery.NewGHNService(appConfig.GHNToken, appConfig.GHNShopID)
+	
+	// Khởi tạo và chạy OrderTracker
+	orderTracker, err := ordertracking.NewOrderTracker(store, ghnService, taskDistributor)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create order tracker 😣")
+	}
+	
+	err = orderTracker.Start()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start order tracker 😣")
+	}
+	log.Info().Msg("order tracking service started ✅")
+	
 	go runRedisTaskProcessor(redisOpt, store, firebaseApp)
-	runHTTPServer(&appConfig, store, redisDb, taskDistributor, mailService)
+	runHTTPServer(&appConfig, store, redisDb, taskDistributor, mailService, ghnService)
 }
 
-func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, mailer *mailer.GmailSender) {
-	server, err := api.NewServer(store, redisDb, taskDistributor, appConfig, mailer)
+func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) {
+	server, err := api.NewServer(store, redisDb, taskDistributor, appConfig, mailer, deliveryService)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
@@ -160,5 +177,5 @@ func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, fireba
 		log.Fatal().Err(err).Msg("failed to start task processor 😣")
 	}
 	
-	log.Info().Msg("task processor started 😎")
+	log.Info().Msg("task processor started ✅")
 }

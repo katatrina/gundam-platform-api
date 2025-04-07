@@ -273,7 +273,7 @@ CREATE TABLE "order_deliveries"
 (
     "id"                     bigserial PRIMARY KEY,
     "order_id"               text        NOT NULL,
-    "ghn_order_code"         text,
+    "delivery_tracking_code" text,
     "expected_delivery_time" timestamptz NOT NULL,
     "status"                 text,
     "overall_status"         delivery_overral_status,

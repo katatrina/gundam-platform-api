@@ -49,5 +49,6 @@ WHERE id = $1;
 -- name: UpdateOrder :one
 UPDATE orders
 SET is_packaged      = COALESCE(sqlc.narg('is_packaged'), is_packaged),
-    packaging_images = COALESCE(sqlc.narg('packaging_images'), packaging_images)
+    packaging_images = COALESCE(sqlc.narg('packaging_images'), packaging_images),
+    status           = COALESCE(sqlc.narg('status'), status)
 WHERE id = sqlc.arg('order_id') RETURNING *;

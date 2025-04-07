@@ -544,7 +544,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 		Title:       fmt.Sprintf("Đơn hàng #%s đã được đóng gói", result.Order.Code),
 		Message: fmt.Sprintf("Đơn hàng #%s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
 			result.Order.Code,
-			result.OrderDelivery.GhnOrderCode,
+			result.OrderDelivery.DeliveryTrackingCode,
 			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
 		Type:        "order",
 		ReferenceID: result.Order.Code,

@@ -29,7 +29,6 @@ type Server struct {
 	tokenMaker             token.Maker
 	config                 *util.Config
 	googleIDTokenValidator *idtoken.Validator
-	redisDb                *redis.Client
 	phoneNumberService     *phone_number.PhoneNumberService
 	mailService            *mailer.GmailSender
 	taskDistributor        *worker.RedisTaskDistributor
@@ -38,7 +37,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, config *util.Config, mailer *mailer.GmailSender) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -68,8 +67,8 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
 	// Create a new GHN service
-	ghnService := delivery.NewGHNService(config.GHNToken, config.GHNShopID)
-	log.Info().Msg("GHN service created successfully ✅")
+	// ghnService := delivery.NewGHNService(config.GHNToken, config.GHNShopID)
+	// log.Info().Msg("GHN service created successfully ✅")
 	
 	server := &Server{
 		dbStore:                store,
@@ -78,11 +77,10 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 		googleIDTokenValidator: googleIDTokenValidator,
 		fileStore:              fileStore,
 		phoneNumberService:     phoneNumberService,
-		redisDb:                redisDb,
 		mailService:            mailer,
 		taskDistributor:        taskDistributor,
 		zalopayService:         zalopayService,
-		deliveryService:        ghnService,
+		deliveryService:        deliveryService,
 	}
 	
 	server.setupRouter()

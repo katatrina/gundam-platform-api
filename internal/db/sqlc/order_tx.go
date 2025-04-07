@@ -457,7 +457,7 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 		// 6. Cập nhật thông tin giao hàng với mã đơn GHN
 		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
 			ID: orderDelivery.ID,
-			GhnOrderCode: pgtype.Text{
+			DeliveryTrackingCode: pgtype.Text{
 				String: ghnResponse.Data.OrderCode,
 				Valid:  true,
 			},

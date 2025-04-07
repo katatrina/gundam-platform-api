@@ -9,23 +9,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOrderDelivery = `-- name: CreateOrderDelivery :one
 INSERT INTO order_deliveries (order_id,
-                              ghn_order_code,
+                              delivery_tracking_code,
                               expected_delivery_time,
                               status,
                               overall_status,
                               from_delivery_id,
                               to_delivery_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, delivery_tracking_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 `
 
 type CreateOrderDeliveryParams struct {
 	OrderID              string                    `json:"order_id"`
-	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
+	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
@@ -36,7 +37,7 @@ type CreateOrderDeliveryParams struct {
 func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDeliveryParams) (OrderDelivery, error) {
 	row := q.db.QueryRow(ctx, createOrderDelivery,
 		arg.OrderID,
-		arg.GhnOrderCode,
+		arg.DeliveryTrackingCode,
 		arg.ExpectedDeliveryTime,
 		arg.Status,
 		arg.OverallStatus,
@@ -47,7 +48,7 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.GhnOrderCode,
+		&i.DeliveryTrackingCode,
 		&i.ExpectedDeliveryTime,
 		&i.Status,
 		&i.OverallStatus,
@@ -59,8 +60,78 @@ func (q *Queries) CreateOrderDelivery(ctx context.Context, arg CreateOrderDelive
 	return i, err
 }
 
+const getActiveOrderDeliveries = `-- name: GetActiveOrderDeliveries :many
+SELECT od.id,
+       o.id AS order_id,
+       od.delivery_tracking_code,
+       od.expected_delivery_time,
+       od.status,
+       od.overall_status,
+       od.from_delivery_id,
+       od.to_delivery_id,
+       od.created_at,
+       od.updated_at,
+       o.code AS order_code,
+       o.buyer_id,
+       o.seller_id
+FROM order_deliveries od
+         JOIN orders o ON od.order_id = o.id::text
+WHERE od.overall_status IN ('picking', 'delivering', 'return')
+  AND od.delivery_tracking_code IS NOT NULL
+`
+
+type GetActiveOrderDeliveriesRow struct {
+	ID                   int64                     `json:"id"`
+	OrderID              uuid.UUID                 `json:"order_id"`
+	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
+	Status               pgtype.Text               `json:"status"`
+	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
+	FromDeliveryID       int64                     `json:"from_delivery_id"`
+	ToDeliveryID         int64                     `json:"to_delivery_id"`
+	CreatedAt            time.Time                 `json:"created_at"`
+	UpdatedAt            time.Time                 `json:"updated_at"`
+	OrderCode            string                    `json:"order_code"`
+	BuyerID              string                    `json:"buyer_id"`
+	SellerID             string                    `json:"seller_id"`
+}
+
+func (q *Queries) GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error) {
+	rows, err := q.db.Query(ctx, getActiveOrderDeliveries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetActiveOrderDeliveriesRow{}
+	for rows.Next() {
+		var i GetActiveOrderDeliveriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.DeliveryTrackingCode,
+			&i.ExpectedDeliveryTime,
+			&i.Status,
+			&i.OverallStatus,
+			&i.FromDeliveryID,
+			&i.ToDeliveryID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OrderCode,
+			&i.BuyerID,
+			&i.SellerID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrderDelivery = `-- name: GetOrderDelivery :one
-SELECT id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+SELECT id, order_id, delivery_tracking_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 FROM order_deliveries
 WHERE order_id = $1
 `
@@ -71,7 +142,7 @@ func (q *Queries) GetOrderDelivery(ctx context.Context, orderID string) (OrderDe
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.GhnOrderCode,
+		&i.DeliveryTrackingCode,
 		&i.ExpectedDeliveryTime,
 		&i.Status,
 		&i.OverallStatus,
@@ -85,18 +156,18 @@ func (q *Queries) GetOrderDelivery(ctx context.Context, orderID string) (OrderDe
 
 const updateOrderDelivery = `-- name: UpdateOrderDelivery :one
 UPDATE order_deliveries
-SET ghn_order_code         = COALESCE($1, ghn_order_code),
+SET delivery_tracking_code = COALESCE($1, delivery_tracking_code),
     expected_delivery_time = COALESCE($2, expected_delivery_time),
     status                 = COALESCE($3, status),
     overall_status         = COALESCE($4, overall_status),
     from_delivery_id       = COALESCE($5, from_delivery_id),
     to_delivery_id         = COALESCE($6, to_delivery_id),
     updated_at             = now()
-WHERE id = $7 RETURNING id, order_id, ghn_order_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
+WHERE id = $7 RETURNING id, order_id, delivery_tracking_code, expected_delivery_time, status, overall_status, from_delivery_id, to_delivery_id, created_at, updated_at
 `
 
 type UpdateOrderDeliveryParams struct {
-	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
+	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime pgtype.Timestamptz        `json:"expected_delivery_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
@@ -107,7 +178,7 @@ type UpdateOrderDeliveryParams struct {
 
 func (q *Queries) UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error) {
 	row := q.db.QueryRow(ctx, updateOrderDelivery,
-		arg.GhnOrderCode,
+		arg.DeliveryTrackingCode,
 		arg.ExpectedDeliveryTime,
 		arg.Status,
 		arg.OverallStatus,
@@ -119,7 +190,7 @@ func (q *Queries) UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDelive
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
-		&i.GhnOrderCode,
+		&i.DeliveryTrackingCode,
 		&i.ExpectedDeliveryTime,
 		&i.Status,
 		&i.OverallStatus,

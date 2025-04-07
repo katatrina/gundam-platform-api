@@ -726,7 +726,7 @@ type Order struct {
 type OrderDelivery struct {
 	ID                   int64                     `json:"id"`
 	OrderID              string                    `json:"order_id"`
-	GhnOrderCode         pgtype.Text               `json:"ghn_order_code"`
+	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	Status               pgtype.Text               `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`

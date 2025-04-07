@@ -214,18 +214,25 @@ func (q *Queries) ListOrdersByUserID(ctx context.Context, buyerID string) ([]Ord
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
 SET is_packaged      = COALESCE($1, is_packaged),
-    packaging_images = COALESCE($2, packaging_images)
-WHERE id = $3 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+    packaging_images = COALESCE($2, packaging_images),
+    status           = COALESCE($3, status)
+WHERE id = $4 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 `
 
 type UpdateOrderParams struct {
-	IsPackaged      pgtype.Bool `json:"is_packaged"`
-	PackagingImages []string    `json:"packaging_images"`
-	OrderID         uuid.UUID   `json:"order_id"`
+	IsPackaged      pgtype.Bool     `json:"is_packaged"`
+	PackagingImages []string        `json:"packaging_images"`
+	Status          NullOrderStatus `json:"status"`
+	OrderID         uuid.UUID       `json:"order_id"`
 }
 
 func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
-	row := q.db.QueryRow(ctx, updateOrder, arg.IsPackaged, arg.PackagingImages, arg.OrderID)
+	row := q.db.QueryRow(ctx, updateOrder,
+		arg.IsPackaged,
+		arg.PackagingImages,
+		arg.Status,
+		arg.OrderID,
+	)
 	var i Order
 	err := row.Scan(
 		&i.ID,
