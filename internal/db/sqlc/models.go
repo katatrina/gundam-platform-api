@@ -663,23 +663,22 @@ type DeliveryInformation struct {
 }
 
 type Gundam struct {
-	ID                   int64              `json:"id"`
-	OwnerID              string             `json:"owner_id"`
-	Name                 string             `json:"name"`
-	Slug                 string             `json:"slug"`
-	GradeID              int64              `json:"grade_id"`
-	Quantity             int64              `json:"quantity"`
-	Condition            GundamCondition    `json:"condition"`
-	ConditionDescription pgtype.Text        `json:"condition_description"`
-	Manufacturer         string             `json:"manufacturer"`
-	Weight               int64              `json:"weight"`
-	Scale                GundamScale        `json:"scale"`
-	Description          string             `json:"description"`
-	Price                int64              `json:"price"`
-	Status               GundamStatus       `json:"status"`
-	CreatedAt            time.Time          `json:"created_at"`
-	UpdatedAt            time.Time          `json:"updated_at"`
-	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
+	ID                   int64           `json:"id"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	GradeID              int64           `json:"grade_id"`
+	Quantity             int64           `json:"quantity"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription pgtype.Text     `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Weight               int64           `json:"weight"`
+	Scale                GundamScale     `json:"scale"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
+	Status               GundamStatus    `json:"status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
 }
 
 type GundamAccessory struct {
@@ -796,18 +795,19 @@ type SubscriptionPlan struct {
 }
 
 type User struct {
-	ID                  string      `json:"id"`
-	GoogleAccountID     pgtype.Text `json:"google_account_id"`
-	FullName            string      `extensions:"x-nullable" json:"full_name"`
-	HashedPassword      pgtype.Text `json:"-"`
-	Email               string      `json:"email"`
-	EmailVerified       bool        `json:"email_verified"`
-	PhoneNumber         pgtype.Text `extensions:"x-nullable" json:"phone_number"`
-	PhoneNumberVerified bool        `json:"phone_number_verified"`
-	Role                UserRole    `json:"role"`
-	AvatarUrl           pgtype.Text `extensions:"x-nullable" json:"avatar_url"`
-	CreatedAt           time.Time   `json:"created_at"`
-	UpdatedAt           time.Time   `json:"updated_at"`
+	ID                  string             `json:"id"`
+	GoogleAccountID     pgtype.Text        `json:"google_account_id"`
+	FullName            string             `extensions:"x-nullable" json:"full_name"`
+	HashedPassword      pgtype.Text        `json:"-"`
+	Email               string             `json:"email"`
+	EmailVerified       bool               `json:"email_verified"`
+	PhoneNumber         pgtype.Text        `extensions:"x-nullable" json:"phone_number"`
+	PhoneNumberVerified bool               `json:"phone_number_verified"`
+	Role                UserRole           `json:"role"`
+	AvatarUrl           pgtype.Text        `extensions:"x-nullable" json:"avatar_url"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type UserAddress struct {

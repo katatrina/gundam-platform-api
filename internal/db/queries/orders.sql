@@ -1,7 +1,7 @@
 -- name: ValidateGundamBeforeCheckout :one
 SELECT sqlc.embed(g),
        CASE
-           WHEN g.id IS NOT NULL AND g.status = 'published' AND g.deleted_at IS NULL
+           WHEN g.id IS NOT NULL AND g.status = 'published'
                THEN true
            ELSE false
            END as valid

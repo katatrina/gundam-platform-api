@@ -48,6 +48,29 @@ func (q *Queries) CreateOrderTransaction(ctx context.Context, arg CreateOrderTra
 	return i, err
 }
 
+const getOrderTransactionByOrderID = `-- name: GetOrderTransactionByOrderID :one
+SELECT id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
+FROM order_transactions
+WHERE order_id = $1
+`
+
+func (q *Queries) GetOrderTransactionByOrderID(ctx context.Context, orderID string) (OrderTransaction, error) {
+	row := q.db.QueryRow(ctx, getOrderTransactionByOrderID, orderID)
+	var i OrderTransaction
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.Amount,
+		&i.Status,
+		&i.BuyerEntryID,
+		&i.SellerEntryID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const updateOrderTransaction = `-- name: UpdateOrderTransaction :one
 UPDATE order_transactions
 SET amount          = COALESCE($1, amount),

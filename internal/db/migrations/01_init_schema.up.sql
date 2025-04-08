@@ -113,7 +113,8 @@ CREATE TABLE "users"
     "role"                  user_role   NOT NULL DEFAULT 'member',
     "avatar_url"            text,
     "created_at"            timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"            timestamptz NOT NULL DEFAULT (now())
+    "updated_at"            timestamptz NOT NULL DEFAULT (now()),
+    "deleted_at"            timestamptz
 );
 
 CREATE TABLE "user_addresses"
@@ -151,8 +152,7 @@ CREATE TABLE "gundams"
     "price"                 bigint           NOT NULL,
     "status"                gundam_status    NOT NULL DEFAULT 'in store',
     "created_at"            timestamptz      NOT NULL DEFAULT (now()),
-    "updated_at"            timestamptz      NOT NULL DEFAULT (now()),
-    "deleted_at"            timestamptz
+    "updated_at"            timestamptz      NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "gundam_accessories"
@@ -365,25 +365,25 @@ ALTER TABLE "gundams"
     ADD FOREIGN KEY ("grade_id") REFERENCES "gundam_grades" ("id");
 
 ALTER TABLE "gundam_accessories"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "gundam_images"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "carts"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "cart_items"
-    ADD FOREIGN KEY ("cart_id") REFERENCES "carts" ("id");
+    ADD FOREIGN KEY ("cart_id") REFERENCES "carts" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "cart_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "seller_subscriptions"
-    ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id");
+    ADD FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("id");
 
 ALTER TABLE "seller_subscriptions"
-    ADD FOREIGN KEY ("plan_id") REFERENCES "subscription_plans" ("id");
+    ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "orders"
     ADD FOREIGN KEY ("buyer_id") REFERENCES "users" ("id");
@@ -392,16 +392,13 @@ ALTER TABLE "orders"
     ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id");
 
 ALTER TABLE "order_items"
-    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "order_items"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "delivery_information"
-    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
-
-ALTER TABLE "order_deliveries"
-    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "order_deliveries"
     ADD FOREIGN KEY ("from_delivery_id") REFERENCES "delivery_information" ("id");
@@ -409,20 +406,23 @@ ALTER TABLE "order_deliveries"
 ALTER TABLE "order_deliveries"
     ADD FOREIGN KEY ("to_delivery_id") REFERENCES "delivery_information" ("id");
 
+ALTER TABLE "order_deliveries"
+    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
+
 ALTER TABLE "wallets"
-    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "wallet_entries"
-    ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id");
-
-ALTER TABLE "order_transactions"
-    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+    ADD FOREIGN KEY ("wallet_id") REFERENCES "wallets" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "order_transactions"
     ADD FOREIGN KEY ("buyer_entry_id") REFERENCES "wallet_entries" ("id");
 
 ALTER TABLE "order_transactions"
     ADD FOREIGN KEY ("seller_entry_id") REFERENCES "wallet_entries" ("id");
+
+ALTER TABLE "order_transactions"
+    ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "payment_transactions"
     ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");

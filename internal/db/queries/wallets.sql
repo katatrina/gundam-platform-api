@@ -24,3 +24,10 @@ UPDATE wallets
 SET non_withdrawable_amount = non_withdrawable_amount + sqlc.arg(amount),
     updated_at              = NOW()
 WHERE id = sqlc.arg(wallet_id);
+
+-- name: TransferNonWithdrawableToBalance :one
+UPDATE wallets
+SET balance = balance + sqlc.arg(amount),
+    non_withdrawable_amount = non_withdrawable_amount - sqlc.arg(amount),
+    updated_at = now()
+WHERE id = sqlc.arg(wallet_id) RETURNING *;

@@ -481,3 +481,100 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 	
 	return result, err
 }
+
+type ConfirmOrderReceivedTxParams struct {
+	Order        *Order
+	OrderItems   []OrderItem
+	SellerEntry  *WalletEntry
+	SellerWallet *Wallet
+}
+
+type ConfirmOrderReceivedTxResult struct {
+	Order            Order            `json:"order"`
+	OrderTransaction OrderTransaction `json:"order_transaction"`
+	SellerWallet     Wallet           `json:"seller_wallet"`
+	SellerEntry      WalletEntry      `json:"seller_entry"`
+}
+
+func (store *SQLStore) ConfirmOrderReceivedTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error) {
+	var result ConfirmOrderReceivedTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Chuyển tiền từ non_withdrawable_amount sang balance của người bán
+		var err error
+		updatedWallet, err := qTx.TransferNonWithdrawableToBalance(ctx, TransferNonWithdrawableToBalanceParams{
+			Amount:   arg.Order.ItemsSubtotal,
+			WalletID: arg.SellerWallet.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to transfer non-withdrawable amount to balance: %w", err)
+		}
+		result.SellerWallet = updatedWallet
+		
+		// 2. Cập nhật trạng thái bút toán của người bán thành "completed"
+		sellerEntry, err := qTx.UpdateWalletEntryByID(ctx, UpdateWalletEntryByIDParams{
+			ID: arg.SellerEntry.ID,
+			Status: NullWalletEntryStatus{
+				WalletEntryStatus: WalletEntryStatusCompleted,
+				Valid:             true,
+			},
+			CompletedAt: pgtype.Timestamptz{
+				Time:  time.Now(),
+				Valid: true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update seller wallet entry status: %w", err)
+		}
+		result.SellerEntry = sellerEntry
+		
+		// 3. Cập nhật trạng thái giao dịch đơn hàng thành "completed"
+		updatedOrderTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
+			Status: NullOrderTransactionStatus{
+				OrderTransactionStatus: OrderTransactionStatusCompleted,
+				Valid:                  true,
+			},
+			OrderID: arg.Order.ID.String(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order transaction status: %w", err)
+		}
+		result.OrderTransaction = updatedOrderTransaction
+		
+		// 4. Chuyển quyền sở hữu các mặt hàng trong đơn hàng cho người mua,
+		// cũng như cập nhật trạng thái của chúng thành "in store"
+		for _, item := range arg.OrderItems {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: item.GundamID,
+				OwnerID: pgtype.Text{
+					String: arg.Order.BuyerID,
+					Valid:  true,
+				},
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusInstore,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam owner: %w", err)
+			}
+		}
+		
+		// 5. Cập nhật trạng thái đơn hàng thành "completed"
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			OrderID: arg.Order.ID,
+			Status: NullOrderStatus{
+				OrderStatus: OrderStatusCompleted,
+				Valid:       true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+		result.Order = updatedOrder
+		
+		return nil
+	})
+	
+	return result, err
+}

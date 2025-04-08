@@ -14,7 +14,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (hashed_password, full_name, email, email_verified, phone_number, phone_number_verified, role,
                    avatar_url)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -53,13 +53,14 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createUserWithGoogleAccount = `-- name: CreateUserWithGoogleAccount :one
 INSERT INTO users (google_account_id, full_name, email, email_verified, avatar_url)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5) RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 `
 
 type CreateUserWithGoogleAccountParams struct {
@@ -92,12 +93,13 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 FROM users
 WHERE email = $1
 `
@@ -118,12 +120,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 FROM users
 WHERE id = $1
 `
@@ -144,12 +147,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserByPhoneNumber = `-- name: GetUserByPhoneNumber :one
-SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+SELECT id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 FROM users
 WHERE phone_number = $1
 `
@@ -170,6 +174,7 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.T
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -182,7 +187,7 @@ SET full_name             = COALESCE($1, full_name),
     phone_number_verified = COALESCE($4, phone_number_verified),
     role                  = COALESCE($5, role),
     updated_at            = now()
-WHERE id = $6 RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at
+WHERE id = $6 RETURNING id, google_account_id, full_name, hashed_password, email, email_verified, phone_number, phone_number_verified, role, avatar_url, created_at, updated_at, deleted_at
 `
 
 type UpdateUserParams struct {
@@ -217,6 +222,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.AvatarUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

@@ -129,6 +129,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	{
 		orderGroup.POST("", server.createOrder)
 		orderGroup.GET("", server.listOrders)
+		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived)
 	}
 	
 	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))

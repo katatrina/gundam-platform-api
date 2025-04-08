@@ -7,10 +7,12 @@ import (
 	"time"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
@@ -281,4 +283,180 @@ func (server *Server) listOrders(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, orders)
+}
+
+func (server *Server) confirmOrderReceived(ctx *gin.Context) {
+	// Lấy buyerID từ token xác thực
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	buyerID := authPayload.Subject
+	
+	// Lấy orderID từ tham số URL
+	orderID, err := uuid.Parse(ctx.Param("orderID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin đơn hàng
+	order, err := server.dbStore.GetOrderByID(ctx, orderID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order ID %s not found", orderID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem người mua có quyền xác nhận đơn hàng không
+	if order.BuyerID != buyerID {
+		err = fmt.Errorf("order %s does not belong to user %s", order.Code, buyerID)
+		ctx.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra trạng thái đơn hàng
+	if order.Status != db.OrderStatusDelivered {
+		err = fmt.Errorf("order %s is not in delivered status", order.Code)
+		ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin giao dịch đơn hàng
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID.String())
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("transaction for order ID %s not found", orderID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order transaction by order ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem giao dịch đã có seller_entry_id chưa
+	if !orderTransaction.SellerEntryID.Valid {
+		err = fmt.Errorf("seller entry not found for order %s", order.Code)
+		ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Lấy bút toán của người bán
+	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, orderTransaction.SellerEntryID.Int64)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("seller entry not found for order %s", order.Code)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get wallet entry by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy ví của người bán
+	sellerWallet, err := server.dbStore.GetWalletForUpdate(ctx, order.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("wallet not found for seller %s", order.SellerID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get wallet for update")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin order items
+	orderItems, err := server.dbStore.GetOrderItems(ctx, order.ID.String())
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order items not found for order %s", order.Code)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order items")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin gundam
+	var gundams []db.Gundam
+	for _, item := range orderItems {
+		gundam, err := server.dbStore.GetGundamByID(ctx, item.GundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+				ctx.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			log.Err(err).Msg("failed to get gundam by ID")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if gundam.Status != db.GundamStatusProcessing {
+			err = fmt.Errorf("gundam ID %d is not in processing status", item.GundamID)
+			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+		
+		gundams = append(gundams, gundam)
+	}
+	
+	// Thực hiện transaction xác nhận đơn hàng đã nhận
+	result, err := server.dbStore.ConfirmOrderReceivedTx(ctx, db.ConfirmOrderReceivedTxParams{
+		Order:        &order,
+		OrderItems:   orderItems,
+		SellerEntry:  &sellerEntry,
+		SellerWallet: &sellerWallet,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to confirm order received")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// TODO: Hủy task "tự động xác nhận đơn hàng sau 7 ngày" vì người mua đã xác nhận đơn hàng
+	
+	// Gửi thông báo cho người mua và người bán
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Bạn đã xác nhận hoàn tất đơn hàng %s thành công.", result.Order.Code),
+		Message:     fmt.Sprintf("Mô hình Gundam đã được thêm vào bộ sưu tập của bạn."),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+	}
+	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.SellerID,
+		Title:       fmt.Sprintf("Đơn hàng #%s đã được người mua xác nhận hoàn tất.", result.Order.Code),
+		Message:     fmt.Sprintf("Quyền sở hữu mô hình Gundam đã được chuyển cho người mua. Số tiền khả dụng của bạn đã được cộng thêm %s.", util.FormatVND(result.SellerEntry.Amount)),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+	}
+	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
+	
+	ctx.JSON(http.StatusOK, result)
 }

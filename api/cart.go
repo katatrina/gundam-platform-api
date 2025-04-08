@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
@@ -46,11 +47,17 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 	// Check if Gundam exists
 	gundam, err := server.dbStore.GetGundamByID(ctx, req.GundamID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = errors.New("gundam not found")
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
 		log.Err(err).Msg("failed to get Gundam by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	if gundam.Status != db.GundamStatusPublished || gundam.DeletedAt.Valid == true {
+	if gundam.Status != db.GundamStatusPublished {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "this gundam has been deleted or is not being published"})
 		return
 	}

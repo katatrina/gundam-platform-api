@@ -130,7 +130,6 @@ FROM cart_items ci
                   AND gi.is_primary = true
 WHERE ci.cart_id = $1
   AND g.status = 'published'
-  AND g.deleted_at IS NULL
 `
 
 type ListCartItemsWithDetailsRow struct {

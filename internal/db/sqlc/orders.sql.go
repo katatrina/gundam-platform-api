@@ -256,9 +256,9 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 }
 
 const validateGundamBeforeCheckout = `-- name: ValidateGundamBeforeCheckout :one
-SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.status, g.created_at, g.updated_at, g.deleted_at,
+SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.status, g.created_at, g.updated_at,
        CASE
-           WHEN g.id IS NOT NULL AND g.status = 'published' AND g.deleted_at IS NULL
+           WHEN g.id IS NOT NULL AND g.status = 'published'
                THEN true
            ELSE false
            END as valid
@@ -292,7 +292,6 @@ func (q *Queries) ValidateGundamBeforeCheckout(ctx context.Context, id int64) (V
 		&i.Gundam.Status,
 		&i.Gundam.CreatedAt,
 		&i.Gundam.UpdatedAt,
-		&i.Gundam.DeletedAt,
 		&i.Valid,
 	)
 	return i, err

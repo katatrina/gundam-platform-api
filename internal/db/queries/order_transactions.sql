@@ -5,6 +5,11 @@ INSERT INTO order_transactions (order_id,
                                 buyer_entry_id)
 VALUES ($1, $2, $3, $4) RETURNING *;
 
+-- name: GetOrderTransactionByOrderID :one
+SELECT *
+FROM order_transactions
+WHERE order_id = sqlc.arg('order_id');
+
 -- name: UpdateOrderTransaction :one
 UPDATE order_transactions
 SET amount          = COALESCE(sqlc.narg('amount'), amount),

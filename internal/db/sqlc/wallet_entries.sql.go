@@ -57,3 +57,78 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 	)
 	return i, err
 }
+
+const getWalletEntryByID = `-- name: GetWalletEntryByID :one
+SELECT id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+FROM wallet_entries
+WHERE id = $1
+`
+
+func (q *Queries) GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error) {
+	row := q.db.QueryRow(ctx, getWalletEntryByID, id)
+	var i WalletEntry
+	err := row.Scan(
+		&i.ID,
+		&i.WalletID,
+		&i.ReferenceID,
+		&i.ReferenceType,
+		&i.EntryType,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const updateWalletEntryByID = `-- name: UpdateWalletEntryByID :one
+UPDATE wallet_entries
+SET wallet_id        = COALESCE($1, wallet_id),
+    reference_id      = COALESCE($2, reference_id),
+    reference_type    = COALESCE($3, reference_type),
+    entry_type        = COALESCE($4, entry_type),
+    amount            = COALESCE($5, amount),
+    status            = COALESCE($6, status),
+    completed_at      = COALESCE($7, completed_at),
+    updated_at        = now()
+WHERE id = $8 RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+`
+
+type UpdateWalletEntryByIDParams struct {
+	WalletID      pgtype.Int8             `json:"wallet_id"`
+	ReferenceID   pgtype.Text             `json:"reference_id"`
+	ReferenceType NullWalletReferenceType `json:"reference_type"`
+	EntryType     NullWalletEntryType     `json:"entry_type"`
+	Amount        pgtype.Int8             `json:"amount"`
+	Status        NullWalletEntryStatus   `json:"status"`
+	CompletedAt   pgtype.Timestamptz      `json:"completed_at"`
+	ID            int64                   `json:"id"`
+}
+
+func (q *Queries) UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error) {
+	row := q.db.QueryRow(ctx, updateWalletEntryByID,
+		arg.WalletID,
+		arg.ReferenceID,
+		arg.ReferenceType,
+		arg.EntryType,
+		arg.Amount,
+		arg.Status,
+		arg.CompletedAt,
+		arg.ID,
+	)
+	var i WalletEntry
+	err := row.Scan(
+		&i.ID,
+		&i.WalletID,
+		&i.ReferenceID,
+		&i.ReferenceType,
+		&i.EntryType,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}

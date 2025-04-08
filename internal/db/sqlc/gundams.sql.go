@@ -42,7 +42,7 @@ INSERT INTO gundams (owner_id,
                      scale,
                      description,
                      price)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at
 `
 
 type CreateGundamParams struct {
@@ -91,7 +91,6 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -155,7 +154,7 @@ func (q *Queries) GetGundamAccessories(ctx context.Context, gundamID int64) ([]G
 }
 
 const getGundamByID = `-- name: GetGundamByID :one
-SELECT id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at, deleted_at
+SELECT id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at
 FROM gundams
 WHERE id = $1
 `
@@ -180,7 +179,6 @@ func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -393,17 +391,19 @@ func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageU
 
 const updateGundam = `-- name: UpdateGundam :exec
 UPDATE gundams
-SET status = coalesce($1, status),
+SET owner_id   = coalesce($1, owner_id),
+    status     = coalesce($2, status),
     updated_at = now()
-WHERE id = $2
+WHERE id = $3
 `
 
 type UpdateGundamParams struct {
-	Status NullGundamStatus `json:"status"`
-	ID     int64            `json:"id"`
+	OwnerID pgtype.Text      `json:"owner_id"`
+	Status  NullGundamStatus `json:"status"`
+	ID      int64            `json:"id"`
 }
 
 func (q *Queries) UpdateGundam(ctx context.Context, arg UpdateGundamParams) error {
-	_, err := q.db.Exec(ctx, updateGundam, arg.Status, arg.ID)
+	_, err := q.db.Exec(ctx, updateGundam, arg.OwnerID, arg.Status, arg.ID)
 	return err
 }
