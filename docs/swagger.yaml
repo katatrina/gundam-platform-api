@@ -818,6 +818,8 @@ definitions:
         x-nullable: true
       created_at:
         type: string
+      deleted_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
       email:
         type: string
       email_verified:
@@ -842,6 +844,7 @@ definitions:
     required:
     - avatar_url
     - created_at
+    - deleted_at
     - email
     - email_verified
     - full_name
@@ -1340,6 +1343,19 @@ paths:
       consumes:
       - application/json
       description: List all purchase orders of the normal user
+      parameters:
+      - description: Filter by order status
+        enum:
+        - pending
+        - packaging
+        - delivering
+        - delivered
+        - completed
+        - canceled
+        - failed
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -1990,7 +2006,7 @@ paths:
       summary: Create a new user
       tags:
       - authentication
-  /users/:id/wallet/:
+  /users/:id/wallet:
     get:
       consumes:
       - application/json

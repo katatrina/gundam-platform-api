@@ -19,7 +19,7 @@ import (
 //	@Failure		400	"Bad request"
 //	@Failure		404	"User not found"
 //	@Failure		500	"Internal server error"
-//	@Router			/users/:id/wallet/ [get]
+//	@Router			/users/:id/wallet [get]
 func (server *Server) getUserWallet(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {

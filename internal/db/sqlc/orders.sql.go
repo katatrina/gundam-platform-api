@@ -170,15 +170,21 @@ func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrder
 	return i, err
 }
 
-const listOrdersByUserID = `-- name: ListOrdersByUserID :many
+const listPurchaseOrders = `-- name: ListPurchaseOrders :many
 SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
 FROM orders
 WHERE buyer_id = $1
-ORDER BY created_at DESC
+  AND status = COALESCE($2::order_status, status)
+ORDER BY updated_at DESC, created_at DESC
 `
 
-func (q *Queries) ListOrdersByUserID(ctx context.Context, buyerID string) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersByUserID, buyerID)
+type ListPurchaseOrdersParams struct {
+	BuyerID string          `json:"buyer_id"`
+	Status  NullOrderStatus `json:"status"`
+}
+
+func (q *Queries) ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrdersParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listPurchaseOrders, arg.BuyerID, arg.Status)
 	if err != nil {
 		return nil, err
 	}

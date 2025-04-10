@@ -400,6 +400,23 @@ const docTemplate = `{
                     "orders"
                 ],
                 "summary": "List all purchase orders of the normal user",
+                "parameters": [
+                    {
+                        "enum": [
+                            "pending",
+                            "packaging",
+                            "delivering",
+                            "delivered",
+                            "completed",
+                            "canceled",
+                            "failed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by order status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of orders",
@@ -1370,7 +1387,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/:id/wallet/": {
+        "/users/:id/wallet": {
             "get": {
                 "security": [
                     {
@@ -2980,6 +2997,7 @@ const docTemplate = `{
             "required": [
                 "avatar_url",
                 "created_at",
+                "deleted_at",
                 "email",
                 "email_verified",
                 "full_name",
@@ -3001,6 +3019,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 },
                 "email": {
                     "type": "string"

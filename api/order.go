@@ -260,22 +260,54 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, result)
 }
 
+type listPurchaseOrdersRequest struct {
+	Status *string `form:"status"`
+}
+
+func (status *listPurchaseOrdersRequest) getStatus() string {
+	if status.Status != nil {
+		return *status.Status
+	}
+	
+	return ""
+}
+
 //	@Summary		List all purchase orders of the normal user
 //	@Description	List all purchase orders of the normal user
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Success		200	array	db.Order	"List of orders"
-//	@Failure		400	"Bad request"
-//	@Failure		500	"Internal server error"
+//	@Param			status	query	string		false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
+//	@Success		200		array	db.Order	"List of orders"
+//	@Failure		400		"Bad request"
+//	@Failure		500		"Internal server error"
 //	@Router			/orders [get]
-func (server *Server) listOrders(ctx *gin.Context) {
+func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 	// Lấy userID từ token xác thực
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	
+	var req listPurchaseOrdersRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	if req.Status != nil {
+		if err := util.IsOrderStatusValid(req.getStatus()); err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
 	// Thực hiện truy vấn để lấy danh sách đơn hàng
-	orders, err := server.dbStore.ListOrdersByUserID(ctx, userID)
+	orders, err := server.dbStore.ListPurchaseOrders(ctx, db.ListPurchaseOrdersParams{
+		BuyerID: userID,
+		Status: db.NullOrderStatus{
+			OrderStatus: db.OrderStatus(req.getStatus()),
+			Valid:       req.Status != nil,
+		},
+	})
 	if err != nil {
 		log.Err(err).Msg("failed to list orders")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))

@@ -528,6 +528,8 @@ func (store *SQLStore) ConfirmOrderReceivedTx(ctx context.Context, arg ConfirmOr
 		}
 		result.SellerEntry = sellerEntry
 		
+		// TODO: Cập nhật trạng thái các bút toán khác nếu giao dịch bao gồm nhiều loại bút toán
+		
 		// 3. Cập nhật trạng thái giao dịch đơn hàng thành "completed"
 		updatedOrderTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
 			Status: NullOrderTransactionStatus{

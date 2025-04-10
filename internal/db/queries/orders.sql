@@ -22,11 +22,12 @@ INSERT INTO orders (id,
                     note)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *;
 
--- name: ListOrdersByUserID :many
+-- name: ListPurchaseOrders :many
 SELECT *
 FROM orders
 WHERE buyer_id = $1
-ORDER BY created_at DESC;
+  AND status = COALESCE(sqlc.narg('status')::order_status, status)
+ORDER BY updated_at DESC, created_at DESC;
 
 -- name: GetSalesOrderBySellerID :one
 SELECT *

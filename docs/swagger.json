@@ -398,6 +398,23 @@
                     "orders"
                 ],
                 "summary": "List all purchase orders of the normal user",
+                "parameters": [
+                    {
+                        "enum": [
+                            "pending",
+                            "packaging",
+                            "delivering",
+                            "delivered",
+                            "completed",
+                            "canceled",
+                            "failed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by order status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of orders",
@@ -1368,7 +1385,7 @@
                 }
             }
         },
-        "/users/:id/wallet/": {
+        "/users/:id/wallet": {
             "get": {
                 "security": [
                     {
@@ -2978,6 +2995,7 @@
             "required": [
                 "avatar_url",
                 "created_at",
+                "deleted_at",
                 "email",
                 "email_verified",
                 "full_name",
@@ -2999,6 +3017,9 @@
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 },
                 "email": {
                     "type": "string"
