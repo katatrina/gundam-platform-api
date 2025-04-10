@@ -76,6 +76,7 @@ CREATE TYPE "wallet_reference_type" AS ENUM (
 CREATE TYPE "wallet_entry_status" AS ENUM (
   'pending',
   'completed',
+  'canceled',
   'failed'
 );
 

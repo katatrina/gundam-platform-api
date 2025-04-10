@@ -47,6 +47,55 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 	return i, err
 }
 
+const getGundamsByOrderItems = `-- name: GetGundamsByOrderItems :many
+SELECT oi.quantity,
+       oi.price,
+       oi.weight,
+       g.name,
+       gg.display_name AS grade,
+       g.scale
+FROM order_items oi
+         JOIN gundams g ON oi.gundam_id = g.id
+         JOIN gundam_grades gg ON g.grade_id = gg.id
+WHERE oi.order_id = $1
+`
+
+type GetGundamsByOrderItemsRow struct {
+	Quantity int64       `json:"quantity"`
+	Price    int64       `json:"price"`
+	Weight   int64       `json:"weight"`
+	Name     string      `json:"name"`
+	Grade    string      `json:"grade"`
+	Scale    GundamScale `json:"scale"`
+}
+
+func (q *Queries) GetGundamsByOrderItems(ctx context.Context, orderID string) ([]GetGundamsByOrderItemsRow, error) {
+	rows, err := q.db.Query(ctx, getGundamsByOrderItems, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetGundamsByOrderItemsRow{}
+	for rows.Next() {
+		var i GetGundamsByOrderItemsRow
+		if err := rows.Scan(
+			&i.Quantity,
+			&i.Price,
+			&i.Weight,
+			&i.Name,
+			&i.Grade,
+			&i.Scale,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrderItems = `-- name: GetOrderItems :many
 SELECT id, order_id, gundam_id, quantity, price, weight, created_at
 FROM order_items

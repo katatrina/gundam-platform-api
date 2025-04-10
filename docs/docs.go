@@ -419,11 +419,11 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of orders",
+                        "description": "Successfully retrieved list of purchase orders",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Order"
+                                "$ref": "#/definitions/api.OrderInfo"
                             }
                         }
                     },
@@ -499,6 +499,56 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/gin.H"
                         }
+                    }
+                }
+            }
+        },
+        "/orders/{orderID}": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get details of a specific order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Get order details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "123e4567-e89b-12d3-a456-426614174000",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order details",
+                        "schema": {
+                            "$ref": "#/definitions/db.Order"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "403": {
+                        "description": "Forbidden - User does not have permission to access this order"
+                    },
+                    "404": {
+                        "description": "Not Found - Order not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -1964,6 +2014,24 @@ const docTemplate = `{
                 }
             }
         },
+        "api.OrderInfo": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_items"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GetGundamsByOrderItemsRow"
+                    }
+                }
+            }
+        },
         "api.VerifyEmailOTPRequest": {
             "type": "object",
             "required": [
@@ -2508,6 +2576,37 @@ const docTemplate = `{
                 "DeliveryOverralStatusFailed",
                 "DeliveryOverralStatusReturn"
             ]
+        },
+        "db.GetGundamsByOrderItemsRow": {
+            "type": "object",
+            "required": [
+                "grade",
+                "name",
+                "price",
+                "quantity",
+                "scale",
+                "weight"
+            ],
+            "properties": {
+                "grade": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "$ref": "#/definitions/db.GundamScale"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
         },
         "db.GundamAccessory": {
             "type": "object",
@@ -3223,11 +3322,13 @@ const docTemplate = `{
             "enum": [
                 "pending",
                 "completed",
+                "canceled",
                 "failed"
             ],
             "x-enum-varnames": [
                 "WalletEntryStatusPending",
                 "WalletEntryStatusCompleted",
+                "WalletEntryStatusCanceled",
                 "WalletEntryStatusFailed"
             ]
         },

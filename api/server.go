@@ -129,7 +129,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	{
 		orderGroup.POST("", server.createOrder)
 		orderGroup.GET("", server.listPurchaseOrders)
-		// orderGroup.GET(":orderID", server.getOrder)
+		orderGroup.GET(":orderID", server.getOrderDetails)
 		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived)
 	}
 	

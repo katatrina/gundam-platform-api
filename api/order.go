@@ -272,6 +272,11 @@ func (status *listPurchaseOrdersRequest) getStatus() string {
 	return ""
 }
 
+type OrderInfo struct {
+	Order      db.Order                       `json:"order"`
+	OrderItems []db.GetGundamsByOrderItemsRow `json:"order_items"`
+}
+
 //	@Summary		List all purchase orders of the normal user
 //	@Description	List all purchase orders of the normal user
 //	@Tags			orders
@@ -279,7 +284,7 @@ func (status *listPurchaseOrdersRequest) getStatus() string {
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			status	query	string		false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
-//	@Success		200		array	db.Order	"List of orders"
+//	@Success		200		array	OrderInfo	"Successfully retrieved list of purchase orders"
 //	@Failure		400		"Bad request"
 //	@Failure		500		"Internal server error"
 //	@Router			/orders [get]
@@ -288,6 +293,7 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	
 	var req listPurchaseOrdersRequest
+	var resp []OrderInfo
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -313,8 +319,22 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	// Duyệt qua từng đơn hàng để lấy thông tin chi tiết
+	for _, order := range orders {
+		var orderDetail OrderInfo
+		orderItems, err := server.dbStore.GetGundamsByOrderItems(ctx, order.ID.String())
+		if err != nil {
+			log.Err(err).Msg("failed to get order items")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		orderDetail.Order = order
+		orderDetail.OrderItems = orderItems
+		resp = append(resp, orderDetail)
+	}
 	
-	ctx.JSON(http.StatusOK, orders)
+	ctx.JSON(http.StatusOK, resp)
 }
 
 func (server *Server) confirmOrderReceived(ctx *gin.Context) {
@@ -491,4 +511,63 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
 	
 	ctx.JSON(http.StatusOK, result)
+}
+
+type getOrderDetailsResponse struct {
+	Order db.Order `json:"order"`
+}
+
+//	@Summary		Get order details
+//	@Description	Get details of a specific order
+//	@Tags			orders
+//	@Accept			json
+//	@Produce		json
+//	@Param			orderID	path		string		true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.Order	"Order details"
+//	@Failure		400		"Bad request"
+//	@Failure		404		"Not Found - Order not found"
+//	@Failure		403		"Forbidden - User does not have permission to access this order"
+//	@Failure		500		"Internal server error"
+//	@Security		accessToken
+//	@Router			/orders/{orderID} [get]
+func (server *Server) getOrderDetails(c *gin.Context) {
+	// Lấy userID từ token xác thực
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	var resp getOrderDetailsResponse
+	
+	// Lấy orderID từ tham số URL
+	orderID, err := uuid.Parse(c.Param("orderID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin đơn hàng
+	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order ID %s not found", orderID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem người dùng có quyền truy cập đơn hàng không
+	if userID != order.BuyerID {
+		err = fmt.Errorf("orderID %s does not belong to user %s", order.ID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	resp.Order = order
+	
+	// server.dbStore.GetOrderItems()
+	
+	c.JSON(http.StatusOK, order)
 }

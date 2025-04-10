@@ -497,6 +497,7 @@ type WalletEntryStatus string
 const (
 	WalletEntryStatusPending   WalletEntryStatus = "pending"
 	WalletEntryStatusCompleted WalletEntryStatus = "completed"
+	WalletEntryStatusCanceled  WalletEntryStatus = "canceled"
 	WalletEntryStatusFailed    WalletEntryStatus = "failed"
 )
 

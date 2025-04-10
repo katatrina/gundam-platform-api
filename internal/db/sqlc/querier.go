@@ -40,6 +40,7 @@ type Querier interface {
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
+	GetGundamsByOrderItems(ctx context.Context, orderID string) ([]GetGundamsByOrderItemsRow, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error)
