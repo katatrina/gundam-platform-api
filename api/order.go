@@ -513,8 +513,13 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-type getOrderDetailsResponse struct {
-	Order db.Order `json:"order"`
+type OrderDetail struct {
+	Order            db.Order                       `json:"order"`
+	OrderItems       []db.GetGundamsByOrderItemsRow `json:"order_items"`
+	OrderDelivery    db.OrderDelivery               `json:"order_delivery"`
+	DeliveryAddress  db.DeliveryInformation         `json:"to_delivery_address"`
+	SellerInfo       db.User                        `json:"seller_info"`
+	OrderTransaction db.OrderTransaction            `json:"order_transaction"`
 }
 
 //	@Summary		Get order details
@@ -523,7 +528,7 @@ type getOrderDetailsResponse struct {
 //	@Accept			json
 //	@Produce		json
 //	@Param			orderID	path		string		true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	db.Order	"Order details"
+//	@Success		200		{object}	OrderDetail	"Successfully retrieved order details"
 //	@Failure		400		"Bad request"
 //	@Failure		404		"Not Found - Order not found"
 //	@Failure		403		"Forbidden - User does not have permission to access this order"
@@ -535,7 +540,7 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	var resp getOrderDetailsResponse
+	var resp OrderDetail
 	
 	// Lấy orderID từ tham số URL
 	orderID, err := uuid.Parse(c.Param("orderID"))
@@ -567,7 +572,70 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	
 	resp.Order = order
 	
-	// server.dbStore.GetOrderItems()
+	orderItems, err := server.dbStore.GetGundamsByOrderItems(c.Request.Context(), order.ID.String())
+	if err != nil {
+		log.Err(err).Msg("failed to get order items")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.OrderItems = orderItems
 	
-	c.JSON(http.StatusOK, order)
+	orderDelivery, err := server.dbStore.GetOrderDelivery(c.Request.Context(), order.ID.String())
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order delivery not found for order ID %s", order.ID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order delivery")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.OrderDelivery = orderDelivery
+	
+	sellerInfo, err := server.dbStore.GetUserByID(c.Request.Context(), order.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("seller ID %s not found", order.SellerID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get seller info")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.SellerInfo = sellerInfo
+	
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID.String())
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order transaction not found for order ID %s", order.ID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order transaction")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.OrderTransaction = orderTransaction
+	
+	// Lấy thông tin địa chỉ giao hàng
+	deliveryAddress, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get delivery address")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.DeliveryAddress = deliveryAddress
+	
+	c.JSON(http.StatusOK, resp)
 }

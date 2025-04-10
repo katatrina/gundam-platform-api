@@ -533,9 +533,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order details",
+                        "description": "Successfully retrieved order details",
                         "schema": {
-                            "$ref": "#/definitions/db.Order"
+                            "$ref": "#/definitions/api.OrderDetail"
                         }
                     },
                     "400": {
@@ -2014,6 +2014,40 @@ const docTemplate = `{
                 }
             }
         },
+        "api.OrderDetail": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_delivery",
+                "order_items",
+                "order_transaction",
+                "seller_info",
+                "to_delivery_address"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_delivery": {
+                    "$ref": "#/definitions/db.OrderDelivery"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GetGundamsByOrderItemsRow"
+                    }
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
+                },
+                "seller_info": {
+                    "$ref": "#/definitions/db.User"
+                },
+                "to_delivery_address": {
+                    "$ref": "#/definitions/db.DeliveryInformation"
+                }
+            }
+        },
         "api.OrderInfo": {
             "type": "object",
             "required": [
@@ -2557,6 +2591,57 @@ const docTemplate = `{
                 },
                 "order_transaction": {
                     "$ref": "#/definitions/db.OrderTransaction"
+                }
+            }
+        },
+        "db.DeliveryInformation": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "detail",
+                "district_name",
+                "full_name",
+                "ghn_district_id",
+                "ghn_ward_code",
+                "id",
+                "phone_number",
+                "province_name",
+                "user_id",
+                "ward_name"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "district_name": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "ghn_district_id": {
+                    "type": "integer"
+                },
+                "ghn_ward_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "province_name": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "ward_name": {
+                    "type": "string"
                 }
             }
         },
