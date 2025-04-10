@@ -433,6 +433,22 @@ definitions:
     - seller_id
     - seller_name
     type: object
+  db.ConfirmOrderReceivedTxResult:
+    properties:
+      order:
+        $ref: '#/definitions/db.Order'
+      order_transaction:
+        $ref: '#/definitions/db.OrderTransaction'
+      seller_entry:
+        $ref: '#/definitions/db.WalletEntry'
+      seller_wallet:
+        $ref: '#/definitions/db.Wallet'
+    required:
+    - order
+    - order_transaction
+    - seller_entry
+    - seller_wallet
+    type: object
   db.ConfirmOrderTxResult:
     properties:
       order:
@@ -1544,6 +1560,40 @@ paths:
       security:
       - accessToken: []
       summary: Get order details
+      tags:
+      - orders
+  /orders/{orderID}/received:
+    post:
+      consumes:
+      - application/json
+      description: Confirm that the buyer has received the order
+      parameters:
+      - description: Order ID
+        example: 123e4567-e89b-12d3-a456-426614174000
+        in: path
+        name: orderID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order received successfully
+          schema:
+            $ref: '#/definitions/db.ConfirmOrderReceivedTxResult'
+        "400":
+          description: Bad request
+        "403":
+          description: Forbidden - User does not have permission to confirm this order
+        "404":
+          description: Order not found
+        "422":
+          description: Unprocessable Entity - Order is not in delivered status
+        "500":
+          description: Internal server error
+      security:
+      - accessToken: []
+      summary: Confirm order received
       tags:
       - orders
   /otp/email/generate:

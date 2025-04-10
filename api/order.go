@@ -337,6 +337,20 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+//	@Summary		Confirm order received
+//	@Description	Confirm that the buyer has received the order
+//	@Tags			orders
+//	@Accept			json
+//	@Produce		json
+//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.ConfirmOrderReceivedTxResult	"Order received successfully"
+//	@Failure		400		"Bad request"
+//	@Failure		404		"Order not found"
+//	@Failure		403		"Forbidden - User does not have permission to confirm this order"
+//	@Failure		422		"Unprocessable Entity - Order is not in delivered status"
+//	@Failure		500		"Internal server error"
+//	@Security		accessToken
+//	@Router			/orders/{orderID}/received [post]
 func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	// Lấy buyerID từ token xác thực
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
