@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -26,6 +25,7 @@ type Querier interface {
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error)
 	CreateOrderTransaction(ctx context.Context, arg CreateOrderTransactionParams) (OrderTransaction, error)
 	CreatePaymentTransaction(ctx context.Context, arg CreatePaymentTransactionParams) (PaymentTransaction, error)
+	CreateSellerProfile(ctx context.Context, arg CreateSellerProfileParams) (SellerProfile, error)
 	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
@@ -37,33 +37,35 @@ type Querier interface {
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
+	GetGradeByID(ctx context.Context, id int64) (GundamGrade, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
-	GetGundamsByOrderItems(ctx context.Context, orderID string) ([]GetGundamsByOrderItemsRow, error)
+	GetGundamPrimaryImageURL(ctx context.Context, gundamID int64) (string, error)
+	GetGundamSecondaryImageURLs(ctx context.Context, gundamID int64) ([]string, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
-	GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error)
-	GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
-	GetOrderTransactionByOrderID(ctx context.Context, orderID string) (OrderTransaction, error)
+	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
+	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
 	GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error)
-	GetSellerByGundamID(ctx context.Context, id int64) (User, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
+	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
-	GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error)
+	GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error)
 	GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error)
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
-	ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error)
+	ListGundamsByUserID(ctx context.Context, arg ListGundamsByUserIDParams) ([]ListGundamsByUserIDRow, error)
 	ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error)
-	ListOrdersBySellerID(ctx context.Context, sellerID string) ([]Order, error)
+	ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error)
+	ListOrdersBySellerID(ctx context.Context, arg ListOrdersBySellerIDParams) ([]Order, error)
 	ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrdersParams) ([]Order, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
@@ -77,6 +79,7 @@ type Querier interface {
 	UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error)
 	UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error)
 	UpdatePaymentTransactionStatus(ctx context.Context, arg UpdatePaymentTransactionStatusParams) error
+	UpdateSellerProfileByID(ctx context.Context, arg UpdateSellerProfileByIDParams) (SellerProfile, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error)

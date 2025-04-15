@@ -2,8 +2,6 @@ package db
 
 import (
 	"context"
-	
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type HandleZalopayCallbackTxParams struct {
@@ -38,8 +36,8 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 			
 			// Cộng tiền vào ví người dùng
 			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
-				WalletID: wallet.ID,
-				Amount:   transaction.Amount,
+				UserID: wallet.UserID,
+				Amount: transaction.Amount,
 			})
 			if err != nil {
 				return err
@@ -47,11 +45,8 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 			
 			// Tạo bút toán nạp tiền vào ví
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
-				WalletID: wallet.ID,
-				ReferenceID: pgtype.Text{
-					String: transaction.ProviderTransactionID,
-					Valid:  true,
-				},
+				WalletID:      wallet.UserID,
+				ReferenceID:   &transaction.ProviderTransactionID,
 				ReferenceType: WalletReferenceTypeZalopay,
 				EntryType:     WalletEntryTypeDeposit,
 				Amount:        transaction.Amount,

@@ -123,14 +123,21 @@ func (server *Server) setupRouter() *gin.Engine {
 		userGroup.POST("become-seller", server.becomeSeller)
 		
 		userGroup.GET(":id/wallet", server.getUserWallet)
+		
+		userGundamGroup := userGroup.Group(":id/gundams")
+		{
+			userGundamGroup.POST("", server.createGundam)
+			userGundamGroup.GET("", server.listGundamsByUser)
+		}
 	}
 	
 	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))
 	{
 		orderGroup.POST("", server.createOrder)
 		orderGroup.GET("", server.listPurchaseOrders)
-		orderGroup.GET(":orderID", server.getOrderDetails)
+		orderGroup.GET(":orderID", server.getPurchaseOrderDetails)
 		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived)
+		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)
 	}
 	
 	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
@@ -143,13 +150,17 @@ func (server *Server) setupRouter() *gin.Engine {
 	
 	v1.GET("/grades", server.listGundamGrades)
 	
-	v1.GET("/sellers/:sellerID", server.getSeller)
-	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerOrAdminRole(server.dbStore))
+	sellerProfileGroup := v1.Group("/seller/profile")
+	{
+		sellerProfileGroup.POST("", server.createSellerProfile)
+		sellerProfileGroup.GET("", server.getSellerProfile)
+		sellerProfileGroup.PATCH("", server.updateSellerProfile)
+	}
+	
+	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerRole(server.dbStore))
 	{
 		gundamGroup := sellerGroup.Group("gundams")
 		{
-			gundamGroup.POST("", server.createGundam)
-			gundamGroup.GET("", server.listGundamsBySeller)
 			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)
 			gundamGroup.PATCH(":gundamID/unpublish", server.unpublishGundam)
 		}
@@ -161,10 +172,11 @@ func (server *Server) setupRouter() *gin.Engine {
 		
 		sellerOrderGroup := sellerGroup.Group("orders")
 		{
-			sellerOrderGroup.GET("", server.listOrdersBySeller)
+			sellerOrderGroup.GET("", server.listSalesOrders)
+			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)
 			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)
 			sellerOrderGroup.PATCH(":orderID/package", server.packageOrder)
-			// sellerOrderGroup.PATCH(":orderID/ship", server.shipOrder)
+			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller)
 		}
 	}
 	

@@ -8,7 +8,7 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createOrderTransaction = `-- name: CreateOrderTransaction :one
@@ -20,7 +20,7 @@ VALUES ($1, $2, $3, $4) RETURNING id, order_id, amount, status, buyer_entry_id, 
 `
 
 type CreateOrderTransactionParams struct {
-	OrderID      string                 `json:"order_id"`
+	OrderID      uuid.UUID              `json:"order_id"`
 	Amount       int64                  `json:"amount"`
 	Status       OrderTransactionStatus `json:"status"`
 	BuyerEntryID int64                  `json:"buyer_entry_id"`
@@ -54,7 +54,7 @@ FROM order_transactions
 WHERE order_id = $1
 `
 
-func (q *Queries) GetOrderTransactionByOrderID(ctx context.Context, orderID string) (OrderTransaction, error) {
+func (q *Queries) GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error) {
 	row := q.db.QueryRow(ctx, getOrderTransactionByOrderID, orderID)
 	var i OrderTransaction
 	err := row.Scan(
@@ -82,11 +82,11 @@ WHERE order_id = $5 RETURNING id, order_id, amount, status, buyer_entry_id, sell
 `
 
 type UpdateOrderTransactionParams struct {
-	Amount        pgtype.Int8                `json:"amount"`
+	Amount        *int64                     `json:"amount"`
 	Status        NullOrderTransactionStatus `json:"status"`
-	BuyerEntryID  pgtype.Int8                `json:"buyer_entry_id"`
-	SellerEntryID pgtype.Int8                `json:"seller_entry_id"`
-	OrderID       string                     `json:"order_id"`
+	BuyerEntryID  *int64                     `json:"buyer_entry_id"`
+	SellerEntryID *int64                     `json:"seller_entry_id"`
+	OrderID       uuid.UUID                  `json:"order_id"`
 }
 
 func (q *Queries) UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error) {

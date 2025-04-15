@@ -40,8 +40,9 @@ SELECT od.id,
        od.created_at,
        od.updated_at
 FROM order_deliveries od
-         JOIN orders o ON od.order_id = o.id::text
+         JOIN orders o ON od.order_id = o.id
 WHERE od.overall_status IN ('picking', 'delivering')
+  AND od.status IS NOT NULL
   AND od.delivery_tracking_code IS NOT NULL
   AND od.updated_at > NOW() - INTERVAL '30 days'
 ORDER BY od.created_at DESC

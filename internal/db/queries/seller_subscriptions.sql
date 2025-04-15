@@ -16,7 +16,7 @@ VALUES (
 -- name: GetCurrentActiveSubscriptionDetailsForSeller :one
 SELECT ss.id,
        ss.plan_id,
-       p.name AS plan_name,
+       p.name AS subscription_name,
        ss.seller_id,
        p.max_listings,
        ss.listings_used,
@@ -24,12 +24,12 @@ SELECT ss.id,
        ss.open_auctions_used,
        ss.is_active,
        p.is_unlimited,
+       ss.start_date,
        ss.end_date
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id
 WHERE ss.seller_id = $1
-  AND ss.is_active = true
-ORDER BY ss.start_date DESC LIMIT 1;
+  AND ss.is_active = true;
 
 -- name: UpdateCurrentActiveSubscriptionForSeller :exec
 UPDATE seller_subscriptions

@@ -11,7 +11,6 @@ import (
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/validator"
 	"github.com/rs/zerolog/log"
@@ -61,14 +60,11 @@ func (server *Server) createUser(ctx *gin.Context) {
 	}
 	
 	arg := db.CreateUserParams{
-		FullName: req.FullName,
-		HashedPassword: pgtype.Text{
-			String: hashedPassword,
-			Valid:  true,
-		},
-		Email:         req.Email,
-		EmailVerified: true,
-		Role:          db.UserRoleMember,
+		FullName:       req.FullName,
+		HashedPassword: &hashedPassword,
+		Email:          req.Email,
+		EmailVerified:  true,
+		Role:           db.UserRoleMember,
 	}
 	
 	user, err := server.dbStore.CreateUserTx(context.Background(), arg)
@@ -151,7 +147,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 	
-	err = util.CheckPassword(req.Password, user.HashedPassword.String)
+	err = util.CheckPassword(req.Password, *user.HashedPassword)
 	if err != nil {
 		err = errors.New("incorrect password")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
@@ -242,17 +238,11 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	
 	// User doesn't exist - create new account
 	newUser, err := server.dbStore.CreateUserWithGoogleAccount(ctx, db.CreateUserWithGoogleAccountParams{
-		GoogleAccountID: pgtype.Text{
-			String: payload.Subject,
-			Valid:  true,
-		},
-		FullName:      payload.Claims["name"].(string),
-		Email:         email,
-		EmailVerified: payload.Claims["email_verified"].(bool),
-		AvatarUrl: pgtype.Text{
-			String: payload.Claims["picture"].(string),
-			Valid:  true,
-		},
+		GoogleAccountID: &payload.Subject,
+		FullName:        payload.Claims["name"].(string),
+		Email:           email,
+		EmailVerified:   payload.Claims["email_verified"].(bool),
+		AvatarURL:       util.StringPointer(payload.Claims["picture"].(string)),
 	})
 	if err != nil {
 		log.Err(err).Msg("failed to create user with google account")
@@ -318,22 +308,19 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	req := new(updateUserRequest)
 	
 	if err := ctx.ShouldBindJSON(req); err != nil {
-		ctx.Status(http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
 	arg := db.UpdateUserParams{
-		UserID: userID,
-		FullName: pgtype.Text{
-			String: *req.FullName,
-			Valid:  req.FullName != nil,
-		},
+		UserID:   userID,
+		FullName: req.FullName,
 	}
 	
 	user, err := server.dbStore.UpdateUser(context.Background(), arg)
 	if err != nil {
 		log.Err(err).Msg("failed to update user")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
@@ -409,11 +396,8 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	}
 	
 	arg := db.UpdateUserParams{
-		AvatarUrl: pgtype.Text{
-			String: uploadedFileURL,
-			Valid:  true,
-		},
-		UserID: userID,
+		AvatarURL: &uploadedFileURL,
+		UserID:    userID,
 	}
 	
 	user, err = server.dbStore.UpdateUser(ctx, arg)
@@ -429,7 +413,7 @@ func (server *Server) updateAvatar(ctx *gin.Context) {
 	}
 	
 	resp := updateAvatarResponse{
-		AvatarURL: user.AvatarUrl.String,
+		AvatarURL: *user.AvatarURL,
 	}
 	ctx.JSON(http.StatusOK, resp)
 	
@@ -453,10 +437,7 @@ type updateAvatarResponse struct {
 func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	phoneNumber := ctx.Query("phone_number")
 	
-	user, err := server.dbStore.GetUserByPhoneNumber(context.Background(), pgtype.Text{
-		String: phoneNumber,
-		Valid:  true,
-	})
+	user, err := server.dbStore.GetUserByPhoneNumber(context.Background(), &phoneNumber)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.Status(http.StatusNotFound)

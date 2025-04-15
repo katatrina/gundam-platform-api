@@ -58,6 +58,28 @@ func (ns NullDeliveryOverralStatus) Value() (driver.Value, error) {
 	return string(ns.DeliveryOverralStatus), nil
 }
 
+func (e DeliveryOverralStatus) Valid() bool {
+	switch e {
+	case DeliveryOverralStatusPicking,
+		DeliveryOverralStatusDelivering,
+		DeliveryOverralStatusDelivered,
+		DeliveryOverralStatusFailed,
+		DeliveryOverralStatusReturn:
+		return true
+	}
+	return false
+}
+
+func AllDeliveryOverralStatusValues() []DeliveryOverralStatus {
+	return []DeliveryOverralStatus{
+		DeliveryOverralStatusPicking,
+		DeliveryOverralStatusDelivering,
+		DeliveryOverralStatusDelivered,
+		DeliveryOverralStatusFailed,
+		DeliveryOverralStatusReturn,
+	}
+}
+
 type GundamCondition string
 
 const (
@@ -99,6 +121,24 @@ func (ns NullGundamCondition) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.GundamCondition), nil
+}
+
+func (e GundamCondition) Valid() bool {
+	switch e {
+	case GundamConditionNew,
+		GundamConditionOpenbox,
+		GundamConditionUsed:
+		return true
+	}
+	return false
+}
+
+func AllGundamConditionValues() []GundamCondition {
+	return []GundamCondition{
+		GundamConditionNew,
+		GundamConditionOpenbox,
+		GundamConditionUsed,
+	}
 }
 
 type GundamScale string
@@ -145,6 +185,26 @@ func (ns NullGundamScale) Value() (driver.Value, error) {
 	return string(ns.GundamScale), nil
 }
 
+func (e GundamScale) Valid() bool {
+	switch e {
+	case GundamScale1144,
+		GundamScale1100,
+		GundamScale160,
+		GundamScale148:
+		return true
+	}
+	return false
+}
+
+func AllGundamScaleValues() []GundamScale {
+	return []GundamScale{
+		GundamScale1144,
+		GundamScale1100,
+		GundamScale160,
+		GundamScale148,
+	}
+}
+
 type GundamStatus string
 
 const (
@@ -153,6 +213,7 @@ const (
 	GundamStatusProcessing             GundamStatus = "processing"
 	GundamStatusPendingauctionapproval GundamStatus = "pending auction approval"
 	GundamStatusAuctioning             GundamStatus = "auctioning"
+	GundamStatusForexchange            GundamStatus = "for exchange"
 )
 
 func (e *GundamStatus) Scan(src interface{}) error {
@@ -188,6 +249,30 @@ func (ns NullGundamStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.GundamStatus), nil
+}
+
+func (e GundamStatus) Valid() bool {
+	switch e {
+	case GundamStatusInstore,
+		GundamStatusPublished,
+		GundamStatusProcessing,
+		GundamStatusPendingauctionapproval,
+		GundamStatusAuctioning,
+		GundamStatusForexchange:
+		return true
+	}
+	return false
+}
+
+func AllGundamStatusValues() []GundamStatus {
+	return []GundamStatus{
+		GundamStatusInstore,
+		GundamStatusPublished,
+		GundamStatusProcessing,
+		GundamStatusPendingauctionapproval,
+		GundamStatusAuctioning,
+		GundamStatusForexchange,
+	}
 }
 
 type OrderStatus string
@@ -237,6 +322,32 @@ func (ns NullOrderStatus) Value() (driver.Value, error) {
 	return string(ns.OrderStatus), nil
 }
 
+func (e OrderStatus) Valid() bool {
+	switch e {
+	case OrderStatusPending,
+		OrderStatusPackaging,
+		OrderStatusDelivering,
+		OrderStatusDelivered,
+		OrderStatusCompleted,
+		OrderStatusFailed,
+		OrderStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func AllOrderStatusValues() []OrderStatus {
+	return []OrderStatus{
+		OrderStatusPending,
+		OrderStatusPackaging,
+		OrderStatusDelivering,
+		OrderStatusDelivered,
+		OrderStatusCompleted,
+		OrderStatusFailed,
+		OrderStatusCanceled,
+	}
+}
+
 type OrderTransactionStatus string
 
 const (
@@ -281,6 +392,26 @@ func (ns NullOrderTransactionStatus) Value() (driver.Value, error) {
 	return string(ns.OrderTransactionStatus), nil
 }
 
+func (e OrderTransactionStatus) Valid() bool {
+	switch e {
+	case OrderTransactionStatusPending,
+		OrderTransactionStatusCompleted,
+		OrderTransactionStatusRefunded,
+		OrderTransactionStatusFailed:
+		return true
+	}
+	return false
+}
+
+func AllOrderTransactionStatusValues() []OrderTransactionStatus {
+	return []OrderTransactionStatus{
+		OrderTransactionStatusPending,
+		OrderTransactionStatusCompleted,
+		OrderTransactionStatusRefunded,
+		OrderTransactionStatusFailed,
+	}
+}
+
 type PaymentMethod string
 
 const (
@@ -323,6 +454,22 @@ func (ns NullPaymentMethod) Value() (driver.Value, error) {
 	return string(ns.PaymentMethod), nil
 }
 
+func (e PaymentMethod) Valid() bool {
+	switch e {
+	case PaymentMethodCod,
+		PaymentMethodWallet:
+		return true
+	}
+	return false
+}
+
+func AllPaymentMethodValues() []PaymentMethod {
+	return []PaymentMethod{
+		PaymentMethodCod,
+		PaymentMethodWallet,
+	}
+}
+
 type PaymentTransactionProvider string
 
 const (
@@ -362,6 +509,20 @@ func (ns NullPaymentTransactionProvider) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.PaymentTransactionProvider), nil
+}
+
+func (e PaymentTransactionProvider) Valid() bool {
+	switch e {
+	case PaymentTransactionProviderZalopay:
+		return true
+	}
+	return false
+}
+
+func AllPaymentTransactionProviderValues() []PaymentTransactionProvider {
+	return []PaymentTransactionProvider{
+		PaymentTransactionProviderZalopay,
+	}
 }
 
 type PaymentTransactionStatus string
@@ -407,6 +568,24 @@ func (ns NullPaymentTransactionStatus) Value() (driver.Value, error) {
 	return string(ns.PaymentTransactionStatus), nil
 }
 
+func (e PaymentTransactionStatus) Valid() bool {
+	switch e {
+	case PaymentTransactionStatusPending,
+		PaymentTransactionStatusCompleted,
+		PaymentTransactionStatusFailed:
+		return true
+	}
+	return false
+}
+
+func AllPaymentTransactionStatusValues() []PaymentTransactionStatus {
+	return []PaymentTransactionStatus{
+		PaymentTransactionStatusPending,
+		PaymentTransactionStatusCompleted,
+		PaymentTransactionStatusFailed,
+	}
+}
+
 type PaymentTransactionType string
 
 const (
@@ -446,6 +625,20 @@ func (ns NullPaymentTransactionType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.PaymentTransactionType), nil
+}
+
+func (e PaymentTransactionType) Valid() bool {
+	switch e {
+	case PaymentTransactionTypeWalletDeposit:
+		return true
+	}
+	return false
+}
+
+func AllPaymentTransactionTypeValues() []PaymentTransactionType {
+	return []PaymentTransactionType{
+		PaymentTransactionTypeWalletDeposit,
+	}
 }
 
 type UserRole string
@@ -492,6 +685,26 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+func (e UserRole) Valid() bool {
+	switch e {
+	case UserRoleMember,
+		UserRoleSeller,
+		UserRoleModerator,
+		UserRoleAdmin:
+		return true
+	}
+	return false
+}
+
+func AllUserRoleValues() []UserRole {
+	return []UserRole{
+		UserRoleMember,
+		UserRoleSeller,
+		UserRoleModerator,
+		UserRoleAdmin,
+	}
+}
+
 type WalletEntryStatus string
 
 const (
@@ -534,6 +747,26 @@ func (ns NullWalletEntryStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.WalletEntryStatus), nil
+}
+
+func (e WalletEntryStatus) Valid() bool {
+	switch e {
+	case WalletEntryStatusPending,
+		WalletEntryStatusCompleted,
+		WalletEntryStatusCanceled,
+		WalletEntryStatusFailed:
+		return true
+	}
+	return false
+}
+
+func AllWalletEntryStatusValues() []WalletEntryStatus {
+	return []WalletEntryStatus{
+		WalletEntryStatusPending,
+		WalletEntryStatusCompleted,
+		WalletEntryStatusCanceled,
+		WalletEntryStatusFailed,
+	}
 }
 
 type WalletEntryType string
@@ -587,6 +820,40 @@ func (ns NullWalletEntryType) Value() (driver.Value, error) {
 	return string(ns.WalletEntryType), nil
 }
 
+func (e WalletEntryType) Valid() bool {
+	switch e {
+	case WalletEntryTypeDeposit,
+		WalletEntryTypeWithdrawal,
+		WalletEntryTypePayment,
+		WalletEntryTypePaymentReceived,
+		WalletEntryTypeNonWithdrawable,
+		WalletEntryTypeRefund,
+		WalletEntryTypeRefundDeduction,
+		WalletEntryTypeAuctionLock,
+		WalletEntryTypeAuctionRelease,
+		WalletEntryTypeAuctionPayment,
+		WalletEntryTypePlatformFee:
+		return true
+	}
+	return false
+}
+
+func AllWalletEntryTypeValues() []WalletEntryType {
+	return []WalletEntryType{
+		WalletEntryTypeDeposit,
+		WalletEntryTypeWithdrawal,
+		WalletEntryTypePayment,
+		WalletEntryTypePaymentReceived,
+		WalletEntryTypeNonWithdrawable,
+		WalletEntryTypeRefund,
+		WalletEntryTypeRefundDeduction,
+		WalletEntryTypeAuctionLock,
+		WalletEntryTypeAuctionRelease,
+		WalletEntryTypeAuctionPayment,
+		WalletEntryTypePlatformFee,
+	}
+}
+
 type WalletReferenceType string
 
 const (
@@ -634,6 +901,32 @@ func (ns NullWalletReferenceType) Value() (driver.Value, error) {
 	return string(ns.WalletReferenceType), nil
 }
 
+func (e WalletReferenceType) Valid() bool {
+	switch e {
+	case WalletReferenceTypeOrder,
+		WalletReferenceTypeAuction,
+		WalletReferenceTypeWithdrawalRequest,
+		WalletReferenceTypeDepositRequest,
+		WalletReferenceTypePromotion,
+		WalletReferenceTypeAffiliate,
+		WalletReferenceTypeZalopay:
+		return true
+	}
+	return false
+}
+
+func AllWalletReferenceTypeValues() []WalletReferenceType {
+	return []WalletReferenceType{
+		WalletReferenceTypeOrder,
+		WalletReferenceTypeAuction,
+		WalletReferenceTypeWithdrawalRequest,
+		WalletReferenceTypeDepositRequest,
+		WalletReferenceTypePromotion,
+		WalletReferenceTypeAffiliate,
+		WalletReferenceTypeZalopay,
+	}
+}
+
 type Cart struct {
 	ID        int64     `json:"id"`
 	UserID    string    `json:"user_id"`
@@ -669,14 +962,19 @@ type Gundam struct {
 	Name                 string          `json:"name"`
 	Slug                 string          `json:"slug"`
 	GradeID              int64           `json:"grade_id"`
+	Series               string          `json:"series"`
+	PartsTotal           int64           `json:"parts_total"`
+	Material             string          `json:"material"`
+	Version              string          `json:"version"`
 	Quantity             int64           `json:"quantity"`
 	Condition            GundamCondition `json:"condition"`
-	ConditionDescription pgtype.Text     `json:"condition_description"`
+	ConditionDescription *string         `json:"condition_description"`
 	Manufacturer         string          `json:"manufacturer"`
 	Weight               int64           `json:"weight"`
 	Scale                GundamScale     `json:"scale"`
 	Description          string          `json:"description"`
 	Price                int64           `json:"price"`
+	ReleaseYear          *int64          `json:"release_year"`
 	Status               GundamStatus    `json:"status"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
@@ -701,34 +999,36 @@ type GundamGrade struct {
 type GundamImage struct {
 	ID        int64     `json:"id"`
 	GundamID  int64     `json:"gundam_id"`
-	Url       string    `json:"url"`
+	URL       string    `json:"url"`
 	IsPrimary bool      `json:"is_primary"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type Order struct {
-	ID              uuid.UUID     `json:"id"`
-	Code            string        `json:"code"`
-	BuyerID         string        `json:"buyer_id"`
-	SellerID        string        `json:"seller_id"`
-	ItemsSubtotal   int64         `json:"items_subtotal"`
-	DeliveryFee     int64         `json:"delivery_fee"`
-	TotalAmount     int64         `json:"total_amount"`
-	Status          OrderStatus   `json:"status"`
-	PaymentMethod   PaymentMethod `json:"payment_method"`
-	Note            pgtype.Text   `json:"note"`
-	IsPackaged      bool          `json:"is_packaged"`
-	PackagingImages []string      `json:"packaging_images"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+	ID                 uuid.UUID     `json:"id"`
+	Code               string        `json:"code"`
+	BuyerID            string        `json:"buyer_id"`
+	SellerID           string        `json:"seller_id"`
+	ItemsSubtotal      int64         `json:"items_subtotal"`
+	DeliveryFee        int64         `json:"delivery_fee"`
+	TotalAmount        int64         `json:"total_amount"`
+	Status             OrderStatus   `json:"status"`
+	PaymentMethod      PaymentMethod `json:"payment_method"`
+	Note               *string       `json:"note"`
+	IsPackaged         bool          `json:"is_packaged"`
+	PackagingImageURLs []string      `json:"packaging_image_urls"`
+	CanceledBy         *string       `json:"canceled_by"`
+	CanceledReason     *string       `json:"canceled_reason"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
 }
 
 type OrderDelivery struct {
 	ID                   int64                     `json:"id"`
-	OrderID              string                    `json:"order_id"`
-	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	OrderID              uuid.UUID                 `json:"order_id"`
+	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
-	Status               pgtype.Text               `json:"status"`
+	Status               *string                   `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`
 	ToDeliveryID         int64                     `json:"to_delivery_id"`
@@ -738,21 +1038,26 @@ type OrderDelivery struct {
 
 type OrderItem struct {
 	ID        int64     `json:"id"`
-	OrderID   string    `json:"order_id"`
-	GundamID  int64     `json:"gundam_id"`
+	OrderID   uuid.UUID `json:"order_id"`
+	GundamID  *int64    `json:"gundam_id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Grade     string    `json:"grade"`
+	Scale     string    `json:"scale"`
 	Quantity  int64     `json:"quantity"`
 	Price     int64     `json:"price"`
 	Weight    int64     `json:"weight"`
+	ImageURL  string    `json:"image_url"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type OrderTransaction struct {
 	ID            int64                  `json:"id"`
-	OrderID       string                 `json:"order_id"`
+	OrderID       uuid.UUID              `json:"order_id"`
 	Amount        int64                  `json:"amount"`
 	Status        OrderTransactionStatus `json:"status"`
 	BuyerEntryID  int64                  `json:"buyer_entry_id"`
-	SellerEntryID pgtype.Int8            `json:"seller_entry_id"`
+	SellerEntryID *int64                 `json:"seller_entry_id"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`
 	CompletedAt   pgtype.Timestamptz     `json:"completed_at"`
@@ -771,6 +1076,13 @@ type PaymentTransaction struct {
 	UpdatedAt             time.Time                  `json:"updated_at"`
 }
 
+type SellerProfile struct {
+	SellerID  string    `json:"seller_id"`
+	ShopName  string    `json:"shop_name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type SellerSubscription struct {
 	ID               int64              `json:"id"`
 	SellerID         string             `json:"seller_id"`
@@ -785,27 +1097,27 @@ type SellerSubscription struct {
 }
 
 type SubscriptionPlan struct {
-	ID              int64       `json:"id"`
-	Name            string      `json:"name"`
-	DurationDays    pgtype.Int8 `json:"duration_days"`
-	MaxListings     pgtype.Int8 `json:"max_listings"`
-	MaxOpenAuctions pgtype.Int8 `json:"max_open_auctions"`
-	IsUnlimited     bool        `json:"is_unlimited"`
-	Price           int64       `json:"price"`
-	CreatedAt       time.Time   `json:"created_at"`
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	DurationDays    *int64    `json:"duration_days"`
+	MaxListings     *int64    `json:"max_listings"`
+	MaxOpenAuctions *int64    `json:"max_open_auctions"`
+	IsUnlimited     bool      `json:"is_unlimited"`
+	Price           int64     `json:"price"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type User struct {
 	ID                  string             `json:"id"`
-	GoogleAccountID     pgtype.Text        `json:"google_account_id"`
-	FullName            string             `extensions:"x-nullable" json:"full_name"`
-	HashedPassword      pgtype.Text        `json:"-"`
+	GoogleAccountID     *string            `json:"google_account_id"`
+	FullName            string             `json:"full_name"`
+	HashedPassword      *string            `json:"-"`
 	Email               string             `json:"email"`
 	EmailVerified       bool               `json:"email_verified"`
-	PhoneNumber         pgtype.Text        `extensions:"x-nullable" json:"phone_number"`
+	PhoneNumber         *string            `json:"phone_number"`
 	PhoneNumberVerified bool               `json:"phone_number_verified"`
 	Role                UserRole           `json:"role"`
-	AvatarUrl           pgtype.Text        `extensions:"x-nullable" json:"avatar_url"`
+	AvatarURL           *string            `json:"avatar_url"`
 	CreatedAt           time.Time          `json:"created_at"`
 	UpdatedAt           time.Time          `json:"updated_at"`
 	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
@@ -829,7 +1141,6 @@ type UserAddress struct {
 }
 
 type Wallet struct {
-	ID                    int64     `json:"id"`
 	UserID                string    `json:"user_id"`
 	Balance               int64     `json:"balance"`
 	NonWithdrawableAmount int64     `json:"non_withdrawable_amount"`
@@ -840,8 +1151,8 @@ type Wallet struct {
 
 type WalletEntry struct {
 	ID            int64               `json:"id"`
-	WalletID      int64               `json:"wallet_id"`
-	ReferenceID   pgtype.Text         `json:"reference_id"`
+	WalletID      string              `json:"wallet_id"`
+	ReferenceID   *string             `json:"reference_id"`
 	ReferenceType WalletReferenceType `json:"reference_type"`
 	EntryType     WalletEntryType     `json:"entry_type"`
 	Amount        int64               `json:"amount"`

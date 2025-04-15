@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -14,7 +15,8 @@ const (
 
 // Constraint names
 const (
-	UniqueEmailConstraint = "users_email_key"
+	UniqueEmailConstraint         = "users_email_key"
+	UniqueSellerProfileConstraint = "seller_profiles_pkey"
 )
 
 // Common errors
@@ -44,5 +46,23 @@ func ErrorDescription(err error) *PgError {
 			ConstraintName: pgErr.ConstraintName,
 		}
 	}
+	return nil
+}
+
+func IsValidGundamStatus(status string) error {
+	if !GundamStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllGundamStatusValues())
+		return err
+	}
+	
+	return nil
+}
+
+func IsValidOrderStatus(status string) error {
+	if !OrderStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllOrderStatusValues())
+		return err
+	}
+	
 	return nil
 }

@@ -4,40 +4,31 @@ FROM users
 WHERE id = $1
   AND role = 'seller';
 
--- name: GetSellerByGundamID :one
-SELECT u.*
-FROM users u
-         JOIN gundams g ON u.id = g.owner_id
-WHERE g.id = $1
-  AND u.role = 'seller';
-
--- name: ListGundamsBySellerID :many
-SELECT g.id,
-       g.owner_id,
-       g.name,
-       g.slug,
-       gg.display_name             AS grade,
-       g.condition,
-       g.condition_description,
-       g.manufacturer,
-       g.scale,
-       g.description,
-       g.price,
-       g.status,
-       g.created_at,
-       g.updated_at,
-       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
-        FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls
-FROM gundams g
-         JOIN users u ON g.owner_id = u.id
-         JOIN gundam_grades gg ON g.grade_id = gg.id
-WHERE owner_id = $1
-  AND (sqlc.narg('name')::text IS NULL OR g.name ILIKE concat('%', sqlc.narg('name')::text, '%'))
-ORDER BY g.created_at DESC;
-
 -- name: ListOrdersBySellerID :many
 SELECT *
 FROM orders
 WHERE seller_id = $1
-ORDER BY created_at DESC;
+  AND status = COALESCE(sqlc.narg('status')::order_status, status)
+ORDER BY updated_at DESC, created_at DESC;
+
+-- name: GetSalesOrderBySellerID :one
+SELECT *
+FROM orders
+WHERE id = sqlc.arg('order_id')
+  AND seller_id = sqlc.arg('seller_id');
+
+-- name: UpdateSellerProfileByID :one
+UPDATE seller_profiles
+SET shop_name = COALESCE(sqlc.narg('shop_name'), shop_name)
+WHERE seller_id = $1 RETURNING *;
+
+-- name: GetSellerDetailByID :one
+SELECT sqlc.embed(u),
+       sqlc.embed(sp)
+FROM users u
+         JOIN seller_profiles sp ON u.id = sp.seller_id
+WHERE u.id = $1;
+
+-- name: CreateSellerProfile :one
+INSERT INTO seller_profiles (seller_id, shop_name)
+VALUES ($1, $2) RETURNING *;

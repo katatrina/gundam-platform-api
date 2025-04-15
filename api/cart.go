@@ -40,7 +40,7 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 	cartID, err := server.dbStore.GetOrCreateCartIfNotExists(ctx, userID)
 	if err != nil {
 		log.Err(err).Msg("failed to get or create cart")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	

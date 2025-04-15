@@ -30,3 +30,15 @@ func FormatVND(amount int64) string {
 	
 	return result.String()
 }
+
+func BoolPointer(b bool) *bool {
+	return &b
+}
+
+func StringPointer(s string) *string {
+	return &s
+}
+
+func Int64Pointer(i int64) *int64 {
+	return &i
+}

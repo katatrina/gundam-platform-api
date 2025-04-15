@@ -2,13 +2,14 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -24,7 +25,7 @@ func (server *Server) listGundamGrades(ctx *gin.Context) {
 	grades, err := server.dbStore.ListGundamGrades(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to retrieve all gundam grades")
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
@@ -32,35 +33,26 @@ func (server *Server) listGundamGrades(ctx *gin.Context) {
 }
 
 type listGundamsRequest struct {
+	Name      *string `form:"name"`
 	GradeSlug *string `form:"grade"`
-	Status    *string `form:"status" binding:"omitempty,oneof='in store' 'published' 'processing' 'pending auction approval' 'auctioning'"`
+	Status    *string `form:"status"`
 }
 
-type listGundamsResponse []db.ListGundamsWithFiltersRow
-
-func (req *listGundamsRequest) getGradeSlug() string {
-	if req == nil || req.GradeSlug == nil {
-		return ""
+func (r *listGundamsRequest) validate() error {
+	if r.Status != nil {
+		return db.IsValidGundamStatus(*r.Status)
 	}
 	
-	return *req.GradeSlug
-}
-
-func (req *listGundamsRequest) getStatus() string {
-	if req == nil || req.Status == nil {
-		return ""
-	}
-	
-	return *req.Status
+	return nil
 }
 
 //	@Summary		List Gundams
 //	@Description	Retrieves a list of selling Gundams, optionally filtered by grade
 //	@Tags			gundams
 //	@Produce		json
-//	@Param			grade	query		string				false	"Filter by Gundam grade slug"	example(master-grade)
-//	@Param			status	query		string				false	"Filter by Gundam status"		Enums(in store, published, processing, pending auction approval, auctioning)
-//	@Success		200		{object}	listGundamsResponse	"Successfully retrieved list of Gundams"
+//	@Param			grade	query	string				false	"Filter by Gundam grade slug"	example(master-grade)
+//	@Param			status	query	string				false	"Filter by Gundam status"		Enums(in store, published, processing, pending auction approval, auctioning)
+//	@Success		200		array	db.GundamDetails	"Successfully retrieved list of Gundams"
 //	@Failure		400		"Bad Request - Invalid query parameters"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundams"
 //	@Router			/gundams [get]
@@ -68,76 +60,142 @@ func (server *Server) listGundams(ctx *gin.Context) {
 	req := new(listGundamsRequest)
 	
 	if err := ctx.ShouldBindQuery(req); err != nil {
+		log.Error().Err(err).Msg("failed to bind query parameters")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Validate the status parameter
+	if err := req.validate(); err != nil {
+		log.Error().Err(err).Msg("invalid status")
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
 	arg := db.ListGundamsWithFiltersParams{
-		GradeSlug: pgtype.Text{
-			String: req.getGradeSlug(),
-			Valid:  req.GradeSlug != nil,
-		},
-		Status: pgtype.Text{
-			String: req.getStatus(),
-			Valid:  req.Status != nil,
-		},
+		GradeSlug: req.GradeSlug,
+		Status:    req.Status,
+		Name:      req.Name,
 	}
 	
-	gundams, err := server.dbStore.ListGundamsWithFilters(ctx, arg)
+	result, err := server.dbStore.ListGundamsWithFilters(ctx, arg)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, errorResponse(db.ErrRecordNotFound))
-			return
-		}
-		
-		log.Error().Err(err).Msg("failed to list gundams")
+		log.Error().Err(err).Msg("failed to list result")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, listGundamsResponse(gundams))
+	resp := make([]db.GundamDetails, len(result))
+	
+	// Map the result to the response struct
+	for i, row := range result {
+		primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(ctx, row.GundamID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get primary image")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(ctx, row.GundamID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get secondary images")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		accessories, err := server.dbStore.GetGundamAccessories(ctx, row.GundamID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get gundam accessories")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Map the accessories to the response struct
+		accessoryDTOs := make([]db.GundamAccessoryDTO, len(accessories))
+		for i, accessory := range accessories {
+			accessoryDTOs[i] = db.ConvertGundamAccessoryToDTO(accessory)
+		}
+		
+		resp[i] = db.GundamDetails{
+			ID:                   row.GundamID,
+			OwnerID:              row.OwnerID,
+			Name:                 row.Name,
+			Slug:                 row.Slug,
+			Grade:                row.Grade,
+			Series:               row.Series,
+			PartsTotal:           row.PartsTotal,
+			Material:             row.Material,
+			Version:              row.Version,
+			Quantity:             row.Quantity,
+			Condition:            string(row.Condition),
+			ConditionDescription: row.ConditionDescription,
+			Manufacturer:         row.Manufacturer,
+			Weight:               row.Weight,
+			Scale:                string(row.Scale),
+			Description:          row.Description,
+			Price:                row.Price,
+			ReleaseYear:          row.ReleaseYear,
+			Status:               string(row.Status),
+			Accessories:          accessoryDTOs,
+			PrimaryImageURL:      primaryImageURL,
+			SecondaryImageURLs:   secondaryImageURLs,
+			CreatedAt:            row.CreatedAt,
+			UpdatedAt:            row.UpdatedAt,
+		}
+	}
+	
+	ctx.JSON(http.StatusOK, resp)
 }
 
-type getGundamBySlugQueryParams struct {
-	Status string `form:"status" binding:"omitempty,oneof='in store' 'published' 'processing' 'pending auction approval' 'auctioning'"`
+type getGundamBySlugQuery struct {
+	Status *string `form:"status"`
 }
 
-type getGundamBySlugResponse struct {
-	db.GetGundamBySlugRow
-	Accessories []db.GundamAccessory `json:"accessories"`
+func (req *getGundamBySlugQuery) validate() error {
+	if req.Status != nil {
+		return db.IsValidGundamStatus(*req.Status)
+	}
+	
+	return nil
 }
 
 //	@Summary		Get Gundam by Slug
 //	@Description	Retrieves a specific Gundam model by its unique slug
 //	@Tags			gundams
 //	@Produce		json
-//	@Param			slug	path		string					true	"Gundam model slug"			example(rx-78-2-gundam)
-//	@Param			status	query		string					false	"Filter by Gundam status"	Enums(in store, published, processing, pending auction approval, auctioning)
-//	@Success		200		{object}	getGundamBySlugResponse	"Successfully retrieved Gundam details"
+//	@Param			slug	path		string				true	"Gundam model slug"			example(rx-78-2-gundam)
+//	@Param			status	query		string				false	"Filter by Gundam status"	Enums(in store, published, processing, pending auction approval, auctioning)
+//	@Success		200		{object}	db.GundamDetails	"Successfully retrieved Gundam details"
 //	@Failure		404		"Not Found - Gundam with specified slug does not exist"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundam"
 //	@Router			/gundams/{slug} [get]
 func (server *Server) getGundamBySlug(ctx *gin.Context) {
 	slug := ctx.Param("slug")
 	
-	var queryParams getGundamBySlugQueryParams
-	if err := ctx.ShouldBindQuery(&queryParams); err != nil {
+	var query getGundamBySlugQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	arg := db.GetGundamBySlugParams{
-		Slug: slug,
-		Status: pgtype.Text{
-			String: queryParams.Status,
-			Valid:  queryParams.Status != "",
-		},
+	if err := query.validate(); err != nil {
+		log.Error().Err(err).Msg("invalid status")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
 	}
 	
-	gundam, err := server.dbStore.GetGundamBySlug(ctx, arg)
+	var resp db.GundamDetails
+	
+	arg := db.GetGundamBySlugParams{
+		Slug:   slug,
+		Status: query.Status,
+	}
+	
+	row, err := server.dbStore.GetGundamBySlug(ctx, arg)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, errorResponse(db.ErrRecordNotFound))
+			err = fmt.Errorf("gundam with slug %s not found", slug)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
@@ -145,55 +203,90 @@ func (server *Server) getGundamBySlug(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	resp.ID = row.GundamID
+	resp.OwnerID = row.OwnerID
+	resp.Name = row.Name
+	resp.Slug = row.Slug
+	resp.Grade = row.Grade
+	resp.Series = row.Series
+	resp.PartsTotal = row.PartsTotal
+	resp.Material = row.Material
+	resp.Version = row.Version
+	resp.Quantity = row.Quantity
+	resp.Condition = string(row.Condition)
+	resp.ConditionDescription = row.ConditionDescription
+	resp.Manufacturer = row.Manufacturer
+	resp.Weight = row.Weight
+	resp.Scale = string(row.Scale)
+	resp.Description = row.Description
+	resp.Price = row.Price
+	resp.ReleaseYear = row.ReleaseYear
+	resp.Status = string(row.Status)
+	resp.CreatedAt = row.CreatedAt
+	resp.UpdatedAt = row.UpdatedAt
 	
-	// Lấy accessories của Gundam
-	accessories, err := server.dbStore.GetGundamAccessories(ctx, gundam.ID)
+	primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(ctx, row.GundamID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get primary image")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.PrimaryImageURL = primaryImageURL
+	
+	secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(ctx, row.GundamID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get secondary images")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.SecondaryImageURLs = secondaryImageURLs
+	
+	accessories, err := server.dbStore.GetGundamAccessories(ctx, row.GundamID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get gundam accessories")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
-	// Tạo response bao gồm cả Gundam và accessories
-	response := getGundamBySlugResponse{
-		GetGundamBySlugRow: gundam,
-		Accessories:        accessories,
+	// Map the accessories to the response struct
+	accessoryDTOs := make([]db.GundamAccessoryDTO, len(accessories))
+	for i, accessory := range accessories {
+		accessoryDTOs[i] = db.ConvertGundamAccessoryToDTO(accessory)
 	}
+	resp.Accessories = accessoryDTOs
 	
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, resp)
 }
 
 type createGundamRequest struct {
 	Name                 string                  `form:"name" binding:"required"`
 	GradeID              int64                   `form:"grade_id" binding:"required"`
+	Series               string                  `form:"series" binding:"required"`
+	PartsTotal           int64                   `form:"parts_total" binding:"required"`
+	Material             string                  `form:"material" binding:"required"`
+	Version              string                  `form:"version" binding:"required"`
 	Condition            string                  `form:"condition" binding:"required"`
 	Manufacturer         string                  `form:"manufacturer" binding:"required"`
 	Scale                string                  `form:"scale" binding:"required"`
 	Weight               int64                   `form:"weight" binding:"required"`
 	Description          string                  `form:"description" binding:"required"`
 	Price                int64                   `form:"price" binding:"required"`
+	ReleaseYear          *int64                  `form:"release_year"`
 	PrimaryImage         *multipart.FileHeader   `form:"primary_image" binding:"required"`
 	SecondaryImages      []*multipart.FileHeader `form:"secondary_images" binding:"required"`
 	ConditionDescription *string                 `form:"condition_description"`
-	Accessories          []db.GundamAccessory    `form:"accessory"`
-}
-
-func (req *createGundamRequest) getConditionDescription() string {
-	if req.ConditionDescription == nil {
-		return ""
-	}
-	
-	return *req.ConditionDescription
+	Accessories          []db.GundamAccessoryDTO `form:"accessory"`
 }
 
 //	@Summary		Create a new Gundam model
 //	@Description	Create a new Gundam model with images and accessories
-//	@Tags			sellers
+//	@Tags			users
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			sellerID				path		string	true	"User ID"
+//	@Param			id						path		string	true	"User ID"
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
+//	@Param			series					formData	string	true	"Gundam series name"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, used)
 //	@Param			manufacturer			formData	string	true	"Manufacturer name"
 //	@Param			scale					formData	string	true	"Gundam scale"	Enums(1/144, 1/100, 1/60)
@@ -205,48 +298,202 @@ func (req *createGundamRequest) getConditionDescription() string {
 //	@Param			condition_description	formData	string	false	"Additional details about condition"
 //	@Param			accessory				formData	string	false	"Accessory as JSON object. Add multiple accessories by repeating this field with different values."
 //	@Security		accessToken
-//	@Success		200	"message: Gundam created successfully"
-//	@Failure		400	"error details"
-//	@Failure		500	"internal server error"
-//	@Router			/sellers/:sellerID/gundams [post]
+//	@Success		201	{object}	db.GundamDetails	"Successfully created Gundam"
+//	@Failure		400	"Bad Request - Invalid input data"
+//	@Failure		404	"Not Found - User with specified ID does not exist"
+//	@Failure		403	"Forbidden - User is not authorized to create Gundam for this user"
+//	@Failure		500	"Internal Server Error - Failed to create Gundam"
+//	@Router			/users/:id/gundams [post]
 func (server *Server) createGundam(ctx *gin.Context) {
-	req := new(createGundamRequest)
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := ctx.Param("id")
 	
+	_, err := server.dbStore.GetUserByID(ctx.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to create gundam for user ID %s", authenticatedUserID, userID)
+		ctx.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	req := new(createGundamRequest)
 	if err := ctx.ShouldBindWith(req, binding.FormMultipart); err != nil {
 		log.Error().Err(err).Msg("failed to bind request")
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	ownerID := ctx.Param("sellerID")
-	
 	arg := db.CreateGundamTxParams{
-		OwnerID:   ownerID,
-		Name:      req.Name,
-		Slug:      util.GenerateRandomSlug(req.Name),
-		GradeID:   req.GradeID,
-		Condition: db.GundamCondition(req.Condition),
-		ConditionDescription: pgtype.Text{
-			String: req.getConditionDescription(),
-			Valid:  req.ConditionDescription != nil,
-		},
-		Manufacturer:     req.Manufacturer,
-		Weight:           req.Weight,
-		Scale:            db.GundamScale(req.Scale),
-		Description:      req.Description,
-		Price:            req.Price,
-		Accessories:      req.Accessories,
-		PrimaryImage:     req.PrimaryImage,
-		SecondaryImages:  req.SecondaryImages,
-		UploadImagesFunc: server.uploadFileToCloudinary,
+		OwnerID:              userID,
+		Name:                 req.Name,
+		Slug:                 util.GenerateRandomSlug(req.Name),
+		GradeID:              req.GradeID,
+		Series:               req.Series,
+		PartsTotal:           req.PartsTotal,
+		Material:             req.Material,
+		Version:              req.Version,
+		Quantity:             1, // Default quantity is 1
+		Condition:            db.GundamCondition(req.Condition),
+		ConditionDescription: req.ConditionDescription,
+		Manufacturer:         req.Manufacturer,
+		Weight:               req.Weight,
+		Scale:                db.GundamScale(req.Scale),
+		Description:          req.Description,
+		Price:                req.Price,
+		ReleaseYear:          req.ReleaseYear,
+		Accessories:          req.Accessories,
+		PrimaryImage:         req.PrimaryImage,
+		SecondaryImages:      req.SecondaryImages,
+		UploadImagesFunc:     server.uploadFileToCloudinary,
 	}
 	
-	err := server.dbStore.CreateGundamTx(ctx, arg)
+	result, err := server.dbStore.CreateGundamTx(ctx, arg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create gundam")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
-	ctx.JSON(http.StatusOK, gin.H{"message": "Gundam created successfully"})
+	ctx.JSON(http.StatusCreated, result)
+}
+
+type listGundamsByUserRequest struct {
+	Name *string `form:"name"`
+}
+
+//	@Summary		List all gundams for a specific user
+//	@Description	Get all gundams that belong to the specified user ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string	true	"User ID"
+//	@Param			name	query	string	false	"Gundam name to filter by"
+//	@Security		accessToken
+//	@Success		200	array	db.GundamDetails	"Successfully retrieved list of gundams"
+//	@Failure		400	"Invalid user ID"
+//	@Failure		403 "Forbidden - User is not authorized to view gundams for this user"
+//	@Failure		404 "User not found"
+//	@Failure		500	"Internal server error"
+//	@Router			/users/:id/gundams [get]
+func (server *Server) listGundamsByUser(ctx *gin.Context) {
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := ctx.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(ctx.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to view gundams for user ID %s", authenticatedUserID, userID)
+		ctx.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	req := new(listGundamsByUserRequest)
+	if err := ctx.ShouldBindQuery(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	arg := db.ListGundamsByUserIDParams{
+		OwnerID: userID,
+		Name:    req.Name,
+	}
+	
+	gundams, err := server.dbStore.ListGundamsByUserID(ctx, arg)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to list gundams by seller")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	fmt.Println(len(gundams))
+	
+	resp := make([]db.GundamDetails, len(gundams))
+	
+	for i, gundam := range gundams {
+		primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(ctx, gundam.ID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("gundam ID %d primary image not found", gundam.ID)
+				ctx.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			log.Error().Err(err).Msg("failed to get primary image")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(ctx, gundam.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get secondary images")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		accessories, err := server.dbStore.GetGundamAccessories(ctx, gundam.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get gundam accessories")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Map the accessories to the response struct
+		accessoryDTOs := make([]db.GundamAccessoryDTO, len(accessories))
+		for i, accessory := range accessories {
+			accessoryDTOs[i] = db.ConvertGundamAccessoryToDTO(accessory)
+		}
+		
+		resp[i] = db.GundamDetails{
+			ID:                   gundam.ID,
+			OwnerID:              gundam.OwnerID,
+			Name:                 gundam.Name,
+			Slug:                 gundam.Slug,
+			Grade:                gundam.Grade,
+			Series:               gundam.Series,
+			PartsTotal:           gundam.PartsTotal,
+			Material:             gundam.Material,
+			Version:              gundam.Version,
+			Quantity:             gundam.Quantity,
+			Condition:            string(gundam.Condition),
+			ConditionDescription: gundam.ConditionDescription,
+			Manufacturer:         gundam.Manufacturer,
+			Weight:               gundam.Weight,
+			Scale:                string(gundam.Scale),
+			Description:          gundam.Description,
+			Price:                gundam.Price,
+			ReleaseYear:          gundam.ReleaseYear,
+			Status:               string(gundam.Status),
+			Accessories:          accessoryDTOs,
+			PrimaryImageURL:      primaryImageURL,
+			SecondaryImageURLs:   secondaryImageURLs,
+			CreatedAt:            gundam.CreatedAt,
+			UpdatedAt:            gundam.UpdatedAt,
+		}
+	}
+	
+	ctx.JSON(http.StatusOK, resp)
 }

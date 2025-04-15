@@ -13,19 +13,18 @@ const addWalletBalance = `-- name: AddWalletBalance :one
 UPDATE wallets
 SET balance    = balance + $1,
     updated_at = NOW()
-WHERE id = $2 RETURNING id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+WHERE user_id = $2 RETURNING user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 `
 
 type AddWalletBalanceParams struct {
-	Amount   int64 `json:"amount"`
-	WalletID int64 `json:"wallet_id"`
+	Amount int64  `json:"amount"`
+	UserID string `json:"user_id"`
 }
 
 func (q *Queries) AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error) {
-	row := q.db.QueryRow(ctx, addWalletBalance, arg.Amount, arg.WalletID)
+	row := q.db.QueryRow(ctx, addWalletBalance, arg.Amount, arg.UserID)
 	var i Wallet
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
 		&i.Balance,
 		&i.NonWithdrawableAmount,
@@ -40,16 +39,16 @@ const addWalletNonWithdrawableAmount = `-- name: AddWalletNonWithdrawableAmount 
 UPDATE wallets
 SET non_withdrawable_amount = non_withdrawable_amount + $1,
     updated_at              = NOW()
-WHERE id = $2
+WHERE user_id = $2
 `
 
 type AddWalletNonWithdrawableAmountParams struct {
-	Amount   int64 `json:"amount"`
-	WalletID int64 `json:"wallet_id"`
+	Amount int64  `json:"amount"`
+	UserID string `json:"user_id"`
 }
 
 func (q *Queries) AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error {
-	_, err := q.db.Exec(ctx, addWalletNonWithdrawableAmount, arg.Amount, arg.WalletID)
+	_, err := q.db.Exec(ctx, addWalletNonWithdrawableAmount, arg.Amount, arg.UserID)
 	return err
 }
 
@@ -64,7 +63,7 @@ func (q *Queries) CreateWallet(ctx context.Context, userID string) error {
 }
 
 const getWalletByUserID = `-- name: GetWalletByUserID :one
-SELECT id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+SELECT user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 FROM wallets
 WHERE user_id = $1
 `
@@ -73,7 +72,6 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID string) (Wallet,
 	row := q.db.QueryRow(ctx, getWalletByUserID, userID)
 	var i Wallet
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
 		&i.Balance,
 		&i.NonWithdrawableAmount,
@@ -85,7 +83,7 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID string) (Wallet,
 }
 
 const getWalletForUpdate = `-- name: GetWalletForUpdate :one
-SELECT id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+SELECT user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 FROM wallets
 WHERE user_id = $1
     FOR UPDATE
@@ -95,7 +93,6 @@ func (q *Queries) GetWalletForUpdate(ctx context.Context, userID string) (Wallet
 	row := q.db.QueryRow(ctx, getWalletForUpdate, userID)
 	var i Wallet
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
 		&i.Balance,
 		&i.NonWithdrawableAmount,
@@ -111,19 +108,18 @@ UPDATE wallets
 SET balance = balance + $1,
     non_withdrawable_amount = non_withdrawable_amount - $1,
     updated_at = now()
-WHERE id = $2 RETURNING id, user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
+WHERE user_id = $2 RETURNING user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 `
 
 type TransferNonWithdrawableToBalanceParams struct {
-	Amount   int64 `json:"amount"`
-	WalletID int64 `json:"wallet_id"`
+	Amount int64  `json:"amount"`
+	UserID string `json:"user_id"`
 }
 
 func (q *Queries) TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error) {
-	row := q.db.QueryRow(ctx, transferNonWithdrawableToBalance, arg.Amount, arg.WalletID)
+	row := q.db.QueryRow(ctx, transferNonWithdrawableToBalance, arg.Amount, arg.UserID)
 	var i Wallet
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
 		&i.Balance,
 		&i.NonWithdrawableAmount,

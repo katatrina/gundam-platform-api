@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -61,14 +60,6 @@ type createOrderRequest struct {
 	Note *string `json:"note" binding:"max=255"`
 }
 
-func (r *createOrderRequest) getNote() string {
-	if r.Note != nil {
-		return *r.Note
-	}
-	
-	return ""
-}
-
 //	@Summary		Create a new order
 //	@Description	Create a new order for purchasing Gundam models
 //	@Tags			orders
@@ -87,9 +78,35 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	// Lấy userID từ token xác thực
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	
+	_, err := server.dbStore.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
 	var req createOrderRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	_, err = server.dbStore.GetUserByID(ctx, req.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("seller ID %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get seller by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
@@ -103,10 +120,8 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		result, err := server.dbStore.ValidateGundamBeforeCheckout(ctx, gundamID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				ctx.JSON(http.StatusNotFound, gin.H{
-					"error":   "Gundam not found",
-					"details": fmt.Sprintf("Gundam ID %d not found", gundamID),
-				})
+				err = fmt.Errorf("gundam ID %d not found", gundamID)
+				ctx.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
@@ -207,11 +222,8 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		TotalAmount:          req.TotalAmount,   // Tổng giá trị đơn hàng (bao gồm phí vận chuyển)
 		ExpectedDeliveryTime: req.ExpectedDeliveryTime,
 		PaymentMethod:        db.PaymentMethod(req.PaymentMethod),
-		Note: pgtype.Text{
-			String: req.getNote(),
-			Valid:  req.Note != nil,
-		},
-		Gundams: gundams,
+		Note:                 req.Note,
+		Gundams:              gundams,
 	}
 	
 	// Thực hiện transaction tạo đơn hàng
@@ -234,7 +246,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
 		Title:       fmt.Sprintf("Đơn hàng #%s đã được tạo thành công", result.Order.Code),
-		Message:     fmt.Sprintf("Đơn hàng #%s đã được tạo thành công với tổng giá trị %d VND. Người bán sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Bạn có thể theo dõi trạng thái đơn hàng trong mục Đơn mua.", result.Order.Code, result.Order.TotalAmount),
+		Message:     fmt.Sprintf("Đơn hàng #%s đã được tạo thành công với tổng giá trị %s. Người bán sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất. Bạn có thể theo dõi trạng thái đơn hàng trong mục Đơn mua.", result.Order.Code, util.FormatVND(result.Order.TotalAmount)),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)
@@ -247,7 +259,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.SellerID,
 		Title:       fmt.Sprintf("Đơn hàng mới #%s cần xác nhận", result.Order.Code),
-		Message:     fmt.Sprintf("Bạn có đơn hàng mới #%s với giá trị %d VND. Vui lòng xác nhận đơn hàng trong thời gian sớm nhất để chuẩn bị giao cho đơn vị vận chuyển GHN.", result.Order.Code, result.Order.ItemsSubtotal),
+		Message:     fmt.Sprintf("Bạn có đơn hàng mới #%s với giá trị %s. Vui lòng xác nhận đơn hàng trong thời gian sớm nhất để chuẩn bị giao cho đơn vị vận chuyển GHN.", result.Order.Code, util.FormatVND(result.Order.ItemsSubtotal)),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	}, opts...)
@@ -264,27 +276,33 @@ type listPurchaseOrdersRequest struct {
 	Status *string `form:"status"`
 }
 
-func (status *listPurchaseOrdersRequest) getStatus() string {
-	if status.Status != nil {
-		return *status.Status
+func (req *listPurchaseOrdersRequest) getStatus() string {
+	if req.Status != nil {
+		return *req.Status
 	}
 	
 	return ""
 }
 
-type OrderInfo struct {
-	Order      db.Order                       `json:"order"`
-	OrderItems []db.GetGundamsByOrderItemsRow `json:"order_items"`
+func (req *listPurchaseOrdersRequest) validate() error {
+	if req.Status != nil {
+		if err := db.IsValidOrderStatus(*req.Status); err != nil {
+			return err
+		}
+	}
+	
+	return nil
 }
 
-//	@Summary		List all purchase orders of the normal user
-//	@Description	List all purchase orders of the normal user
+//	@Summary		List all purchase orders of a user
+//	@Description	List all purchase orders of a user
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			status	query	string		false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
-//	@Success		200		array	OrderInfo	"Successfully retrieved list of purchase orders"
+//	@Param			status	query	string					false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
+//	@Success		200		array	db.PurchaseOrderInfo	"Successfully retrieved list of purchase orders"
+//	@Failure		404		"User not found"
 //	@Failure		400		"Bad request"
 //	@Failure		500		"Internal server error"
 //	@Router			/orders [get]
@@ -292,18 +310,29 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 	// Lấy userID từ token xác thực
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
 	
+	_, err := server.dbStore.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
 	var req listPurchaseOrdersRequest
-	var resp []OrderInfo
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	if req.Status != nil {
-		if err := util.IsOrderStatusValid(req.getStatus()); err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
+	// Kiểm tra tính hợp lệ của tham số trạng thái
+	if err := req.validate(); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
 	}
 	
 	// Thực hiện truy vấn để lấy danh sách đơn hàng
@@ -319,19 +348,22 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	
+	resp := make([]db.PurchaseOrderInfo, 0, len(orders))
+	
 	// Duyệt qua từng đơn hàng để lấy thông tin chi tiết
 	for _, order := range orders {
-		var orderDetail OrderInfo
-		orderItems, err := server.dbStore.GetGundamsByOrderItems(ctx, order.ID.String())
+		var orderInfo db.PurchaseOrderInfo
+		orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
 		if err != nil {
 			log.Err(err).Msg("failed to get order items")
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 		
-		orderDetail.Order = order
-		orderDetail.OrderItems = orderItems
-		resp = append(resp, orderDetail)
+		orderInfo.Order = order
+		orderInfo.OrderItems = orderItems
+		resp = append(resp, orderInfo)
 	}
 	
 	ctx.JSON(http.StatusOK, resp)
@@ -345,7 +377,7 @@ func (server *Server) listPurchaseOrders(ctx *gin.Context) {
 //	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Success		200		{object}	db.ConfirmOrderReceivedTxResult	"Order received successfully"
 //	@Failure		400		"Bad request"
-//	@Failure		404		"Order not found"
+//	@Failure		404		"User not found<br/>Order not found"
 //	@Failure		403		"Forbidden - User does not have permission to confirm this order"
 //	@Failure		422		"Unprocessable Entity - Order is not in delivered status"
 //	@Failure		500		"Internal server error"
@@ -355,6 +387,19 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	// Lấy buyerID từ token xác thực
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	buyerID := authPayload.Subject
+	
+	_, err := server.dbStore.GetUserByID(ctx, buyerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("authenticated user ID %s not found", buyerID)
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user by ID")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 	
 	// Lấy orderID từ tham số URL
 	orderID, err := uuid.Parse(ctx.Param("orderID"))
@@ -392,7 +437,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	}
 	
 	// Lấy thông tin giao dịch đơn hàng
-	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID.String())
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("transaction for order ID %s not found", orderID)
@@ -406,14 +451,14 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	}
 	
 	// Kiểm tra xem giao dịch đã có seller_entry_id chưa
-	if !orderTransaction.SellerEntryID.Valid {
+	if orderTransaction.SellerEntryID == nil {
 		err = fmt.Errorf("seller entry not found for order %s", order.Code)
 		ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 	
 	// Lấy bút toán của người bán
-	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, orderTransaction.SellerEntryID.Int64)
+	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("seller entry not found for order %s", order.Code)
@@ -441,7 +486,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	}
 	
 	// Lấy thông tin order items
-	orderItems, err := server.dbStore.GetOrderItems(ctx, order.ID.String())
+	orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("order items not found for order %s", order.Code)
@@ -457,26 +502,31 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	// Lấy thông tin gundam
 	var gundams []db.Gundam
 	for _, item := range orderItems {
-		gundam, err := server.dbStore.GetGundamByID(ctx, item.GundamID)
-		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("gundam ID %d not found", item.GundamID)
-				ctx.JSON(http.StatusNotFound, errorResponse(err))
+		if item.GundamID != nil {
+			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
+			if err != nil {
+				if errors.Is(err, db.ErrRecordNotFound) {
+					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+					ctx.JSON(http.StatusNotFound, errorResponse(err))
+					return
+				}
+				
+				log.Err(err).Msg("failed to get gundam by ID")
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 				return
 			}
 			
-			log.Err(err).Msg("failed to get gundam by ID")
-			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
+			if gundam.Status != db.GundamStatusProcessing {
+				err = fmt.Errorf("gundam ID %d is not in processing status", item.GundamID)
+				ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+				return
+			}
+			
+			gundams = append(gundams, gundam)
+			continue
 		}
 		
-		if gundam.Status != db.GundamStatusProcessing {
-			err = fmt.Errorf("gundam ID %d is not in processing status", item.GundamID)
-			ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-			return
-		}
-		
-		gundams = append(gundams, gundam)
+		log.Warn().Msgf("gundam ID %d not found in order items", item.GundamID)
 	}
 	
 	// Thực hiện transaction xác nhận đơn hàng đã nhận
@@ -527,34 +577,38 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-type OrderDetail struct {
-	Order            db.Order                       `json:"order"`
-	OrderItems       []db.GetGundamsByOrderItemsRow `json:"order_items"`
-	OrderDelivery    db.OrderDelivery               `json:"order_delivery"`
-	DeliveryAddress  db.DeliveryInformation         `json:"to_delivery_address"`
-	SellerInfo       db.User                        `json:"seller_info"`
-	OrderTransaction db.OrderTransaction            `json:"order_transaction"`
-}
-
-//	@Summary		Get order details
-//	@Description	Get details of a specific order
+//	@Summary		Get purchase order details
+//	@Description	Get details of a specific purchase order
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string		true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	OrderDetail	"Successfully retrieved order details"
+//	@Param			orderID	path		string					true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.PurchaseOrderDetails	"Order details"
 //	@Failure		400		"Bad request"
-//	@Failure		404		"Not Found - Order not found"
+//	@Failure		404		"User not Found<br/>Order not found"
 //	@Failure		403		"Forbidden - User does not have permission to access this order"
 //	@Failure		500		"Internal server error"
 //	@Security		accessToken
 //	@Router			/orders/{orderID} [get]
-func (server *Server) getOrderDetails(c *gin.Context) {
+func (server *Server) getPurchaseOrderDetails(c *gin.Context) {
 	// Lấy userID từ token xác thực
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	var resp OrderDetail
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get user by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	var resp db.PurchaseOrderDetails
 	
 	// Lấy orderID từ tham số URL
 	orderID, err := uuid.Parse(c.Param("orderID"))
@@ -586,7 +640,31 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	
 	resp.Order = order
 	
-	orderItems, err := server.dbStore.GetGundamsByOrderItems(c.Request.Context(), order.ID.String())
+	// Lấy thông tin người bán
+	seller, err := server.dbStore.GetSellerDetailByID(c.Request.Context(), order.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("seller ID %s not found", order.SellerID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get buyer by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.SellerInfo = db.SellerInfo{
+		ID:              seller.User.ID,
+		GoogleAccountID: seller.User.GoogleAccountID,
+		UserFullName:    seller.User.FullName,
+		ShopName:        seller.SellerProfile.ShopName,
+		Email:           seller.User.Email,
+		PhoneNumber:     seller.User.PhoneNumber,
+		Role:            string(seller.User.Role),
+		AvatarURL:       seller.User.AvatarURL,
+	}
+	
+	orderItems, err := server.dbStore.ListOrderItems(c.Request.Context(), order.ID)
 	if err != nil {
 		log.Err(err).Msg("failed to get order items")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -594,7 +672,7 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	}
 	resp.OrderItems = orderItems
 	
-	orderDelivery, err := server.dbStore.GetOrderDelivery(c.Request.Context(), order.ID.String())
+	orderDelivery, err := server.dbStore.GetOrderDelivery(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("order delivery not found for order ID %s", order.ID)
@@ -608,21 +686,22 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	}
 	resp.OrderDelivery = orderDelivery
 	
-	sellerInfo, err := server.dbStore.GetUserByID(c.Request.Context(), order.SellerID)
+	// Lấy thông tin địa chỉ giao hàng
+	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("seller ID %s not found", order.SellerID)
+			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get seller info")
+		log.Err(err).Msg("failed to get delivery address")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	resp.SellerInfo = sellerInfo
+	resp.ToDeliveryInformation = deliveryInformation
 	
-	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID.String())
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			err = fmt.Errorf("order transaction not found for order ID %s", order.ID)
@@ -636,20 +715,134 @@ func (server *Server) getOrderDetails(c *gin.Context) {
 	}
 	resp.OrderTransaction = orderTransaction
 	
-	// Lấy thông tin địa chỉ giao hàng
-	deliveryAddress, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	c.JSON(http.StatusOK, resp)
+}
+
+type cancelOrderByBuyerRequest struct {
+	CanceledReason string `json:"canceled_reason" binding:"required"`
+}
+
+//	@Summary		Cancel order by buyer
+//	@Description	Cancel an order by the buyer
+//	@Tags			orders
+//	@Accept			json
+//	@Produce		json
+//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			request	body		cancelOrderByBuyerRequest		true	"Cancellation reason"
+//	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"Order canceled successfully"
+//	@Failure		400		"Bad request"
+//	@Failure		404		"User not found<br/>Order not found"
+//	@Failure		403		"Forbidden - User does not have permission to cancel this order"
+//	@Failure		422		"Unprocessable Entity - Order cannot be canceled in the current status"
+//	@Failure		500		"Internal server error"
+//	@Security		accessToken
+//	@Router			/orders/{orderID}/cancel [patch]
+func (server *Server) cancelOrderByBuyer(c *gin.Context) {
+	// Lấy userID từ token xác thực
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get delivery address")
+		log.Err(err).Msg("failed to get user by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	resp.DeliveryAddress = deliveryAddress
 	
-	c.JSON(http.StatusOK, resp)
+	// Lấy orderID từ tham số URL
+	orderID, err := uuid.Parse(c.Param("orderID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Lấy lý do hủy đơn hàng từ request body
+	var req cancelOrderByBuyerRequest
+	if err = c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin đơn hàng
+	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("order ID %s not found", orderID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get order by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem người mua có quyền hủy đơn hàng không
+	if order.BuyerID != userID {
+		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra trạng thái đơn hàng
+	// Chỉ cho phép hủy đơn hàng khi đơn hàng đang ở trạng thái "pending"
+	if order.Status != db.OrderStatusPending {
+		err = fmt.Errorf("order %s cannot be canceled in status %s", order.Code, order.Status)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	result, err := server.dbStore.CancelOrderByBuyerTx(c.Request.Context(), db.CancelOrderByBuyerTxParams{
+		Order:          &order,
+		CanceledReason: req.CanceledReason,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to cancel order by buyer")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Gửi thông báo cho người mua
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       "Đơn hàng của bạn đã được hủy",
+		Message: fmt.Sprintf("Đơn hàng #%s đã được hủy thành công. Số tiền %s đã được hoàn trả vào ví của bạn.",
+			result.Order.Code,
+			util.FormatVND(result.OrderTransaction.Amount)),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+	}
+	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
+	
+	// Gửi thông báo cho người bán
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.SellerID,
+		Title:       "Đơn hàng đã bị hủy bởi người mua",
+		Message: fmt.Sprintf("Đơn hàng #%s (giá trị %s) đã bị hủy bởi người mua với lý do: \"%s\". Các sản phẩm đã được đưa về trạng thái có thể bán lại.",
+			result.Order.Code,
+			util.FormatVND(result.OrderTransaction.Amount),
+			req.CanceledReason),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+	}
+	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
+	
+	c.JSON(http.StatusOK, result)
 }

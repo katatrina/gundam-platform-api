@@ -9,15 +9,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const confirmOrderByID = `-- name: ConfirmOrderByID :one
 UPDATE orders
-SET status = 'packaging',
+SET status     = 'packaging',
     updated_at = now()
 WHERE id = $1
-  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type ConfirmOrderByIDParams struct {
@@ -40,7 +39,9 @@ func (q *Queries) ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDPara
 		&i.PaymentMethod,
 		&i.Note,
 		&i.IsPackaged,
-		&i.PackagingImages,
+		&i.PackagingImageURLs,
+		&i.CanceledBy,
+		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -58,7 +59,7 @@ INSERT INTO orders (id,
                     status,
                     payment_method,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type CreateOrderParams struct {
@@ -71,7 +72,7 @@ type CreateOrderParams struct {
 	TotalAmount   int64         `json:"total_amount"`
 	Status        OrderStatus   `json:"status"`
 	PaymentMethod PaymentMethod `json:"payment_method"`
-	Note          pgtype.Text   `json:"note"`
+	Note          *string       `json:"note"`
 }
 
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
@@ -100,7 +101,9 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.PaymentMethod,
 		&i.Note,
 		&i.IsPackaged,
-		&i.PackagingImages,
+		&i.PackagingImageURLs,
+		&i.CanceledBy,
+		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -108,7 +111,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE id = $1
 `
@@ -128,42 +131,9 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 		&i.PaymentMethod,
 		&i.Note,
 		&i.IsPackaged,
-		&i.PackagingImages,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getSalesOrderBySellerID = `-- name: GetSalesOrderBySellerID :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
-FROM orders
-WHERE id = $1
-  AND seller_id = $2
-    FOR UPDATE
-`
-
-type GetSalesOrderBySellerIDParams struct {
-	OrderID  uuid.UUID `json:"order_id"`
-	SellerID string    `json:"seller_id"`
-}
-
-func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error) {
-	row := q.db.QueryRow(ctx, getSalesOrderBySellerID, arg.OrderID, arg.SellerID)
-	var i Order
-	err := row.Scan(
-		&i.ID,
-		&i.Code,
-		&i.BuyerID,
-		&i.SellerID,
-		&i.ItemsSubtotal,
-		&i.DeliveryFee,
-		&i.TotalAmount,
-		&i.Status,
-		&i.PaymentMethod,
-		&i.Note,
-		&i.IsPackaged,
-		&i.PackagingImages,
+		&i.PackagingImageURLs,
+		&i.CanceledBy,
+		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -171,7 +141,7 @@ func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrder
 }
 
 const listPurchaseOrders = `-- name: ListPurchaseOrders :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE buyer_id = $1
   AND status = COALESCE($2::order_status, status)
@@ -204,7 +174,9 @@ func (q *Queries) ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrders
 			&i.PaymentMethod,
 			&i.Note,
 			&i.IsPackaged,
-			&i.PackagingImages,
+			&i.PackagingImageURLs,
+			&i.CanceledBy,
+			&i.CanceledReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -220,25 +192,31 @@ func (q *Queries) ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrders
 
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
-SET is_packaged      = COALESCE($1, is_packaged),
-    packaging_images = COALESCE($2, packaging_images),
-    status           = COALESCE($3, status),
-    updated_at       = now()
-WHERE id = $4 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+SET is_packaged          = COALESCE($1, is_packaged),
+    packaging_image_urls = COALESCE($2, packaging_image_urls),
+    status               = COALESCE($3, status),
+    canceled_by          = COALESCE($4, canceled_by),
+    canceled_reason      = COALESCE($5, canceled_reason),
+    updated_at           = now()
+WHERE id = $6 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type UpdateOrderParams struct {
-	IsPackaged      pgtype.Bool     `json:"is_packaged"`
-	PackagingImages []string        `json:"packaging_images"`
-	Status          NullOrderStatus `json:"status"`
-	OrderID         uuid.UUID       `json:"order_id"`
+	IsPackaged         *bool           `json:"is_packaged"`
+	PackagingImageURLs []string        `json:"packaging_image_urls"`
+	Status             NullOrderStatus `json:"status"`
+	CanceledBy         *string         `json:"canceled_by"`
+	CanceledReason     *string         `json:"canceled_reason"`
+	OrderID            uuid.UUID       `json:"order_id"`
 }
 
 func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
 	row := q.db.QueryRow(ctx, updateOrder,
 		arg.IsPackaged,
-		arg.PackagingImages,
+		arg.PackagingImageURLs,
 		arg.Status,
+		arg.CanceledBy,
+		arg.CanceledReason,
 		arg.OrderID,
 	)
 	var i Order
@@ -254,7 +232,9 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		&i.PaymentMethod,
 		&i.Note,
 		&i.IsPackaged,
-		&i.PackagingImages,
+		&i.PackagingImageURLs,
+		&i.CanceledBy,
+		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -262,7 +242,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 }
 
 const validateGundamBeforeCheckout = `-- name: ValidateGundamBeforeCheckout :one
-SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.status, g.created_at, g.updated_at,
+SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.series, g.parts_total, g.material, g.version, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.release_year, g.status, g.created_at, g.updated_at,
        CASE
            WHEN g.id IS NOT NULL AND g.status = 'published'
                THEN true
@@ -287,6 +267,10 @@ func (q *Queries) ValidateGundamBeforeCheckout(ctx context.Context, id int64) (V
 		&i.Gundam.Name,
 		&i.Gundam.Slug,
 		&i.Gundam.GradeID,
+		&i.Gundam.Series,
+		&i.Gundam.PartsTotal,
+		&i.Gundam.Material,
+		&i.Gundam.Version,
 		&i.Gundam.Quantity,
 		&i.Gundam.Condition,
 		&i.Gundam.ConditionDescription,
@@ -295,6 +279,7 @@ func (q *Queries) ValidateGundamBeforeCheckout(ctx context.Context, id int64) (V
 		&i.Gundam.Scale,
 		&i.Gundam.Description,
 		&i.Gundam.Price,
+		&i.Gundam.ReleaseYear,
 		&i.Gundam.Status,
 		&i.Gundam.CreatedAt,
 		&i.Gundam.UpdatedAt,

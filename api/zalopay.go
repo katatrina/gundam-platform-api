@@ -9,6 +9,7 @@ import (
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/katatrina/gundam-BE/internal/zalopay"
 	"github.com/rs/zerolog/log"
@@ -116,8 +117,8 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 	
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: transData.AppUser,
-		Title:       fmt.Sprintf("Nạp tiền thành công: %s VND", transData.Amount),
-		Message:     fmt.Sprintf("Nạp tiền thành công: %s VND đã được thêm vào ví của bạn qua ZaloPay. Số dư mới có thể sử dụng để thanh toán đơn hàng hoặc tham gia đấu giá. Mã giao dịch: %s", transData.Amount, transData.AppTransID),
+		Title:       fmt.Sprintf("Nạp tiền thành công: %s", util.FormatVND(transData.Amount)),
+		Message:     fmt.Sprintf("Nạp tiền thành công: %s đã được thêm vào ví của bạn qua ZaloPay. Số dư mới có thể sử dụng để thanh toán đơn hàng hoặc tham gia đấu giá. Mã giao dịch: %s", util.FormatVND(transData.Amount), transData.AppTransID),
 		Type:        "wallet",
 		ReferenceID: transData.AppTransID,
 	}, opts...)
@@ -125,7 +126,7 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 		log.Err(err).Msgf("failed to send notification to user ID %s", transData.AppUser)
 	}
 	
-	log.Info().Msgf("Successfully deposited %s VND into wallet for user ID %s", transData.Amount, transData.AppUser)
+	log.Info().Msgf("Successfully deposited %s into wallet for user ID %s", util.FormatVND(transData.Amount), transData.AppUser)
 	
 	// Trả về kết quả cho Zalopay server
 	c.JSON(http.StatusOK, result)

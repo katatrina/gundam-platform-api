@@ -7,8 +7,6 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addCartItem = `-- name: AddCartItem :one
@@ -40,14 +38,14 @@ type AddCartItemParams struct {
 }
 
 type AddCartItemRow struct {
-	CartItemID      string      `json:"cart_item_id"`
-	GundamID        int64       `json:"gundam_id"`
-	GundamName      string      `json:"gundam_name"`
-	GundamPrice     int64       `json:"gundam_price"`
-	GundamImageUrl  string      `json:"gundam_image_url"`
-	SellerID        string      `json:"seller_id"`
-	SellerName      string      `extensions:"x-nullable" json:"seller_name"`
-	SellerAvatarUrl pgtype.Text `extensions:"x-nullable" json:"seller_avatar_url"`
+	CartItemID      string  `json:"cart_item_id"`
+	GundamID        int64   `json:"gundam_id"`
+	GundamName      string  `json:"gundam_name"`
+	GundamPrice     int64   `json:"gundam_price"`
+	GundamImageUrl  string  `json:"gundam_image_url"`
+	SellerID        string  `json:"seller_id"`
+	SellerName      string  `json:"seller_name"`
+	SellerAvatarUrl *string `json:"seller_avatar_url"`
 }
 
 func (q *Queries) AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error) {
@@ -133,14 +131,14 @@ WHERE ci.cart_id = $1
 `
 
 type ListCartItemsWithDetailsRow struct {
-	CartItemID      string      `json:"cart_item_id"`
-	GundamID        int64       `json:"gundam_id"`
-	GundamName      string      `json:"gundam_name"`
-	GundamPrice     int64       `json:"gundam_price"`
-	GundamImageUrl  string      `json:"gundam_image_url"`
-	SellerID        string      `json:"seller_id"`
-	SellerName      string      `extensions:"x-nullable" json:"seller_name"`
-	SellerAvatarUrl pgtype.Text `extensions:"x-nullable" json:"seller_avatar_url"`
+	CartItemID      string  `json:"cart_item_id"`
+	GundamID        int64   `json:"gundam_id"`
+	GundamName      string  `json:"gundam_name"`
+	GundamPrice     int64   `json:"gundam_price"`
+	GundamImageUrl  string  `json:"gundam_image_url"`
+	SellerID        string  `json:"seller_id"`
+	SellerName      string  `json:"seller_name"`
+	SellerAvatarUrl *string `json:"seller_avatar_url"`
 }
 
 func (q *Queries) ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error) {

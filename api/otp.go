@@ -8,7 +8,6 @@ import (
 	"time"
 	
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -117,9 +116,11 @@ func (server *Server) verifyPhoneNumberOTP(c *gin.Context) {
 	}
 	
 	// So sánh số điện thoại mới với số điện thoại hiện tại
-	if user.PhoneNumber.String == req.PhoneNumber {
-		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("cannot update to the same phone number")))
-		return
+	if user.PhoneNumber != nil {
+		if *user.PhoneNumber == req.PhoneNumber {
+			c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("cannot update to the same phone number")))
+			return
+		}
 	}
 	
 	// Xác thực OTP
@@ -136,10 +137,7 @@ func (server *Server) verifyPhoneNumberOTP(c *gin.Context) {
 	}
 	
 	// Kiểm tra xem số điện thoại đã được sử dụng bởi user khác chưa
-	_, err = server.dbStore.GetUserByPhoneNumber(c.Request.Context(), pgtype.Text{
-		String: req.PhoneNumber,
-		Valid:  true,
-	})
+	_, err = server.dbStore.GetUserByPhoneNumber(c.Request.Context(), &req.PhoneNumber)
 	if err != nil {
 		if !errors.Is(err, db.ErrRecordNotFound) {
 			log.Error().Err(err).Msg("failed to get user by phone number")
@@ -151,15 +149,9 @@ func (server *Server) verifyPhoneNumberOTP(c *gin.Context) {
 	
 	// Update user's phone_number column
 	arg := db.UpdateUserParams{
-		UserID: user.ID,
-		PhoneNumber: pgtype.Text{
-			String: req.PhoneNumber,
-			Valid:  true,
-		},
-		PhoneNumberVerified: pgtype.Bool{
-			Bool:  true,
-			Valid: true,
-		},
+		UserID:              user.ID,
+		PhoneNumber:         &req.PhoneNumber,
+		PhoneNumberVerified: util.BoolPointer(true),
 	}
 	_, err = server.dbStore.UpdateUser(context.Background(), arg)
 	if err != nil {

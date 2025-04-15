@@ -19,7 +19,7 @@ type Store interface {
 	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (UserAddress, error)
 	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	DeleteUserAddressTx(ctx context.Context, arg DeleteUserAddressParams) error
-	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) error
+	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) (GundamDetails, error)
 	BecomeSellerTx(ctx context.Context, userID string) (User, error)
 	PublishGundamTx(ctx context.Context, arg PublishGundamTxParams) error
 	UnpublishGundamTx(ctx context.Context, arg UnpublishGundamTxParams) error
@@ -28,6 +28,8 @@ type Store interface {
 	ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error)
 	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
 	ConfirmOrderReceivedTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error)
+	CancelOrderByBuyerTx(ctx context.Context, arg CancelOrderByBuyerTxParams) (CancelOrderByBuyerTxResult, error)
+	CancelOrderBySellerTx(ctx context.Context, arg CancelOrderBySellerTxParams) (CancelOrderBySellerTxResult, error)
 }
 
 type SQLStore struct {

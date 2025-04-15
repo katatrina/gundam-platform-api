@@ -7,36 +7,64 @@ package db
 
 import (
 	"context"
-	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
-const getSellerByGundamID = `-- name: GetSellerByGundamID :one
-SELECT u.id, u.google_account_id, u.full_name, u.hashed_password, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.role, u.avatar_url, u.created_at, u.updated_at, u.deleted_at
-FROM users u
-         JOIN gundams g ON u.id = g.owner_id
-WHERE g.id = $1
-  AND u.role = 'seller'
+const createSellerProfile = `-- name: CreateSellerProfile :one
+INSERT INTO seller_profiles (seller_id, shop_name)
+VALUES ($1, $2) RETURNING seller_id, shop_name, created_at, updated_at
 `
 
-func (q *Queries) GetSellerByGundamID(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getSellerByGundamID, id)
-	var i User
+type CreateSellerProfileParams struct {
+	SellerID string `json:"seller_id"`
+	ShopName string `json:"shop_name"`
+}
+
+func (q *Queries) CreateSellerProfile(ctx context.Context, arg CreateSellerProfileParams) (SellerProfile, error) {
+	row := q.db.QueryRow(ctx, createSellerProfile, arg.SellerID, arg.ShopName)
+	var i SellerProfile
 	err := row.Scan(
-		&i.ID,
-		&i.GoogleAccountID,
-		&i.FullName,
-		&i.HashedPassword,
-		&i.Email,
-		&i.EmailVerified,
-		&i.PhoneNumber,
-		&i.PhoneNumberVerified,
-		&i.Role,
-		&i.AvatarUrl,
+		&i.SellerID,
+		&i.ShopName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getSalesOrderBySellerID = `-- name: GetSalesOrderBySellerID :one
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+FROM orders
+WHERE id = $1
+  AND seller_id = $2
+`
+
+type GetSalesOrderBySellerIDParams struct {
+	OrderID  uuid.UUID `json:"order_id"`
+	SellerID string    `json:"seller_id"`
+}
+
+func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getSalesOrderBySellerID, arg.OrderID, arg.SellerID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.DeliveryFee,
+		&i.TotalAmount,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Note,
+		&i.IsPackaged,
+		&i.PackagingImageURLs,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -61,7 +89,7 @@ func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -69,100 +97,59 @@ func (q *Queries) GetSellerByID(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
-const listGundamsBySellerID = `-- name: ListGundamsBySellerID :many
-SELECT g.id,
-       g.owner_id,
-       g.name,
-       g.slug,
-       gg.display_name             AS grade,
-       g.condition,
-       g.condition_description,
-       g.manufacturer,
-       g.scale,
-       g.description,
-       g.price,
-       g.status,
-       g.created_at,
-       g.updated_at,
-       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
-        FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls
-FROM gundams g
-         JOIN users u ON g.owner_id = u.id
-         JOIN gundam_grades gg ON g.grade_id = gg.id
-WHERE owner_id = $1
-  AND ($2::text IS NULL OR g.name ILIKE concat('%', $2::text, '%'))
-ORDER BY g.created_at DESC
+const getSellerDetailByID = `-- name: GetSellerDetailByID :one
+SELECT u.id, u.google_account_id, u.full_name, u.hashed_password, u.email, u.email_verified, u.phone_number, u.phone_number_verified, u.role, u.avatar_url, u.created_at, u.updated_at, u.deleted_at,
+       sp.seller_id, sp.shop_name, sp.created_at, sp.updated_at
+FROM users u
+         JOIN seller_profiles sp ON u.id = sp.seller_id
+WHERE u.id = $1
 `
 
-type ListGundamsBySellerIDParams struct {
-	OwnerID string      `json:"owner_id"`
-	Name    pgtype.Text `json:"name"`
+type GetSellerDetailByIDRow struct {
+	User          User          `json:"user"`
+	SellerProfile SellerProfile `json:"seller_profile"`
 }
 
-type ListGundamsBySellerIDRow struct {
-	ID                   int64           `json:"id"`
-	OwnerID              string          `json:"owner_id"`
-	Name                 string          `json:"name"`
-	Slug                 string          `json:"slug"`
-	Grade                string          `json:"grade"`
-	Condition            GundamCondition `json:"condition"`
-	ConditionDescription pgtype.Text     `json:"condition_description"`
-	Manufacturer         string          `json:"manufacturer"`
-	Scale                GundamScale     `json:"scale"`
-	Description          string          `json:"description"`
-	Price                int64           `json:"price"`
-	Status               GundamStatus    `json:"status"`
-	CreatedAt            time.Time       `json:"created_at"`
-	UpdatedAt            time.Time       `json:"updated_at"`
-	ImageURLs            []string        `json:"image_urls"`
-}
-
-func (q *Queries) ListGundamsBySellerID(ctx context.Context, arg ListGundamsBySellerIDParams) ([]ListGundamsBySellerIDRow, error) {
-	rows, err := q.db.Query(ctx, listGundamsBySellerID, arg.OwnerID, arg.Name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListGundamsBySellerIDRow{}
-	for rows.Next() {
-		var i ListGundamsBySellerIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OwnerID,
-			&i.Name,
-			&i.Slug,
-			&i.Grade,
-			&i.Condition,
-			&i.ConditionDescription,
-			&i.Manufacturer,
-			&i.Scale,
-			&i.Description,
-			&i.Price,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ImageURLs,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error) {
+	row := q.db.QueryRow(ctx, getSellerDetailByID, id)
+	var i GetSellerDetailByIDRow
+	err := row.Scan(
+		&i.User.ID,
+		&i.User.GoogleAccountID,
+		&i.User.FullName,
+		&i.User.HashedPassword,
+		&i.User.Email,
+		&i.User.EmailVerified,
+		&i.User.PhoneNumber,
+		&i.User.PhoneNumberVerified,
+		&i.User.Role,
+		&i.User.AvatarURL,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.DeletedAt,
+		&i.SellerProfile.SellerID,
+		&i.SellerProfile.ShopName,
+		&i.SellerProfile.CreatedAt,
+		&i.SellerProfile.UpdatedAt,
+	)
+	return i, err
 }
 
 const listOrdersBySellerID = `-- name: ListOrdersBySellerID :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_images, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE seller_id = $1
-ORDER BY created_at DESC
+  AND status = COALESCE($2::order_status, status)
+ORDER BY updated_at DESC, created_at DESC
 `
 
-func (q *Queries) ListOrdersBySellerID(ctx context.Context, sellerID string) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersBySellerID, sellerID)
+type ListOrdersBySellerIDParams struct {
+	SellerID string          `json:"seller_id"`
+	Status   NullOrderStatus `json:"status"`
+}
+
+func (q *Queries) ListOrdersBySellerID(ctx context.Context, arg ListOrdersBySellerIDParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrdersBySellerID, arg.SellerID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +169,9 @@ func (q *Queries) ListOrdersBySellerID(ctx context.Context, sellerID string) ([]
 			&i.PaymentMethod,
 			&i.Note,
 			&i.IsPackaged,
-			&i.PackagingImages,
+			&i.PackagingImageURLs,
+			&i.CanceledBy,
+			&i.CanceledReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -194,4 +183,27 @@ func (q *Queries) ListOrdersBySellerID(ctx context.Context, sellerID string) ([]
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSellerProfileByID = `-- name: UpdateSellerProfileByID :one
+UPDATE seller_profiles
+SET shop_name = COALESCE($2, shop_name)
+WHERE seller_id = $1 RETURNING seller_id, shop_name, created_at, updated_at
+`
+
+type UpdateSellerProfileByIDParams struct {
+	SellerID string  `json:"seller_id"`
+	ShopName *string `json:"shop_name"`
+}
+
+func (q *Queries) UpdateSellerProfileByID(ctx context.Context, arg UpdateSellerProfileByIDParams) (SellerProfile, error) {
+	row := q.db.QueryRow(ctx, updateSellerProfileByID, arg.SellerID, arg.ShopName)
+	var i SellerProfile
+	err := row.Scan(
+		&i.SellerID,
+		&i.ShopName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

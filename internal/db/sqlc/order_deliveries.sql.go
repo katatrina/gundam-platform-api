@@ -25,10 +25,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_id, delivery_tracking_co
 `
 
 type CreateOrderDeliveryParams struct {
-	OrderID              string                    `json:"order_id"`
-	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	OrderID              uuid.UUID                 `json:"order_id"`
+	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
-	Status               pgtype.Text               `json:"status"`
+	Status               *string                   `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`
 	ToDeliveryID         int64                     `json:"to_delivery_id"`
@@ -76,8 +76,9 @@ SELECT od.id,
        od.created_at,
        od.updated_at
 FROM order_deliveries od
-         JOIN orders o ON od.order_id = o.id::text
+         JOIN orders o ON od.order_id = o.id
 WHERE od.overall_status IN ('picking', 'delivering')
+  AND od.status IS NOT NULL
   AND od.delivery_tracking_code IS NOT NULL
   AND od.updated_at > NOW() - INTERVAL '30 days'
 ORDER BY od.created_at DESC
@@ -91,11 +92,11 @@ type GetActiveOrderDeliveriesRow struct {
 	BuyerID              string                    `json:"buyer_id"`
 	SellerID             string                    `json:"seller_id"`
 	ItemsSubtotal        int64                     `json:"items_subtotal"`
-	Status               pgtype.Text               `json:"status"`
+	Status               *string                   `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       int64                     `json:"from_delivery_id"`
 	ToDeliveryID         int64                     `json:"to_delivery_id"`
-	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
 	CreatedAt            time.Time                 `json:"created_at"`
 	UpdatedAt            time.Time                 `json:"updated_at"`
@@ -142,7 +143,7 @@ FROM order_deliveries
 WHERE order_id = $1
 `
 
-func (q *Queries) GetOrderDelivery(ctx context.Context, orderID string) (OrderDelivery, error) {
+func (q *Queries) GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error) {
 	row := q.db.QueryRow(ctx, getOrderDelivery, orderID)
 	var i OrderDelivery
 	err := row.Scan(
@@ -173,12 +174,12 @@ WHERE id = $7 RETURNING id, order_id, delivery_tracking_code, expected_delivery_
 `
 
 type UpdateOrderDeliveryParams struct {
-	DeliveryTrackingCode pgtype.Text               `json:"delivery_tracking_code"`
+	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
 	ExpectedDeliveryTime pgtype.Timestamptz        `json:"expected_delivery_time"`
-	Status               pgtype.Text               `json:"status"`
+	Status               *string                   `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
-	FromDeliveryID       pgtype.Int8               `json:"from_delivery_id"`
-	ToDeliveryID         pgtype.Int8               `json:"to_delivery_id"`
+	FromDeliveryID       *int64                    `json:"from_delivery_id"`
+	ToDeliveryID         *int64                    `json:"to_delivery_id"`
 	ID                   int64                     `json:"id"`
 }
 

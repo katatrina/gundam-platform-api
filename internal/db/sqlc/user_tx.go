@@ -96,7 +96,7 @@ func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAd
 		}
 		
 		// First unset the existing primary addressUpdated if the new addressUpdated is primary
-		if arg.IsPrimary.Bool {
+		if arg.IsPrimary != nil {
 			err = qTx.UnsetPrimaryAddress(ctx, addressUpdated.UserID)
 			if err != nil {
 				return err
@@ -104,7 +104,7 @@ func (store *SQLStore) UpdateUserAddressTx(ctx context.Context, arg UpdateUserAd
 		}
 		
 		// Second unset the existing pickup addressUpdated if the new addressUpdated is a pickup addressUpdated
-		if arg.IsPickupAddress.Bool {
+		if arg.IsPickupAddress != nil {
 			err = qTx.UnsetPickupAddress(ctx, addressUpdated.UserID)
 			if err != nil {
 				return err

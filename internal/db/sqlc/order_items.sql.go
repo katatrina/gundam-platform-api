@@ -7,103 +7,76 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createOrderItem = `-- name: CreateOrderItem :one
 INSERT INTO order_items (order_id,
                          gundam_id,
+                         name,
+                         slug,
+                         grade,
+                         scale,
                          price,
                          quantity,
-                         weight)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, order_id, gundam_id, quantity, price, weight, created_at
+                         weight,
+                         image_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, order_id, gundam_id, name, slug, grade, scale, quantity, price, weight, image_url, created_at
 `
 
 type CreateOrderItemParams struct {
-	OrderID  string `json:"order_id"`
-	GundamID int64  `json:"gundam_id"`
-	Price    int64  `json:"price"`
-	Quantity int64  `json:"quantity"`
-	Weight   int64  `json:"weight"`
+	OrderID  uuid.UUID `json:"order_id"`
+	GundamID *int64    `json:"gundam_id"`
+	Name     string    `json:"name"`
+	Slug     string    `json:"slug"`
+	Grade    string    `json:"grade"`
+	Scale    string    `json:"scale"`
+	Price    int64     `json:"price"`
+	Quantity int64     `json:"quantity"`
+	Weight   int64     `json:"weight"`
+	ImageURL string    `json:"image_url"`
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
 	row := q.db.QueryRow(ctx, createOrderItem,
 		arg.OrderID,
 		arg.GundamID,
+		arg.Name,
+		arg.Slug,
+		arg.Grade,
+		arg.Scale,
 		arg.Price,
 		arg.Quantity,
 		arg.Weight,
+		arg.ImageURL,
 	)
 	var i OrderItem
 	err := row.Scan(
 		&i.ID,
 		&i.OrderID,
 		&i.GundamID,
+		&i.Name,
+		&i.Slug,
+		&i.Grade,
+		&i.Scale,
 		&i.Quantity,
 		&i.Price,
 		&i.Weight,
+		&i.ImageURL,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const getGundamsByOrderItems = `-- name: GetGundamsByOrderItems :many
-SELECT oi.quantity,
-       oi.price,
-       oi.weight,
-       g.name,
-       gg.display_name AS grade,
-       g.scale
-FROM order_items oi
-         JOIN gundams g ON oi.gundam_id = g.id
-         JOIN gundam_grades gg ON g.grade_id = gg.id
-WHERE oi.order_id = $1
-`
-
-type GetGundamsByOrderItemsRow struct {
-	Quantity int64       `json:"quantity"`
-	Price    int64       `json:"price"`
-	Weight   int64       `json:"weight"`
-	Name     string      `json:"name"`
-	Grade    string      `json:"grade"`
-	Scale    GundamScale `json:"scale"`
-}
-
-func (q *Queries) GetGundamsByOrderItems(ctx context.Context, orderID string) ([]GetGundamsByOrderItemsRow, error) {
-	rows, err := q.db.Query(ctx, getGundamsByOrderItems, orderID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetGundamsByOrderItemsRow{}
-	for rows.Next() {
-		var i GetGundamsByOrderItemsRow
-		if err := rows.Scan(
-			&i.Quantity,
-			&i.Price,
-			&i.Weight,
-			&i.Name,
-			&i.Grade,
-			&i.Scale,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getOrderItems = `-- name: GetOrderItems :many
-SELECT id, order_id, gundam_id, quantity, price, weight, created_at
+const listOrderItems = `-- name: ListOrderItems :many
+SELECT id, order_id, gundam_id, name, slug, grade, scale, quantity, price, weight, image_url, created_at
 FROM order_items
 WHERE order_id = $1
 `
 
-func (q *Queries) GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error) {
-	rows, err := q.db.Query(ctx, getOrderItems, orderID)
+func (q *Queries) ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error) {
+	rows, err := q.db.Query(ctx, listOrderItems, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +88,14 @@ func (q *Queries) GetOrderItems(ctx context.Context, orderID string) ([]OrderIte
 			&i.ID,
 			&i.OrderID,
 			&i.GundamID,
+			&i.Name,
+			&i.Slug,
+			&i.Grade,
+			&i.Scale,
 			&i.Quantity,
 			&i.Price,
 			&i.Weight,
+			&i.ImageURL,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

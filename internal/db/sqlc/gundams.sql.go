@@ -8,8 +8,6 @@ package db
 import (
 	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAccessory = `-- name: CreateAccessory :exec
@@ -35,14 +33,20 @@ INSERT INTO gundams (owner_id,
                      name,
                      slug,
                      grade_id,
+                     series,
+                     parts_total,
+                     material,
+                     version,
+                     quantity,
                      condition,
                      condition_description,
                      manufacturer,
                      weight,
                      scale,
                      description,
-                     price)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at
+                     price,
+                     release_year)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id, owner_id, name, slug, grade_id, series, parts_total, material, version, quantity, condition, condition_description, manufacturer, weight, scale, description, price, release_year, status, created_at, updated_at
 `
 
 type CreateGundamParams struct {
@@ -50,13 +54,19 @@ type CreateGundamParams struct {
 	Name                 string          `json:"name"`
 	Slug                 string          `json:"slug"`
 	GradeID              int64           `json:"grade_id"`
+	Series               string          `json:"series"`
+	PartsTotal           int64           `json:"parts_total"`
+	Material             string          `json:"material"`
+	Version              string          `json:"version"`
+	Quantity             int64           `json:"quantity"`
 	Condition            GundamCondition `json:"condition"`
-	ConditionDescription pgtype.Text     `json:"condition_description"`
+	ConditionDescription *string         `json:"condition_description"`
 	Manufacturer         string          `json:"manufacturer"`
 	Weight               int64           `json:"weight"`
 	Scale                GundamScale     `json:"scale"`
 	Description          string          `json:"description"`
 	Price                int64           `json:"price"`
+	ReleaseYear          *int64          `json:"release_year"`
 }
 
 func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error) {
@@ -65,6 +75,11 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		arg.Name,
 		arg.Slug,
 		arg.GradeID,
+		arg.Series,
+		arg.PartsTotal,
+		arg.Material,
+		arg.Version,
+		arg.Quantity,
 		arg.Condition,
 		arg.ConditionDescription,
 		arg.Manufacturer,
@@ -72,6 +87,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		arg.Scale,
 		arg.Description,
 		arg.Price,
+		arg.ReleaseYear,
 	)
 	var i Gundam
 	err := row.Scan(
@@ -80,6 +96,10 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.Name,
 		&i.Slug,
 		&i.GradeID,
+		&i.Series,
+		&i.PartsTotal,
+		&i.Material,
+		&i.Version,
 		&i.Quantity,
 		&i.Condition,
 		&i.ConditionDescription,
@@ -88,6 +108,7 @@ func (q *Queries) CreateGundam(ctx context.Context, arg CreateGundamParams) (Gun
 		&i.Scale,
 		&i.Description,
 		&i.Price,
+		&i.ReleaseYear,
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -154,7 +175,7 @@ func (q *Queries) GetGundamAccessories(ctx context.Context, gundamID int64) ([]G
 }
 
 const getGundamByID = `-- name: GetGundamByID :one
-SELECT id, owner_id, name, slug, grade_id, quantity, condition, condition_description, manufacturer, weight, scale, description, price, status, created_at, updated_at
+SELECT id, owner_id, name, slug, grade_id, series, parts_total, material, version, quantity, condition, condition_description, manufacturer, weight, scale, description, price, release_year, status, created_at, updated_at
 FROM gundams
 WHERE id = $1
 `
@@ -168,6 +189,10 @@ func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
 		&i.Name,
 		&i.Slug,
 		&i.GradeID,
+		&i.Series,
+		&i.PartsTotal,
+		&i.Material,
+		&i.Version,
 		&i.Quantity,
 		&i.Condition,
 		&i.ConditionDescription,
@@ -176,6 +201,7 @@ func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
 		&i.Scale,
 		&i.Description,
 		&i.Price,
+		&i.ReleaseYear,
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -184,71 +210,85 @@ func (q *Queries) GetGundamByID(ctx context.Context, id int64) (Gundam, error) {
 }
 
 const getGundamBySlug = `-- name: GetGundamBySlug :one
-SELECT g.id,
+SELECT g.id            AS gundam_id,
        g.owner_id,
        g.name,
        g.slug,
-       gg.display_name             AS grade,
+       gg.display_name AS grade,
+       g.series,
+         g.parts_total,
+            g.material,
+         g.version,
+       g.quantity,
        g.condition,
+       g.condition_description,
        g.manufacturer,
        g.scale,
        g.weight,
        g.description,
        g.price,
+            g.release_year,
        g.status,
-       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
-        FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls,
        g.created_at,
        g.updated_at
 FROM gundams g
-         JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
 WHERE g.slug = $1
   AND ($2::text IS NULL OR g.status = $2::gundam_status)
-ORDER BY g.created_at DESC
 `
 
 type GetGundamBySlugParams struct {
-	Slug   string      `json:"slug"`
-	Status pgtype.Text `json:"status"`
+	Slug   string  `json:"slug"`
+	Status *string `json:"status"`
 }
 
 type GetGundamBySlugRow struct {
-	ID           int64           `json:"id"`
-	OwnerID      string          `json:"owner_id"`
-	Name         string          `json:"name"`
-	Slug         string          `json:"slug"`
-	Grade        string          `json:"grade"`
-	Condition    GundamCondition `json:"condition"`
-	Manufacturer string          `json:"manufacturer"`
-	Scale        GundamScale     `json:"scale"`
-	Weight       int64           `json:"weight"`
-	Description  string          `json:"description"`
-	Price        int64           `json:"price"`
-	Status       GundamStatus    `json:"status"`
-	ImageURLs    []string        `json:"image_urls"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	GundamID             int64           `json:"gundam_id"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	Grade                string          `json:"grade"`
+	Series               string          `json:"series"`
+	PartsTotal           int64           `json:"parts_total"`
+	Material             string          `json:"material"`
+	Version              string          `json:"version"`
+	Quantity             int64           `json:"quantity"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription *string         `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Scale                GundamScale     `json:"scale"`
+	Weight               int64           `json:"weight"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
+	ReleaseYear          *int64          `json:"release_year"`
+	Status               GundamStatus    `json:"status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
 }
 
 func (q *Queries) GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error) {
 	row := q.db.QueryRow(ctx, getGundamBySlug, arg.Slug, arg.Status)
 	var i GetGundamBySlugRow
 	err := row.Scan(
-		&i.ID,
+		&i.GundamID,
 		&i.OwnerID,
 		&i.Name,
 		&i.Slug,
 		&i.Grade,
+		&i.Series,
+		&i.PartsTotal,
+		&i.Material,
+		&i.Version,
+		&i.Quantity,
 		&i.Condition,
+		&i.ConditionDescription,
 		&i.Manufacturer,
 		&i.Scale,
 		&i.Weight,
 		&i.Description,
 		&i.Price,
+		&i.ReleaseYear,
 		&i.Status,
-		&i.ImageURLs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -286,57 +326,151 @@ func (q *Queries) ListGundamGrades(ctx context.Context) ([]GundamGrade, error) {
 	return items, nil
 }
 
-const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
-SELECT g.id,
-       g.owner_id,
-       g.name,
-       g.slug,
-       gg.display_name             AS grade,
-       g.condition,
-       g.condition_description,
-       g.manufacturer,
-       g.scale,
-       g.description,
-       g.price,
-       g.status,
-       g.created_at,
-       g.updated_at,
-       (SELECT array_agg(gi.url ORDER BY is_primary DESC, created_at DESC) ::TEXT[]
-        FROM gundam_images gi
-        WHERE gi.gundam_id = g.id) AS image_urls
+const listGundamsByUserID = `-- name: ListGundamsByUserID :many
+SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.series, g.parts_total, g.material, g.version, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.release_year, g.status, g.created_at, g.updated_at,
+       gg.display_name AS grade
 FROM gundams g
-         JOIN users u ON g.owner_id = u.id
          JOIN gundam_grades gg ON g.grade_id = gg.id
-WHERE gg.slug = COALESCE($1::text, gg.slug)
-  AND ($2::text IS NULL OR g.status = $2::gundam_status)
-ORDER BY g.created_at DESC
+WHERE owner_id = $1
+  AND ($2::text IS NULL OR g.name ILIKE concat('%', $2::text, '%'))
+ORDER BY g.created_at DESC, g.updated_at DESC
 `
 
-type ListGundamsWithFiltersParams struct {
-	GradeSlug pgtype.Text `json:"grade_slug"`
-	Status    pgtype.Text `json:"status"`
+type ListGundamsByUserIDParams struct {
+	OwnerID string  `json:"owner_id"`
+	Name    *string `json:"name"`
 }
 
-type ListGundamsWithFiltersRow struct {
+type ListGundamsByUserIDRow struct {
 	ID                   int64           `json:"id"`
 	OwnerID              string          `json:"owner_id"`
 	Name                 string          `json:"name"`
 	Slug                 string          `json:"slug"`
-	Grade                string          `json:"grade"`
+	GradeID              int64           `json:"grade_id"`
+	Series               string          `json:"series"`
+	PartsTotal           int64           `json:"parts_total"`
+	Material             string          `json:"material"`
+	Version              string          `json:"version"`
+	Quantity             int64           `json:"quantity"`
 	Condition            GundamCondition `json:"condition"`
-	ConditionDescription pgtype.Text     `json:"condition_description"`
+	ConditionDescription *string         `json:"condition_description"`
 	Manufacturer         string          `json:"manufacturer"`
+	Weight               int64           `json:"weight"`
 	Scale                GundamScale     `json:"scale"`
 	Description          string          `json:"description"`
 	Price                int64           `json:"price"`
+	ReleaseYear          *int64          `json:"release_year"`
 	Status               GundamStatus    `json:"status"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
-	ImageURLs            []string        `json:"image_urls"`
+	Grade                string          `json:"grade"`
+}
+
+func (q *Queries) ListGundamsByUserID(ctx context.Context, arg ListGundamsByUserIDParams) ([]ListGundamsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listGundamsByUserID, arg.OwnerID, arg.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGundamsByUserIDRow{}
+	for rows.Next() {
+		var i ListGundamsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Name,
+			&i.Slug,
+			&i.GradeID,
+			&i.Series,
+			&i.PartsTotal,
+			&i.Material,
+			&i.Version,
+			&i.Quantity,
+			&i.Condition,
+			&i.ConditionDescription,
+			&i.Manufacturer,
+			&i.Weight,
+			&i.Scale,
+			&i.Description,
+			&i.Price,
+			&i.ReleaseYear,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Grade,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGundamsWithFilters = `-- name: ListGundamsWithFilters :many
+SELECT g.id            AS gundam_id,
+       g.owner_id,
+       g.name,
+       g.slug,
+       gg.display_name AS grade,
+       g.series,
+         g.parts_total,
+         g.material,
+         g.version,
+       g.quantity,
+       g.condition,
+       g.condition_description,
+       g.manufacturer,
+       g.scale,
+       g.weight,
+       g.description,
+       g.price,
+         g.release_year,
+       g.status,
+       g.created_at,
+       g.updated_at
+FROM gundams g
+         JOIN gundam_grades gg ON g.grade_id = gg.id
+WHERE ($1::text IS NULL OR g.name ILIKE '%' || $1::text || '%')
+  AND gg.slug = COALESCE($2::text, gg.slug)
+  AND ($3::text IS NULL OR g.status = $3::gundam_status)
+ORDER BY g.created_at DESC
+`
+
+type ListGundamsWithFiltersParams struct {
+	Name      *string `json:"name"`
+	GradeSlug *string `json:"grade_slug"`
+	Status    *string `json:"status"`
+}
+
+type ListGundamsWithFiltersRow struct {
+	GundamID             int64           `json:"gundam_id"`
+	OwnerID              string          `json:"owner_id"`
+	Name                 string          `json:"name"`
+	Slug                 string          `json:"slug"`
+	Grade                string          `json:"grade"`
+	Series               string          `json:"series"`
+	PartsTotal           int64           `json:"parts_total"`
+	Material             string          `json:"material"`
+	Version              string          `json:"version"`
+	Quantity             int64           `json:"quantity"`
+	Condition            GundamCondition `json:"condition"`
+	ConditionDescription *string         `json:"condition_description"`
+	Manufacturer         string          `json:"manufacturer"`
+	Scale                GundamScale     `json:"scale"`
+	Weight               int64           `json:"weight"`
+	Description          string          `json:"description"`
+	Price                int64           `json:"price"`
+	ReleaseYear          *int64          `json:"release_year"`
+	Status               GundamStatus    `json:"status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
 }
 
 func (q *Queries) ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error) {
-	rows, err := q.db.Query(ctx, listGundamsWithFilters, arg.GradeSlug, arg.Status)
+	rows, err := q.db.Query(ctx, listGundamsWithFilters, arg.Name, arg.GradeSlug, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -345,21 +479,27 @@ func (q *Queries) ListGundamsWithFilters(ctx context.Context, arg ListGundamsWit
 	for rows.Next() {
 		var i ListGundamsWithFiltersRow
 		if err := rows.Scan(
-			&i.ID,
+			&i.GundamID,
 			&i.OwnerID,
 			&i.Name,
 			&i.Slug,
 			&i.Grade,
+			&i.Series,
+			&i.PartsTotal,
+			&i.Material,
+			&i.Version,
+			&i.Quantity,
 			&i.Condition,
 			&i.ConditionDescription,
 			&i.Manufacturer,
 			&i.Scale,
+			&i.Weight,
 			&i.Description,
 			&i.Price,
+			&i.ReleaseYear,
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.ImageURLs,
 		); err != nil {
 			return nil, err
 		}
@@ -380,12 +520,12 @@ VALUES ($1, $2, $3)
 
 type StoreGundamImageURLParams struct {
 	GundamID  int64  `json:"gundam_id"`
-	Url       string `json:"url"`
+	URL       string `json:"url"`
 	IsPrimary bool   `json:"is_primary"`
 }
 
 func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error {
-	_, err := q.db.Exec(ctx, storeGundamImageURL, arg.GundamID, arg.Url, arg.IsPrimary)
+	_, err := q.db.Exec(ctx, storeGundamImageURL, arg.GundamID, arg.URL, arg.IsPrimary)
 	return err
 }
 
@@ -398,7 +538,7 @@ WHERE id = $3
 `
 
 type UpdateGundamParams struct {
-	OwnerID pgtype.Text      `json:"owner_id"`
+	OwnerID *string          `json:"owner_id"`
 	Status  NullGundamStatus `json:"status"`
 	ID      int64            `json:"id"`
 }

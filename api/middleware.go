@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	
@@ -14,6 +15,7 @@ const (
 	authorizationHeaderKey  = "Authorization"
 	authorizationTypeBearer = "Bearer"
 	authorizationPayloadKey = "authPayload"
+	sellerPayloadKey        = "sellerPayload"
 )
 
 // authMiddleware authenticates the user.
@@ -52,35 +54,30 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 	}
 }
 
-func requiredSellerOrAdminRole(dbStore db.Store) gin.HandlerFunc {
+func requiredSellerRole(dbStore db.Store) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		authenticatedUserID := authPayload.Subject
 		sellerID := ctx.Param("sellerID")
 		
-		authUser, err := dbStore.GetUserByID(ctx, payload.Subject)
+		seller, err := dbStore.GetSellerByID(ctx, sellerID)
 		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("seller ID %s not found", sellerID)
+				ctx.AbortWithStatusJSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 		
-		// Nếu là Admin, cho phép truy cập
-		if authUser.Role == db.UserRoleAdmin {
-			ctx.Next()
+		if authenticatedUserID != seller.ID {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(ErrSellerIDMismatch))
 			return
 		}
 		
-		// Nếu là Seller, kiểm tra ID
-		if authUser.Role == db.UserRoleSeller {
-			if authUser.ID != sellerID {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(ErrSellerIDMismatch))
-				return
-			}
-			
-			ctx.Next()
-			return
-		}
-		
-		// Trường hợp còn lại: không phải Admin cũng không phải Seller
-		ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(ErrInsufficientPermission))
+		ctx.Set(sellerPayloadKey, &seller)
+		ctx.Next()
 	}
 }

@@ -320,7 +320,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.ListGundamsWithFiltersRow"
+                                "$ref": "#/definitions/db.GundamDetails"
                             }
                         }
                     },
@@ -370,7 +370,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved Gundam details",
                         "schema": {
-                            "$ref": "#/definitions/api.getGundamBySlugResponse"
+                            "$ref": "#/definitions/db.GundamDetails"
                         }
                     },
                     "404": {
@@ -389,7 +389,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "List all purchase orders of the normal user",
+                "description": "List all purchase orders of a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -399,7 +399,7 @@ const docTemplate = `{
                 "tags": [
                     "orders"
                 ],
-                "summary": "List all purchase orders of the normal user",
+                "summary": "List all purchase orders of a user",
                 "parameters": [
                     {
                         "enum": [
@@ -423,12 +423,15 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/api.OrderInfo"
+                                "$ref": "#/definitions/db.PurchaseOrderInfo"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad request"
+                    },
+                    "404": {
+                        "description": "User not found"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -510,7 +513,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Get details of a specific order",
+                "description": "Get details of a specific purchase order",
                 "consumes": [
                     "application/json"
                 ],
@@ -520,7 +523,7 @@ const docTemplate = `{
                 "tags": [
                     "orders"
                 ],
-                "summary": "Get order details",
+                "summary": "Get purchase order details",
                 "parameters": [
                     {
                         "type": "string",
@@ -533,9 +536,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved order details",
+                        "description": "Order details",
                         "schema": {
-                            "$ref": "#/definitions/api.OrderDetail"
+                            "$ref": "#/definitions/db.PurchaseOrderDetails"
                         }
                     },
                     "400": {
@@ -545,7 +548,69 @@ const docTemplate = `{
                         "description": "Forbidden - User does not have permission to access this order"
                     },
                     "404": {
-                        "description": "Not Found - Order not found"
+                        "description": "User not Found\u003cbr/\u003eOrder not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/orders/{orderID}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Cancel an order by the buyer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Cancel order by buyer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "123e4567-e89b-12d3-a456-426614174000",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cancellation reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.cancelOrderByBuyerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order canceled successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.CancelOrderByBuyerTxResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "403": {
+                        "description": "Forbidden - User does not have permission to cancel this order"
+                    },
+                    "404": {
+                        "description": "User not found\u003cbr/\u003eOrder not found"
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity - Order cannot be canceled in the current status"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -595,7 +660,7 @@ const docTemplate = `{
                         "description": "Forbidden - User does not have permission to confirm this order"
                     },
                     "404": {
-                        "description": "Order not found"
+                        "description": "User not found\u003cbr/\u003eOrder not found"
                     },
                     "422": {
                         "description": "Unprocessable Entity - Order is not in delivered status"
@@ -772,14 +837,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/:sellerID/gundams": {
+        "/seller/profile": {
             "get": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Get all gundams that belong to the specified seller ID",
+                "description": "Get detailed information about a specific seller",
                 "consumes": [
                     "application/json"
                 ],
@@ -787,27 +847,18 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "sellers"
+                    "seller profile"
                 ],
-                "summary": "List all gundams for a specific seller",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Gundam name to filter by",
-                        "name": "name",
-                        "in": "query"
-                    }
-                ],
+                "summary": "Get seller profile",
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved list of gundams"
+                        "description": "Seller profile details",
+                        "schema": {
+                            "$ref": "#/definitions/db.SellerInfo"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -815,132 +866,84 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Create a new Gundam model with images and accessories",
+                "description": "Creates a new seller profile",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "sellers"
+                    "seller profile"
                 ],
-                "summary": "Create a new Gundam model",
+                "summary": "Create a seller profile",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
+                        "description": "Seller profile creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createSellerProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Seller profile created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.SellerProfile"
+                        }
                     },
-                    {
-                        "type": "string",
-                        "description": "Gundam name",
-                        "name": "name",
-                        "in": "formData",
-                        "required": true
+                    "400": {
+                        "description": "Invalid request format"
                     },
-                    {
-                        "type": "integer",
-                        "description": "Gundam grade ID",
-                        "name": "grade_id",
-                        "in": "formData",
-                        "required": true
+                    "409": {
+                        "description": "Seller profile already exists"
                     },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update the seller's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "seller profile"
+                ],
+                "summary": "Update seller profile",
+                "parameters": [
                     {
-                        "enum": [
-                            "new",
-                            "open box",
-                            "used"
-                        ],
-                        "type": "string",
-                        "description": "Condition of the Gundam",
-                        "name": "condition",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Manufacturer name",
-                        "name": "manufacturer",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "1/144",
-                            "1/100",
-                            "1/60"
-                        ],
-                        "type": "string",
-                        "description": "Gundam scale",
-                        "name": "scale",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Weight in grams",
-                        "name": "weight",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Detailed description",
-                        "name": "description",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Price in VND",
-                        "name": "price",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Primary image of the Gundam",
-                        "name": "primary_image",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Secondary images of the Gundam",
-                        "name": "secondary_images",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Additional details about condition",
-                        "name": "condition_description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Accessory as JSON object. Add multiple accessories by repeating this field with different values.",
-                        "name": "accessory",
-                        "in": "formData"
+                        "description": "Request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.updateSellerProfileRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Gundam created successfully"
+                        "description": "Successfully updated seller profile",
+                        "schema": {
+                            "$ref": "#/definitions/db.SellerProfile"
+                        }
                     },
                     "400": {
-                        "description": "error details"
+                        "description": "Invalid request body"
+                    },
+                    "404": {
+                        "description": "Seller not found"
                     },
                     "500": {
-                        "description": "internal server error"
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -970,11 +973,88 @@ const docTemplate = `{
                         "name": "sellerID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "packaging",
+                            "delivering",
+                            "delivered",
+                            "completed",
+                            "canceled",
+                            "failed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by order status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved list of orders"
+                        "description": "List of sales orders",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.SalesOrderInfo"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid order status"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/sellers/:sellerID/orders/:orderID": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get details of a specific sales order for the seller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get sales order details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sales order details",
+                        "schema": {
+                            "$ref": "#/definitions/db.SalesOrderDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid order ID"
+                    },
+                    "404": {
+                        "description": "Order not found"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -1201,38 +1281,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/{id}": {
-            "get": {
-                "description": "Get detailed information about a specific seller",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Retrieve a seller by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved seller",
-                        "schema": {
-                            "$ref": "#/definitions/db.User"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            }
-        },
         "/sellers/{sellerID}/gundams/{gundamID}/publish": {
             "patch": {
                 "security": [
@@ -1294,7 +1342,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Gundam not found",
+                        "description": "Seller not found\u003cbr/\u003eGundam not found\u003cbr/\u003eNo active subscription found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1383,6 +1431,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "404": {
+                        "description": "Seller not found\u003cbr/\u003eGundam not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "409": {
                         "description": "Gundam is not currently listed for sale",
                         "schema": {
@@ -1400,6 +1457,76 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/orders/{orderID}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Cancel a pending order by the seller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Cancel order by seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "s123e456-e789-45d0-9876-54321abcdef",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "123e4567-e89b-12d3-a456-426614174000",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cancellation reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.cancelOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order canceled successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.CancelOrderBySellerTxResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "403": {
+                        "description": "Forbidden - Order does not belong to this seller"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "409": {
+                        "description": "Conflict - Order cannot be canceled in the current status"
+                    },
+                    "500": {
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -1490,6 +1617,210 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/:id/gundams": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get all gundams that belong to the specified user ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List all gundams for a specific user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam name to filter by",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved list of gundams",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.GundamDetails"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID"
+                    },
+                    "403": {
+                        "description": "Forbidden - User is not authorized to view gundams for this user"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new Gundam model with images and accessories",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a new Gundam model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam name",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Gundam grade ID",
+                        "name": "grade_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam series name",
+                        "name": "series",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "new",
+                            "open box",
+                            "used"
+                        ],
+                        "type": "string",
+                        "description": "Condition of the Gundam",
+                        "name": "condition",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Manufacturer name",
+                        "name": "manufacturer",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "1/144",
+                            "1/100",
+                            "1/60"
+                        ],
+                        "type": "string",
+                        "description": "Gundam scale",
+                        "name": "scale",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Weight in grams",
+                        "name": "weight",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Detailed description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Price in VND",
+                        "name": "price",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Primary image of the Gundam",
+                        "name": "primary_image",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Secondary images of the Gundam",
+                        "name": "secondary_images",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Additional details about condition",
+                        "name": "condition_description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Accessory as JSON object. Add multiple accessories by repeating this field with different values.",
+                        "name": "accessory",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created Gundam",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input data"
+                    },
+                    "403": {
+                        "description": "Forbidden - User is not authorized to create Gundam for this user"
+                    },
+                    "404": {
+                        "description": "Not Found - User with specified ID does not exist"
+                    },
+                    "500": {
+                        "description": "Internal Server Error - Failed to create Gundam"
+                    }
+                }
+            }
+        },
         "/users/:id/wallet": {
             "get": {
                 "security": [
@@ -1560,6 +1891,9 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.User"
                         }
+                    },
+                    "404": {
+                        "description": "User not found"
                     },
                     "409": {
                         "description": "User is already a seller"
@@ -2067,58 +2401,6 @@ const docTemplate = `{
                 }
             }
         },
-        "api.OrderDetail": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_delivery",
-                "order_items",
-                "order_transaction",
-                "seller_info",
-                "to_delivery_address"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_delivery": {
-                    "$ref": "#/definitions/db.OrderDelivery"
-                },
-                "order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GetGundamsByOrderItemsRow"
-                    }
-                },
-                "order_transaction": {
-                    "$ref": "#/definitions/db.OrderTransaction"
-                },
-                "seller_info": {
-                    "$ref": "#/definitions/db.User"
-                },
-                "to_delivery_address": {
-                    "$ref": "#/definitions/db.DeliveryInformation"
-                }
-            }
-        },
-        "api.OrderInfo": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_items"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GetGundamsByOrderItemsRow"
-                    }
-                }
-            }
-        },
         "api.VerifyEmailOTPRequest": {
             "type": "object",
             "required": [
@@ -2164,6 +2446,28 @@ const docTemplate = `{
             "properties": {
                 "gundam_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.cancelOrderByBuyerRequest": {
+            "type": "object",
+            "required": [
+                "canceled_reason"
+            ],
+            "properties": {
+                "canceled_reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.cancelOrderRequest": {
+            "type": "object",
+            "required": [
+                "canceled_reason"
+            ],
+            "properties": {
+                "canceled_reason": {
+                    "type": "string"
                 }
             }
         },
@@ -2238,6 +2542,21 @@ const docTemplate = `{
                     "description": "Total order amount (including delivery fee)\nminimum: 0\nexample: 530000",
                     "type": "integer",
                     "minimum": 0
+                }
+            }
+        },
+        "api.createSellerProfileRequest": {
+            "type": "object",
+            "required": [
+                "shop_name",
+                "user_id"
+            ],
+            "properties": {
+                "shop_name": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -2328,83 +2647,6 @@ const docTemplate = `{
                 }
             }
         },
-        "api.getGundamBySlugResponse": {
-            "type": "object",
-            "required": [
-                "accessories",
-                "condition",
-                "created_at",
-                "description",
-                "grade",
-                "id",
-                "image_urls",
-                "manufacturer",
-                "name",
-                "owner_id",
-                "price",
-                "scale",
-                "slug",
-                "status",
-                "updated_at",
-                "weight"
-            ],
-            "properties": {
-                "accessories": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GundamAccessory"
-                    }
-                },
-                "condition": {
-                    "$ref": "#/definitions/db.GundamCondition"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "grade": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "image_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "manufacturer": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "scale": {
-                    "$ref": "#/definitions/db.GundamScale"
-                },
-                "slug": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/db.GundamStatus"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "weight": {
-                    "type": "integer"
-                }
-            }
-        },
         "api.loginUserRequest": {
             "type": "object",
             "required": [
@@ -2457,6 +2699,21 @@ const docTemplate = `{
             ],
             "properties": {
                 "avatar_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.updateSellerProfileRequest": {
+            "type": "object",
+            "required": [
+                "shop_name",
+                "user_id"
+            ],
+            "properties": {
+                "shop_name": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -2559,19 +2816,59 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "seller_avatar_url": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
-                    "x-nullable": true
+                    "type": "string"
                 },
                 "seller_id": {
                     "type": "string"
                 },
                 "seller_name": {
-                    "type": "string",
-                    "x-nullable": true
+                    "type": "string"
+                }
+            }
+        },
+        "db.CancelOrderByBuyerTxResult": {
+            "type": "object",
+            "required": [
+                "buyer_wallet",
+                "order",
+                "order_transaction",
+                "refund_entry"
+            ],
+            "properties": {
+                "buyer_wallet": {
+                    "$ref": "#/definitions/db.Wallet"
+                },
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
+                },
+                "refund_entry": {
+                    "$ref": "#/definitions/db.WalletEntry"
+                }
+            }
+        },
+        "db.CancelOrderBySellerTxResult": {
+            "type": "object",
+            "required": [
+                "buyer_wallet",
+                "order",
+                "order_transaction",
+                "refund_entry"
+            ],
+            "properties": {
+                "buyer_wallet": {
+                    "$ref": "#/definitions/db.Wallet"
+                },
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
+                },
+                "refund_entry": {
+                    "$ref": "#/definitions/db.WalletEntry"
                 }
             }
         },
@@ -2738,76 +3035,129 @@ const docTemplate = `{
                 "DeliveryOverralStatusReturn"
             ]
         },
-        "db.GetGundamsByOrderItemsRow": {
+        "db.GundamAccessoryDTO": {
             "type": "object",
             "required": [
-                "grade",
-                "name",
-                "price",
-                "quantity",
-                "scale",
-                "weight"
-            ],
-            "properties": {
-                "grade": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "quantity": {
-                    "type": "integer"
-                },
-                "scale": {
-                    "$ref": "#/definitions/db.GundamScale"
-                },
-                "weight": {
-                    "type": "integer"
-                }
-            }
-        },
-        "db.GundamAccessory": {
-            "type": "object",
-            "required": [
-                "created_at",
-                "gundam_id",
-                "id",
                 "name",
                 "quantity"
             ],
             "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "db.GundamDetails": {
+            "type": "object",
+            "required": [
+                "accessories",
+                "condition",
+                "condition_description",
+                "created_at",
+                "description",
+                "grade",
+                "gundam_id",
+                "manufacturer",
+                "material",
+                "name",
+                "owner_id",
+                "parts_total",
+                "price",
+                "primary_image_url",
+                "quantity",
+                "release_year",
+                "scale",
+                "secondary_image_urls",
+                "series",
+                "slug",
+                "status",
+                "updated_at",
+                "version",
+                "weight"
+            ],
+            "properties": {
+                "accessories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamAccessoryDTO"
+                    }
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "condition_description": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "grade": {
                     "type": "string"
                 },
                 "gundam_id": {
                     "type": "integer"
                 },
-                "id": {
-                    "type": "integer"
+                "manufacturer": {
+                    "type": "string"
+                },
+                "material": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
+                "owner_id": {
+                    "type": "string"
+                },
+                "parts_total": {
+                    "type": "integer"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "primary_image_url": {
+                    "type": "string"
+                },
                 "quantity": {
+                    "type": "integer"
+                },
+                "release_year": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "type": "string"
+                },
+                "secondary_image_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "weight": {
                     "type": "integer"
                 }
             }
-        },
-        "db.GundamCondition": {
-            "type": "string",
-            "enum": [
-                "new",
-                "open box",
-                "used"
-            ],
-            "x-enum-varnames": [
-                "GundamConditionNew",
-                "GundamConditionOpenbox",
-                "GundamConditionUsed"
-            ]
         },
         "db.GundamGrade": {
             "type": "object",
@@ -2835,38 +3185,6 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "db.GundamScale": {
-            "type": "string",
-            "enum": [
-                "1/144",
-                "1/100",
-                "1/60",
-                "1/48"
-            ],
-            "x-enum-varnames": [
-                "GundamScale1144",
-                "GundamScale1100",
-                "GundamScale160",
-                "GundamScale148"
-            ]
-        },
-        "db.GundamStatus": {
-            "type": "string",
-            "enum": [
-                "in store",
-                "published",
-                "processing",
-                "pending auction approval",
-                "auctioning"
-            ],
-            "x-enum-varnames": [
-                "GundamStatusInstore",
-                "GundamStatusPublished",
-                "GundamStatusProcessing",
-                "GundamStatusPendingauctionapproval",
-                "GundamStatusAuctioning"
-            ]
         },
         "db.ListCartItemsWithDetailsRow": {
             "type": "object",
@@ -2897,88 +3215,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "seller_avatar_url": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
-                    "x-nullable": true
+                    "type": "string"
                 },
                 "seller_id": {
                     "type": "string"
                 },
                 "seller_name": {
-                    "type": "string",
-                    "x-nullable": true
-                }
-            }
-        },
-        "db.ListGundamsWithFiltersRow": {
-            "type": "object",
-            "required": [
-                "condition",
-                "condition_description",
-                "created_at",
-                "description",
-                "grade",
-                "id",
-                "image_urls",
-                "manufacturer",
-                "name",
-                "owner_id",
-                "price",
-                "scale",
-                "slug",
-                "status",
-                "updated_at"
-            ],
-            "properties": {
-                "condition": {
-                    "$ref": "#/definitions/db.GundamCondition"
-                },
-                "condition_description": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "grade": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "image_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "manufacturer": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "scale": {
-                    "$ref": "#/definitions/db.GundamScale"
-                },
-                "slug": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/db.GundamStatus"
-                },
-                "updated_at": {
                     "type": "string"
                 }
             }
@@ -3003,6 +3245,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "buyer_id",
+                "canceled_by",
+                "canceled_reason",
                 "code",
                 "created_at",
                 "delivery_fee",
@@ -3010,7 +3254,7 @@ const docTemplate = `{
                 "is_packaged",
                 "items_subtotal",
                 "note",
-                "packaging_images",
+                "packaging_image_urls",
                 "payment_method",
                 "seller_id",
                 "status",
@@ -3019,6 +3263,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "buyer_id": {
+                    "type": "string"
+                },
+                "canceled_by": {
+                    "type": "string"
+                },
+                "canceled_reason": {
                     "type": "string"
                 },
                 "code": {
@@ -3040,9 +3290,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "note": {
-                    "$ref": "#/definitions/pgtype.Text"
+                    "type": "string"
                 },
-                "packaging_images": {
+                "packaging_image_urls": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -3084,7 +3334,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "delivery_tracking_code": {
-                    "$ref": "#/definitions/pgtype.Text"
+                    "type": "string"
                 },
                 "expected_delivery_time": {
                     "type": "string"
@@ -3102,7 +3352,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.NullDeliveryOverralStatus"
                 },
                 "status": {
-                    "$ref": "#/definitions/pgtype.Text"
+                    "type": "string"
                 },
                 "to_delivery_id": {
                     "type": "integer"
@@ -3116,15 +3366,23 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "created_at",
+                "grade",
                 "gundam_id",
                 "id",
+                "image_url",
+                "name",
                 "order_id",
                 "price",
                 "quantity",
+                "scale",
+                "slug",
                 "weight"
             ],
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "grade": {
                     "type": "string"
                 },
                 "gundam_id": {
@@ -3132,6 +3390,12 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 },
                 "order_id": {
                     "type": "string"
@@ -3141,6 +3405,12 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
+                },
+                "scale": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
                 },
                 "weight": {
                     "type": "integer"
@@ -3201,7 +3471,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "seller_entry_id": {
-                    "$ref": "#/definitions/pgtype.Int8"
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/db.OrderTransactionStatus"
@@ -3252,6 +3522,182 @@ const docTemplate = `{
                 "PaymentMethodWallet"
             ]
         },
+        "db.PurchaseOrderDetails": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_delivery",
+                "order_items",
+                "order_transaction",
+                "seller_info",
+                "to_delivery_information"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_delivery": {
+                    "$ref": "#/definitions/db.OrderDelivery"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
+                },
+                "seller_info": {
+                    "$ref": "#/definitions/db.SellerInfo"
+                },
+                "to_delivery_information": {
+                    "description": "Thông tin nhận hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.DeliveryInformation"
+                        }
+                    ]
+                }
+            }
+        },
+        "db.PurchaseOrderInfo": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_items"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                }
+            }
+        },
+        "db.SalesOrderDetails": {
+            "type": "object",
+            "required": [
+                "buyer_info",
+                "order",
+                "order_delivery",
+                "order_items",
+                "order_transaction",
+                "to_delivery_information"
+            ],
+            "properties": {
+                "buyer_info": {
+                    "$ref": "#/definitions/db.User"
+                },
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_delivery": {
+                    "$ref": "#/definitions/db.OrderDelivery"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                },
+                "order_transaction": {
+                    "$ref": "#/definitions/db.OrderTransaction"
+                },
+                "to_delivery_information": {
+                    "description": "Thông tin nhận hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.DeliveryInformation"
+                        }
+                    ]
+                }
+            }
+        },
+        "db.SalesOrderInfo": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_items"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                }
+            }
+        },
+        "db.SellerInfo": {
+            "type": "object",
+            "required": [
+                "avatar_url",
+                "email",
+                "google_account_id",
+                "id",
+                "phone_number",
+                "role",
+                "shop_name",
+                "user_full_name"
+            ],
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "google_account_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "shop_name": {
+                    "type": "string"
+                },
+                "user_full_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.SellerProfile": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "seller_id",
+                "shop_name",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "shop_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "db.User": {
             "type": "object",
             "required": [
@@ -3270,12 +3716,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "avatar_url": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
-                    "x-nullable": true
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -3290,22 +3731,16 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "full_name": {
-                    "type": "string",
-                    "x-nullable": true
+                    "type": "string"
                 },
                 "google_account_id": {
-                    "$ref": "#/definitions/pgtype.Text"
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
                 "phone_number": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/pgtype.Text"
-                        }
-                    ],
-                    "x-nullable": true
+                    "type": "string"
                 },
                 "phone_number_verified": {
                     "type": "boolean"
@@ -3402,7 +3837,6 @@ const docTemplate = `{
                 "balance",
                 "created_at",
                 "currency",
-                "id",
                 "non_withdrawable_amount",
                 "updated_at",
                 "user_id"
@@ -3416,9 +3850,6 @@ const docTemplate = `{
                 },
                 "currency": {
                     "type": "string"
-                },
-                "id": {
-                    "type": "integer"
                 },
                 "non_withdrawable_amount": {
                     "type": "integer"
@@ -3462,7 +3893,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "reference_id": {
-                    "$ref": "#/definitions/pgtype.Text"
+                    "type": "string"
                 },
                 "reference_type": {
                     "$ref": "#/definitions/db.WalletReferenceType"
@@ -3474,7 +3905,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "wallet_id": {
-                    "type": "integer"
+                    "type": "string"
                 }
             }
         },
@@ -3559,28 +3990,6 @@ const docTemplate = `{
                 "Finite",
                 "NegativeInfinity"
             ]
-        },
-        "pgtype.Int8": {
-            "type": "object",
-            "properties": {
-                "int64": {
-                    "type": "integer"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "pgtype.Text": {
-            "type": "object",
-            "properties": {
-                "string": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
         },
         "pgtype.Timestamptz": {
             "type": "object",

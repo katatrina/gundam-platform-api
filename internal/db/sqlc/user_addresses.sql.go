@@ -7,8 +7,6 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUserAddress = `-- name: CreateUserAddress :one
@@ -266,18 +264,18 @@ WHERE id = $11
 `
 
 type UpdateUserAddressParams struct {
-	FullName        pgtype.Text `json:"full_name"`
-	PhoneNumber     pgtype.Text `json:"phone_number"`
-	ProvinceName    pgtype.Text `json:"province_name"`
-	DistrictName    pgtype.Text `json:"district_name"`
-	GhnDistrictID   pgtype.Int8 `json:"ghn_district_id"`
-	WardName        pgtype.Text `json:"ward_name"`
-	GhnWardCode     pgtype.Text `json:"ghn_ward_code"`
-	Detail          pgtype.Text `json:"detail"`
-	IsPrimary       pgtype.Bool `json:"is_primary"`
-	IsPickupAddress pgtype.Bool `json:"is_pickup_address"`
-	AddressID       int64       `json:"address_id"`
-	UserID          string      `json:"user_id"`
+	FullName        *string `json:"full_name"`
+	PhoneNumber     *string `json:"phone_number"`
+	ProvinceName    *string `json:"province_name"`
+	DistrictName    *string `json:"district_name"`
+	GhnDistrictID   *int64  `json:"ghn_district_id"`
+	WardName        *string `json:"ward_name"`
+	GhnWardCode     *string `json:"ghn_ward_code"`
+	Detail          *string `json:"detail"`
+	IsPrimary       *bool   `json:"is_primary"`
+	IsPickupAddress *bool   `json:"is_pickup_address"`
+	AddressID       int64   `json:"address_id"`
+	UserID          string  `json:"user_id"`
 }
 
 func (q *Queries) UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error) {

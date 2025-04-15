@@ -23,8 +23,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, wallet_id, reference_id, refer
 `
 
 type CreateWalletEntryParams struct {
-	WalletID      int64               `json:"wallet_id"`
-	ReferenceID   pgtype.Text         `json:"reference_id"`
+	WalletID      string              `json:"wallet_id"`
+	ReferenceID   *string             `json:"reference_id"`
 	ReferenceType WalletReferenceType `json:"reference_type"`
 	EntryType     WalletEntryType     `json:"entry_type"`
 	Amount        int64               `json:"amount"`
@@ -96,11 +96,11 @@ WHERE id = $8 RETURNING id, wallet_id, reference_id, reference_type, entry_type,
 `
 
 type UpdateWalletEntryByIDParams struct {
-	WalletID      pgtype.Int8             `json:"wallet_id"`
-	ReferenceID   pgtype.Text             `json:"reference_id"`
+	WalletID      *string                 `json:"wallet_id"`
+	ReferenceID   *string                 `json:"reference_id"`
 	ReferenceType NullWalletReferenceType `json:"reference_type"`
 	EntryType     NullWalletEntryType     `json:"entry_type"`
-	Amount        pgtype.Int8             `json:"amount"`
+	Amount        *int64                  `json:"amount"`
 	Status        NullWalletEntryStatus   `json:"status"`
 	CompletedAt   pgtype.Timestamptz      `json:"completed_at"`
 	ID            int64                   `json:"id"`

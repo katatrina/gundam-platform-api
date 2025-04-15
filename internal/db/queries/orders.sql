@@ -29,16 +29,9 @@ WHERE buyer_id = $1
   AND status = COALESCE(sqlc.narg('status')::order_status, status)
 ORDER BY updated_at DESC, created_at DESC;
 
--- name: GetSalesOrderBySellerID :one
-SELECT *
-FROM orders
-WHERE id = sqlc.arg('order_id')
-  AND seller_id = sqlc.arg('seller_id')
-    FOR UPDATE;
-
 -- name: ConfirmOrderByID :one
 UPDATE orders
-SET status = 'packaging',
+SET status     = 'packaging',
     updated_at = now()
 WHERE id = sqlc.arg('order_id')
   AND seller_id = sqlc.arg('seller_id') RETURNING *;
@@ -50,8 +43,10 @@ WHERE id = $1;
 
 -- name: UpdateOrder :one
 UPDATE orders
-SET is_packaged      = COALESCE(sqlc.narg('is_packaged'), is_packaged),
-    packaging_images = COALESCE(sqlc.narg('packaging_images'), packaging_images),
-    status           = COALESCE(sqlc.narg('status'), status),
-    updated_at       = now()
+SET is_packaged          = COALESCE(sqlc.narg('is_packaged'), is_packaged),
+    packaging_image_urls = COALESCE(sqlc.narg('packaging_image_urls'), packaging_image_urls),
+    status               = COALESCE(sqlc.narg('status'), status),
+    canceled_by          = COALESCE(sqlc.narg('canceled_by'), canceled_by),
+    canceled_reason      = COALESCE(sqlc.narg('canceled_reason'), canceled_reason),
+    updated_at           = now()
 WHERE id = sqlc.arg('order_id') RETURNING *;

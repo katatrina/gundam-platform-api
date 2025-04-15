@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"net/mail"
 	"regexp"
-)
-
-var (
-	isValidFullName = regexp.MustCompile(`^[a-zA-Z\s]+$`).MatchString
+	"unicode"
 )
 
 func ValidateString(value string, minLength int, maxLength int) error {
@@ -70,8 +67,10 @@ func ValidateFullName(value string) error {
 		return err
 	}
 	
-	if !isValidFullName(value) {
-		return fmt.Errorf("must contain only letters or spaces")
+	for _, r := range value {
+		if !unicode.IsLetter(r) && !unicode.IsSpace(r) {
+			return fmt.Errorf("must contain only letters or spaces")
+		}
 	}
 	
 	return nil

@@ -19,7 +19,7 @@ type OrderInfo struct {
 
 type OrderItemInfo struct {
 	OrderID  string
-	GundamID int64
+	Name     string
 	Price    int64
 	Quantity int64
 	Weight   int64

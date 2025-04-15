@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,8 @@ func (server *Server) getUserWallet(c *gin.Context) {
 	wallet, err := server.dbStore.GetWalletByUserID(c, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, errorResponse(db.ErrRecordNotFound))
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		

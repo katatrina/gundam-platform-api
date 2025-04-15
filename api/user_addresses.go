@@ -6,7 +6,6 @@ import (
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/rs/zerolog/log"
 )
@@ -124,64 +123,34 @@ type updateUserAddressPathParams struct {
 
 func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressParams) {
 	if req.FullName != nil {
-		arg.FullName = pgtype.Text{
-			String: *req.FullName,
-			Valid:  true,
-		}
+		arg.FullName = req.FullName
 	}
 	if req.PhoneNumber != nil {
-		arg.PhoneNumber = pgtype.Text{
-			String: *req.PhoneNumber,
-			Valid:  true,
-		}
+		arg.PhoneNumber = req.PhoneNumber
 	}
 	if req.ProvinceName != nil {
-		arg.ProvinceName = pgtype.Text{
-			String: *req.ProvinceName,
-			Valid:  true,
-		}
+		arg.ProvinceName = req.ProvinceName
 	}
 	if req.DistrictName != nil {
-		arg.DistrictName = pgtype.Text{
-			String: *req.DistrictName,
-			Valid:  true,
-		}
+		arg.DistrictName = req.DistrictName
 	}
 	if req.GHNDistrictID != nil {
-		arg.GhnDistrictID = pgtype.Int8{
-			Int64: *req.GHNDistrictID,
-			Valid: true,
-		}
+		arg.GhnDistrictID = req.GHNDistrictID
 	}
 	if req.WardName != nil {
-		arg.WardName = pgtype.Text{
-			String: *req.WardName,
-			Valid:  true,
-		}
+		arg.WardName = req.WardName
 	}
 	if req.GHNWardCode != nil {
-		arg.GhnWardCode = pgtype.Text{
-			String: *req.GHNWardCode,
-			Valid:  true,
-		}
+		arg.GhnWardCode = req.GHNWardCode
 	}
 	if req.Detail != nil {
-		arg.Detail = pgtype.Text{
-			String: *req.Detail,
-			Valid:  true,
-		}
+		arg.Detail = req.Detail
 	}
 	if req.IsPrimary != nil {
-		arg.IsPrimary = pgtype.Bool{
-			Bool:  *req.IsPrimary,
-			Valid: true,
-		}
+		arg.IsPrimary = req.IsPrimary
 	}
 	if req.IsPickupAddress != nil {
-		arg.IsPickupAddress = pgtype.Bool{
-			Bool:  *req.IsPickupAddress,
-			Valid: true,
-		}
+		arg.IsPickupAddress = req.IsPickupAddress
 	}
 	
 	return arg

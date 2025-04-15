@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -35,7 +36,7 @@ func (q *Queries) CreateTrialSubscriptionForSeller(ctx context.Context, sellerID
 const getCurrentActiveSubscriptionDetailsForSeller = `-- name: GetCurrentActiveSubscriptionDetailsForSeller :one
 SELECT ss.id,
        ss.plan_id,
-       p.name AS plan_name,
+       p.name AS subscription_name,
        ss.seller_id,
        p.max_listings,
        ss.listings_used,
@@ -43,25 +44,26 @@ SELECT ss.id,
        ss.open_auctions_used,
        ss.is_active,
        p.is_unlimited,
+       ss.start_date,
        ss.end_date
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id
 WHERE ss.seller_id = $1
   AND ss.is_active = true
-ORDER BY ss.start_date DESC LIMIT 1
 `
 
 type GetCurrentActiveSubscriptionDetailsForSellerRow struct {
 	ID               int64              `json:"id"`
 	PlanID           int64              `json:"plan_id"`
-	PlanName         string             `json:"plan_name"`
+	SubscriptionName string             `json:"subscription_name"`
 	SellerID         string             `json:"seller_id"`
-	MaxListings      pgtype.Int8        `json:"max_listings"`
+	MaxListings      *int64             `json:"max_listings"`
 	ListingsUsed     int64              `json:"listings_used"`
-	MaxOpenAuctions  pgtype.Int8        `json:"max_open_auctions"`
+	MaxOpenAuctions  *int64             `json:"max_open_auctions"`
 	OpenAuctionsUsed int64              `json:"open_auctions_used"`
 	IsActive         bool               `json:"is_active"`
 	IsUnlimited      bool               `json:"is_unlimited"`
+	StartDate        time.Time          `json:"start_date"`
 	EndDate          pgtype.Timestamptz `json:"end_date"`
 }
 
@@ -71,7 +73,7 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 	err := row.Scan(
 		&i.ID,
 		&i.PlanID,
-		&i.PlanName,
+		&i.SubscriptionName,
 		&i.SellerID,
 		&i.MaxListings,
 		&i.ListingsUsed,
@@ -79,6 +81,7 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 		&i.OpenAuctionsUsed,
 		&i.IsActive,
 		&i.IsUnlimited,
+		&i.StartDate,
 		&i.EndDate,
 	)
 	return i, err
@@ -94,9 +97,9 @@ WHERE id = $2
 `
 
 type UpdateCurrentActiveSubscriptionForSellerParams struct {
-	ListingsUsed   pgtype.Int8 `json:"listings_used"`
-	SubscriptionID int64       `json:"subscription_id"`
-	SellerID       string      `json:"seller_id"`
+	ListingsUsed   *int64 `json:"listings_used"`
+	SubscriptionID int64  `json:"subscription_id"`
+	SellerID       string `json:"seller_id"`
 }
 
 func (q *Queries) UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error {

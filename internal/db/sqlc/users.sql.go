@@ -7,8 +7,6 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -18,14 +16,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, google_account_id, full_na
 `
 
 type CreateUserParams struct {
-	HashedPassword      pgtype.Text `json:"-"`
-	FullName            string      `extensions:"x-nullable" json:"full_name"`
-	Email               string      `json:"email"`
-	EmailVerified       bool        `json:"email_verified"`
-	PhoneNumber         pgtype.Text `extensions:"x-nullable" json:"phone_number"`
-	PhoneNumberVerified bool        `json:"phone_number_verified"`
-	Role                UserRole    `json:"role"`
-	AvatarUrl           pgtype.Text `extensions:"x-nullable" json:"avatar_url"`
+	HashedPassword      *string  `json:"-"`
+	FullName            string   `json:"full_name"`
+	Email               string   `json:"email"`
+	EmailVerified       bool     `json:"email_verified"`
+	PhoneNumber         *string  `json:"phone_number"`
+	PhoneNumberVerified bool     `json:"phone_number_verified"`
+	Role                UserRole `json:"role"`
+	AvatarURL           *string  `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -37,7 +35,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.PhoneNumber,
 		arg.PhoneNumberVerified,
 		arg.Role,
-		arg.AvatarUrl,
+		arg.AvatarURL,
 	)
 	var i User
 	err := row.Scan(
@@ -50,7 +48,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -64,11 +62,11 @@ VALUES ($1, $2, $3, $4, $5) RETURNING id, google_account_id, full_name, hashed_p
 `
 
 type CreateUserWithGoogleAccountParams struct {
-	GoogleAccountID pgtype.Text `json:"google_account_id"`
-	FullName        string      `extensions:"x-nullable" json:"full_name"`
-	Email           string      `json:"email"`
-	EmailVerified   bool        `json:"email_verified"`
-	AvatarUrl       pgtype.Text `extensions:"x-nullable" json:"avatar_url"`
+	GoogleAccountID *string `json:"google_account_id"`
+	FullName        string  `json:"full_name"`
+	Email           string  `json:"email"`
+	EmailVerified   bool    `json:"email_verified"`
+	AvatarURL       *string `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error) {
@@ -77,7 +75,7 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		arg.FullName,
 		arg.Email,
 		arg.EmailVerified,
-		arg.AvatarUrl,
+		arg.AvatarURL,
 	)
 	var i User
 	err := row.Scan(
@@ -90,7 +88,7 @@ func (q *Queries) CreateUserWithGoogleAccount(ctx context.Context, arg CreateUse
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -117,7 +115,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -144,7 +142,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -158,7 +156,7 @@ FROM users
 WHERE phone_number = $1
 `
 
-func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.Text) (User, error) {
+func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByPhoneNumber, phoneNumber)
 	var i User
 	err := row.Scan(
@@ -171,7 +169,7 @@ func (q *Queries) GetUserByPhoneNumber(ctx context.Context, phoneNumber pgtype.T
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -191,10 +189,10 @@ WHERE id = $6 RETURNING id, google_account_id, full_name, hashed_password, email
 `
 
 type UpdateUserParams struct {
-	FullName            pgtype.Text  `extensions:"x-nullable" json:"full_name"`
-	AvatarUrl           pgtype.Text  `extensions:"x-nullable" json:"avatar_url"`
-	PhoneNumber         pgtype.Text  `extensions:"x-nullable" json:"phone_number"`
-	PhoneNumberVerified pgtype.Bool  `json:"phone_number_verified"`
+	FullName            *string      `json:"full_name"`
+	AvatarURL           *string      `json:"avatar_url"`
+	PhoneNumber         *string      `json:"phone_number"`
+	PhoneNumberVerified *bool        `json:"phone_number_verified"`
 	Role                NullUserRole `json:"role"`
 	UserID              string       `json:"user_id"`
 }
@@ -202,7 +200,7 @@ type UpdateUserParams struct {
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.FullName,
-		arg.AvatarUrl,
+		arg.AvatarURL,
 		arg.PhoneNumber,
 		arg.PhoneNumberVerified,
 		arg.Role,
@@ -219,7 +217,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.PhoneNumber,
 		&i.PhoneNumberVerified,
 		&i.Role,
-		&i.AvatarUrl,
+		&i.AvatarURL,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
