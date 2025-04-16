@@ -1804,6 +1804,12 @@ paths:
       consumes:
       - application/json
       description: Get detailed information about a specific seller
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -2379,6 +2385,24 @@ paths:
         name: series
         required: true
         type: string
+      - description: Total number of parts
+        in: formData
+        name: parts_total
+        required: true
+        type: integer
+      - description: Gundam material
+        enum:
+        - plastic
+        - metal
+        in: formData
+        name: material
+        required: true
+        type: string
+      - description: Gundam version
+        in: formData
+        name: version
+        required: true
+        type: string
       - description: Condition of the Gundam
         enum:
         - new
@@ -2416,6 +2440,10 @@ paths:
         in: formData
         name: price
         required: true
+        type: integer
+      - description: Release year
+        in: formData
+        name: release_year
         type: integer
       - description: Primary image of the Gundam
         in: formData

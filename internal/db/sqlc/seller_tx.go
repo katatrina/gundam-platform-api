@@ -104,7 +104,7 @@ type ConfirmOrderTxResult struct {
 }
 
 // ConfirmOrderTx xử lý việc người bán xác nhận đơn hàng
-func (store *SQLStore) ConfirmOrderTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error) {
+func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error) {
 	var result ConfirmOrderTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
@@ -263,7 +263,7 @@ type PackageOrderTxResult struct {
 	OrderDelivery OrderDelivery `json:"order_delivery"`
 }
 
-func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error) {
+func (store *SQLStore) PackageOrderBySellerTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error) {
 	var result PackageOrderTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {

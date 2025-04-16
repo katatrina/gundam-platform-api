@@ -287,12 +287,16 @@ type createGundamRequest struct {
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
 //	@Param			series					formData	string	true	"Gundam series name"
+// @Param			parts_total				formData	integer	true	"Total number of parts"
+//	@Param			material				formData	string	true	"Gundam material"	Enums(plastic, metal)
+//	@Param			version					formData	string	true	"Gundam version"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, used)
 //	@Param			manufacturer			formData	string	true	"Manufacturer name"
 //	@Param			scale					formData	string	true	"Gundam scale"	Enums(1/144, 1/100, 1/60)
 //	@Param			weight					formData	integer	true	"Weight in grams"
 //	@Param			description				formData	string	true	"Detailed description"
 //	@Param			price					formData	integer	true	"Price in VND"
+//	@Param			release_year			formData	integer	false	"Release year"
 //	@Param			primary_image			formData	file	true	"Primary image of the Gundam"
 //	@Param			secondary_images		formData	file	true	"Secondary images of the Gundam"
 //	@Param			condition_description	formData	string	false	"Additional details about condition"

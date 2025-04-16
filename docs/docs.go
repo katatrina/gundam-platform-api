@@ -850,6 +850,15 @@ const docTemplate = `{
                     "seller profile"
                 ],
                 "summary": "Get seller profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Seller profile details",
@@ -1721,6 +1730,31 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "integer",
+                        "description": "Total number of parts",
+                        "name": "parts_total",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "plastic",
+                            "metal"
+                        ],
+                        "type": "string",
+                        "description": "Gundam material",
+                        "name": "material",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam version",
+                        "name": "version",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
                         "enum": [
                             "new",
                             "open box",
@@ -1771,6 +1805,12 @@ const docTemplate = `{
                         "name": "price",
                         "in": "formData",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Release year",
+                        "name": "release_year",
+                        "in": "formData"
                     },
                     {
                         "type": "file",

@@ -530,7 +530,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	}
 	
 	// Thực hiện transaction xác nhận đơn hàng đã nhận
-	result, err := server.dbStore.ConfirmOrderReceivedTx(ctx, db.ConfirmOrderReceivedTxParams{
+	result, err := server.dbStore.ConfirmOrderReceivedByBuyerTx(ctx, db.ConfirmOrderReceivedTxParams{
 		Order:        &order,
 		OrderItems:   orderItems,
 		SellerEntry:  &sellerEntry,

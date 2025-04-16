@@ -231,7 +231,7 @@ type ConfirmOrderReceivedTxResult struct {
 	SellerEntry      WalletEntry      `json:"seller_entry"`
 }
 
-func (store *SQLStore) ConfirmOrderReceivedTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error) {
+func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error) {
 	var result ConfirmOrderReceivedTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {

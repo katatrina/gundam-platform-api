@@ -61,8 +61,8 @@ func (server *Server) becomeSeller(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, seller)
 }
 
-type getSellerProfileRequest struct {
-	UserID string `json:"userID" binding:"required"`
+type getSellerProfileQueryString struct {
+	UserID string `form:"user_id" binding:"required"`
 }
 
 //	@Summary		Get seller profile
@@ -70,14 +70,15 @@ type getSellerProfileRequest struct {
 //	@Tags			seller profile
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	db.SellerInfo	"Seller profile details"
-//	@Failure		404	"User not found"
-//	@Failure		500	"Internal server error"
+//	@Param			user_id	query		string			true	"User ID"
+//	@Success		200		{object}	db.SellerInfo	"Seller profile details"
+//	@Failure		404		"User not found"
+//	@Failure		500		"Internal server error"
 //	@Router			/seller/profile [get]
 func (server *Server) getSellerProfile(c *gin.Context) {
-	var req getSellerProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Error().Err(err).Msg("Failed to bind JSON")
+	var req getSellerProfileQueryString
+	if err := c.ShouldBindQuery(&req); err != nil {
+		log.Error().Err(err).Msg("Failed to bind query string")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -423,7 +424,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 		return
 	}
 	
-	result, err := server.dbStore.ConfirmOrderTx(c, db.ConfirmOrderTxParams{
+	result, err := server.dbStore.ConfirmOrderBySellerTx(c, db.ConfirmOrderTxParams{
 		Order:    &order,
 		SellerID: url.SellerID,
 	})
@@ -568,7 +569,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 		CreateDeliveryOrder: server.deliveryService.CreateOrder,
 	}
 	
-	result, err := server.dbStore.PackageOrderTx(c.Request.Context(), arg)
+	result, err := server.dbStore.PackageOrderBySellerTx(c.Request.Context(), arg)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to package order")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
