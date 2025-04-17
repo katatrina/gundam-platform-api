@@ -16,7 +16,7 @@ UPDATE orders
 SET status     = 'packaging',
     updated_at = now()
 WHERE id = $1
-  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type ConfirmOrderByIDParams struct {
@@ -37,6 +37,7 @@ func (q *Queries) ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDPara
 		&i.TotalAmount,
 		&i.Status,
 		&i.PaymentMethod,
+		&i.Type,
 		&i.Note,
 		&i.IsPackaged,
 		&i.PackagingImageURLs,
@@ -58,8 +59,9 @@ INSERT INTO orders (id,
                     total_amount,
                     status,
                     payment_method,
+                    type,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type CreateOrderParams struct {
@@ -72,6 +74,7 @@ type CreateOrderParams struct {
 	TotalAmount   int64         `json:"total_amount"`
 	Status        OrderStatus   `json:"status"`
 	PaymentMethod PaymentMethod `json:"payment_method"`
+	Type          OrderType     `json:"type"`
 	Note          *string       `json:"note"`
 }
 
@@ -86,6 +89,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		arg.TotalAmount,
 		arg.Status,
 		arg.PaymentMethod,
+		arg.Type,
 		arg.Note,
 	)
 	var i Order
@@ -99,6 +103,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.TotalAmount,
 		&i.Status,
 		&i.PaymentMethod,
+		&i.Type,
 		&i.Note,
 		&i.IsPackaged,
 		&i.PackagingImageURLs,
@@ -111,7 +116,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE id = $1
 `
@@ -129,6 +134,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 		&i.TotalAmount,
 		&i.Status,
 		&i.PaymentMethod,
+		&i.Type,
 		&i.Note,
 		&i.IsPackaged,
 		&i.PackagingImageURLs,
@@ -140,21 +146,21 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	return i, err
 }
 
-const listPurchaseOrders = `-- name: ListPurchaseOrders :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+const listMemberOrders = `-- name: ListMemberOrders :many
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
-WHERE buyer_id = $1
+WHERE (buyer_id = $1 OR (type = 'exchange' AND seller_id = $1))
   AND status = COALESCE($2::order_status, status)
 ORDER BY updated_at DESC, created_at DESC
 `
 
-type ListPurchaseOrdersParams struct {
+type ListMemberOrdersParams struct {
 	BuyerID string          `json:"buyer_id"`
 	Status  NullOrderStatus `json:"status"`
 }
 
-func (q *Queries) ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrdersParams) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listPurchaseOrders, arg.BuyerID, arg.Status)
+func (q *Queries) ListMemberOrders(ctx context.Context, arg ListMemberOrdersParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listMemberOrders, arg.BuyerID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +178,7 @@ func (q *Queries) ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrders
 			&i.TotalAmount,
 			&i.Status,
 			&i.PaymentMethod,
+			&i.Type,
 			&i.Note,
 			&i.IsPackaged,
 			&i.PackagingImageURLs,
@@ -198,7 +205,7 @@ SET is_packaged          = COALESCE($1, is_packaged),
     canceled_by          = COALESCE($4, canceled_by),
     canceled_reason      = COALESCE($5, canceled_reason),
     updated_at           = now()
-WHERE id = $6 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+WHERE id = $6 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type UpdateOrderParams struct {
@@ -230,6 +237,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		&i.TotalAmount,
 		&i.Status,
 		&i.PaymentMethod,
+		&i.Type,
 		&i.Note,
 		&i.IsPackaged,
 		&i.PackagingImageURLs,
@@ -237,53 +245,6 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const validateGundamBeforeCheckout = `-- name: ValidateGundamBeforeCheckout :one
-SELECT g.id, g.owner_id, g.name, g.slug, g.grade_id, g.series, g.parts_total, g.material, g.version, g.quantity, g.condition, g.condition_description, g.manufacturer, g.weight, g.scale, g.description, g.price, g.release_year, g.status, g.created_at, g.updated_at,
-       CASE
-           WHEN g.id IS NOT NULL AND g.status = 'published'
-               THEN true
-           ELSE false
-           END as valid
-FROM gundams g
-         JOIN users u ON g.owner_id = u.id
-WHERE g.id = $1
-`
-
-type ValidateGundamBeforeCheckoutRow struct {
-	Gundam Gundam `json:"gundam"`
-	Valid  bool   `json:"valid"`
-}
-
-func (q *Queries) ValidateGundamBeforeCheckout(ctx context.Context, id int64) (ValidateGundamBeforeCheckoutRow, error) {
-	row := q.db.QueryRow(ctx, validateGundamBeforeCheckout, id)
-	var i ValidateGundamBeforeCheckoutRow
-	err := row.Scan(
-		&i.Gundam.ID,
-		&i.Gundam.OwnerID,
-		&i.Gundam.Name,
-		&i.Gundam.Slug,
-		&i.Gundam.GradeID,
-		&i.Gundam.Series,
-		&i.Gundam.PartsTotal,
-		&i.Gundam.Material,
-		&i.Gundam.Version,
-		&i.Gundam.Quantity,
-		&i.Gundam.Condition,
-		&i.Gundam.ConditionDescription,
-		&i.Gundam.Manufacturer,
-		&i.Gundam.Weight,
-		&i.Gundam.Scale,
-		&i.Gundam.Description,
-		&i.Gundam.Price,
-		&i.Gundam.ReleaseYear,
-		&i.Gundam.Status,
-		&i.Gundam.CreatedAt,
-		&i.Gundam.UpdatedAt,
-		&i.Valid,
 	)
 	return i, err
 }

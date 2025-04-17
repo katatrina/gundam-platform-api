@@ -109,7 +109,7 @@ definitions:
     properties:
       buyer_address_id:
         description: |-
-          ID of the buyer's address
+          ID of the buyer's chosen address
           example: 42
         type: integer
       delivery_fee:
@@ -654,6 +654,58 @@ definitions:
     - seller_id
     - seller_name
     type: object
+  db.MemberOrderDetails:
+    properties:
+      buyer_info:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin người nhận (null nếu là người nhận)
+      order:
+        allOf:
+        - $ref: '#/definitions/db.Order'
+        description: Thông tin đơn hàng
+      order_delivery:
+        allOf:
+        - $ref: '#/definitions/db.OrderDelivery'
+        description: Thông tin vận chuyển
+      order_items:
+        description: Danh sách sản phẩm trong đơn hàng
+        items:
+          $ref: '#/definitions/db.OrderItem'
+        type: array
+      order_transaction:
+        allOf:
+        - $ref: '#/definitions/db.OrderTransaction'
+        description: Thông tin giao dịch thanh toán của đơn hàng
+      seller_info:
+        allOf:
+        - $ref: '#/definitions/db.SellerInfo'
+        description: Thông tin người gửi (null nếu là người gửi)
+      to_delivery_information:
+        allOf:
+        - $ref: '#/definitions/db.DeliveryInformation'
+        description: Địa chỉ nhận hàng của người mua
+    required:
+    - buyer_info
+    - order
+    - order_delivery
+    - order_items
+    - order_transaction
+    - seller_info
+    - to_delivery_information
+    type: object
+  db.MemberOrderInfo:
+    properties:
+      order:
+        $ref: '#/definitions/db.Order'
+      order_items:
+        items:
+          $ref: '#/definitions/db.OrderItem'
+        type: array
+    required:
+    - order
+    - order_items
+    type: object
   db.NullDeliveryOverralStatus:
     properties:
       delivery_overral_status:
@@ -699,6 +751,8 @@ definitions:
         $ref: '#/definitions/db.OrderStatus'
       total_amount:
         type: integer
+      type:
+        $ref: '#/definitions/db.OrderType'
       updated_at:
         type: string
     required:
@@ -717,6 +771,7 @@ definitions:
     - seller_id
     - status
     - total_amount
+    - type
     - updated_at
     type: object
   db.OrderDelivery:
@@ -854,6 +909,16 @@ definitions:
     - OrderTransactionStatusCompleted
     - OrderTransactionStatusRefunded
     - OrderTransactionStatusFailed
+  db.OrderType:
+    enum:
+    - regular
+    - exchange
+    - auction
+    type: string
+    x-enum-varnames:
+    - OrderTypeRegular
+    - OrderTypeExchange
+    - OrderTypeAuction
   db.PackageOrderTxResult:
     properties:
       order:
@@ -872,62 +937,33 @@ definitions:
     x-enum-varnames:
     - PaymentMethodCod
     - PaymentMethodWallet
-  db.PurchaseOrderDetails:
-    properties:
-      order:
-        $ref: '#/definitions/db.Order'
-      order_delivery:
-        $ref: '#/definitions/db.OrderDelivery'
-      order_items:
-        items:
-          $ref: '#/definitions/db.OrderItem'
-        type: array
-      order_transaction:
-        $ref: '#/definitions/db.OrderTransaction'
-      seller_info:
-        $ref: '#/definitions/db.SellerInfo'
-      to_delivery_information:
-        allOf:
-        - $ref: '#/definitions/db.DeliveryInformation'
-        description: Thông tin nhận hàng
-    required:
-    - order
-    - order_delivery
-    - order_items
-    - order_transaction
-    - seller_info
-    - to_delivery_information
-    type: object
-  db.PurchaseOrderInfo:
-    properties:
-      order:
-        $ref: '#/definitions/db.Order'
-      order_items:
-        items:
-          $ref: '#/definitions/db.OrderItem'
-        type: array
-    required:
-    - order
-    - order_items
-    type: object
   db.SalesOrderDetails:
     properties:
       buyer_info:
-        $ref: '#/definitions/db.User'
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin người mua
       order:
-        $ref: '#/definitions/db.Order'
+        allOf:
+        - $ref: '#/definitions/db.Order'
+        description: Thông tin đơn hàng
       order_delivery:
-        $ref: '#/definitions/db.OrderDelivery'
+        allOf:
+        - $ref: '#/definitions/db.OrderDelivery'
+        description: Thông tin vận chuyển
       order_items:
+        description: Danh sách sản phẩm trong đơn hàng
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
       order_transaction:
-        $ref: '#/definitions/db.OrderTransaction'
+        allOf:
+        - $ref: '#/definitions/db.OrderTransaction'
+        description: Thông tin giao dịch thanh toán của đơn hàng
       to_delivery_information:
         allOf:
         - $ref: '#/definitions/db.DeliveryInformation'
-        description: Thông tin nhận hàng
+        description: Địa chỉ nhận hàng của người mua
     required:
     - buyer_info
     - order
@@ -1202,9 +1238,6 @@ definitions:
     - WalletReferenceTypePromotion
     - WalletReferenceTypeAffiliate
     - WalletReferenceTypeZalopay
-  gin.H:
-    additionalProperties: {}
-    type: object
   pgtype.InfinityModifier:
     enum:
     - 1
@@ -1504,7 +1537,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: List all purchase orders of a user
+      description: List all orders of a member with optional filtering by order status
       parameters:
       - description: Filter by order status
         enum:
@@ -1522,20 +1555,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully retrieved list of purchase orders
+          description: List of orders
           schema:
             items:
-              $ref: '#/definitions/db.PurchaseOrderInfo'
+              $ref: '#/definitions/db.MemberOrderInfo'
             type: array
-        "400":
-          description: Bad request
-        "404":
-          description: User not found
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
-      summary: List all purchase orders of a user
+      summary: List all orders of a member
       tags:
       - orders
     post:
@@ -1545,7 +1572,7 @@ paths:
       parameters:
       - description: Order details
         in: body
-        name: createOrderRequest
+        name: request
         required: true
         schema:
           $ref: '#/definitions/api.createOrderRequest'
@@ -1556,36 +1583,47 @@ paths:
           description: Order created successfully
           schema:
             $ref: '#/definitions/db.CreateOrderTxResult'
-        "400":
-          description: Invalid request data
-          schema:
-            $ref: '#/definitions/gin.H'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/gin.H'
-        "404":
-          description: Something not found
-          schema:
-            $ref: '#/definitions/gin.H'
-        "422":
-          description: Invalid items or price mismatch
-          schema:
-            $ref: '#/definitions/gin.H'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/gin.H'
       security:
       - accessToken: []
       summary: Create a new order
+      tags:
+      - orders
+  /orders/:orderID/package:
+    patch:
+      description: Package an order for the specified user.
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: string
+      - description: Package images
+        in: formData
+        name: package_images
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully packaged order
+          schema:
+            $ref: '#/definitions/db.PackageOrderTxResult'
+      security:
+      - accessToken: []
+      summary: Package an order
       tags:
       - orders
   /orders/{orderID}:
     get:
       consumes:
       - application/json
-      description: Get details of a specific purchase order
+      description: Get details of a specific order for a member
       parameters:
       - description: Order ID
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -1599,18 +1637,10 @@ paths:
         "200":
           description: Order details
           schema:
-            $ref: '#/definitions/db.PurchaseOrderDetails'
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - User does not have permission to access this order
-        "404":
-          description: User not Found<br/>Order not found
-        "500":
-          description: Internal server error
+            $ref: '#/definitions/db.MemberOrderDetails'
       security:
       - accessToken: []
-      summary: Get purchase order details
+      summary: Get order details for a member
       tags:
       - orders
   /orders/{orderID}/cancel:
@@ -1638,24 +1668,13 @@ paths:
           description: Order canceled successfully
           schema:
             $ref: '#/definitions/db.CancelOrderByBuyerTxResult'
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - User does not have permission to cancel this order
-        "404":
-          description: User not found<br/>Order not found
-        "422":
-          description: Unprocessable Entity - Order cannot be canceled in the current
-            status
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
       summary: Cancel order by buyer
       tags:
       - orders
   /orders/{orderID}/received:
-    post:
+    patch:
       consumes:
       - application/json
       description: Confirm that the buyer has received the order
@@ -1673,16 +1692,6 @@ paths:
           description: Order received successfully
           schema:
             $ref: '#/definitions/db.ConfirmOrderReceivedTxResult'
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - User does not have permission to confirm this order
-        "404":
-          description: User not found<br/>Order not found
-        "422":
-          description: Unprocessable Entity - Order is not in delivered status
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
       summary: Confirm order received
@@ -1882,7 +1891,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all sale orders that belong to the specified seller ID
+      description: Get all sales orders that belong to the specified seller ID
       parameters:
       - description: Seller ID
         in: path
@@ -1910,13 +1919,9 @@ paths:
             items:
               $ref: '#/definitions/db.SalesOrderInfo'
             type: array
-        "400":
-          description: Invalid order status
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
-      summary: List all sale orders for a specific seller
+      summary: List all sales orders (excluding exchange orders) for a specific seller
       tags:
       - sellers
   /sellers/:sellerID/orders/:orderID:
@@ -1942,15 +1947,9 @@ paths:
           description: Sales order details
           schema:
             $ref: '#/definitions/db.SalesOrderDetails'
-        "400":
-          description: Invalid order ID
-        "404":
-          description: Order not found
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
-      summary: Get sales order details
+      summary: Get sales order details (excluding exchange orders)
       tags:
       - sellers
   /sellers/:sellerID/orders/:orderID/confirm:
@@ -1977,102 +1976,9 @@ paths:
           description: Successfully confirmed order
           schema:
             $ref: '#/definitions/db.ConfirmOrderTxResult'
-        "400":
-          description: Invalid order ID or seller ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Order does not belong to this seller
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order is not in pending status
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
       security:
       - accessToken: []
       summary: Confirm an order
-      tags:
-      - sellers
-  /sellers/:sellerID/orders/:orderID/package:
-    patch:
-      description: Package an order for the specified seller. This endpoint checks
-        the order's status before proceeding.
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: Order ID
-        in: path
-        name: orderID
-        required: true
-        type: string
-      - description: Package images
-        in: formData
-        name: package_images
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully packaged order
-          schema:
-            $ref: '#/definitions/db.PackageOrderTxResult'
-        "400":
-          description: Invalid order ID or seller ID<br/>At least one package image
-            is required
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Order does not belong to this seller
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order is not in packaging status<br/>Order is already packaged
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - accessToken: []
-      summary: Package an order
       tags:
       - sellers
   /sellers/:sellerID/subscriptions/active:

@@ -33,20 +33,21 @@ func (q *Queries) CreateSellerProfile(ctx context.Context, arg CreateSellerProfi
 	return i, err
 }
 
-const getSalesOrderBySellerID = `-- name: GetSalesOrderBySellerID :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+const getSalesOrder = `-- name: GetSalesOrder :one
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE id = $1
   AND seller_id = $2
+  AND type != 'exchange'
 `
 
-type GetSalesOrderBySellerIDParams struct {
+type GetSalesOrderParams struct {
 	OrderID  uuid.UUID `json:"order_id"`
 	SellerID string    `json:"seller_id"`
 }
 
-func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error) {
-	row := q.db.QueryRow(ctx, getSalesOrderBySellerID, arg.OrderID, arg.SellerID)
+func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, getSalesOrder, arg.OrderID, arg.SellerID)
 	var i Order
 	err := row.Scan(
 		&i.ID,
@@ -58,6 +59,7 @@ func (q *Queries) GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrder
 		&i.TotalAmount,
 		&i.Status,
 		&i.PaymentMethod,
+		&i.Type,
 		&i.Note,
 		&i.IsPackaged,
 		&i.PackagingImageURLs,
@@ -135,21 +137,22 @@ func (q *Queries) GetSellerDetailByID(ctx context.Context, id string) (GetSeller
 	return i, err
 }
 
-const listOrdersBySellerID = `-- name: ListOrdersBySellerID :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+const listSalesOrders = `-- name: ListSalesOrders :many
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
 FROM orders
 WHERE seller_id = $1
+  AND type != 'exchange'
   AND status = COALESCE($2::order_status, status)
 ORDER BY updated_at DESC, created_at DESC
 `
 
-type ListOrdersBySellerIDParams struct {
+type ListSalesOrdersParams struct {
 	SellerID string          `json:"seller_id"`
 	Status   NullOrderStatus `json:"status"`
 }
 
-func (q *Queries) ListOrdersBySellerID(ctx context.Context, arg ListOrdersBySellerIDParams) ([]Order, error) {
-	rows, err := q.db.Query(ctx, listOrdersBySellerID, arg.SellerID, arg.Status)
+func (q *Queries) ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listSalesOrders, arg.SellerID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +170,7 @@ func (q *Queries) ListOrdersBySellerID(ctx context.Context, arg ListOrdersBySell
 			&i.TotalAmount,
 			&i.Status,
 			&i.PaymentMethod,
+			&i.Type,
 			&i.Note,
 			&i.IsPackaged,
 			&i.PackagingImageURLs,

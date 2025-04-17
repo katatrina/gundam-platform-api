@@ -389,7 +389,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "List all purchase orders of a user",
+                "description": "List all orders of a member with optional filtering by order status",
                 "consumes": [
                     "application/json"
                 ],
@@ -399,7 +399,7 @@ const docTemplate = `{
                 "tags": [
                     "orders"
                 ],
-                "summary": "List all purchase orders of a user",
+                "summary": "List all orders of a member",
                 "parameters": [
                     {
                         "enum": [
@@ -419,22 +419,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved list of purchase orders",
+                        "description": "List of orders",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.PurchaseOrderInfo"
+                                "$ref": "#/definitions/db.MemberOrderInfo"
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    },
-                    "404": {
-                        "description": "User not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             },
@@ -458,7 +449,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Order details",
-                        "name": "createOrderRequest",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -472,35 +463,53 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.CreateOrderTxResult"
                         }
+                    }
+                }
+            }
+        },
+        "/orders/:orderID/package": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Package an order for the specified user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Package an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
                     },
-                    "400": {
-                        "description": "Invalid request data",
-                        "schema": {
-                            "$ref": "#/definitions/gin.H"
-                        }
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    {
+                        "type": "file",
+                        "description": "Package images",
+                        "name": "package_images",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully packaged order",
                         "schema": {
-                            "$ref": "#/definitions/gin.H"
-                        }
-                    },
-                    "404": {
-                        "description": "Something not found",
-                        "schema": {
-                            "$ref": "#/definitions/gin.H"
-                        }
-                    },
-                    "422": {
-                        "description": "Invalid items or price mismatch",
-                        "schema": {
-                            "$ref": "#/definitions/gin.H"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/gin.H"
+                            "$ref": "#/definitions/db.PackageOrderTxResult"
                         }
                     }
                 }
@@ -513,7 +522,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Get details of a specific purchase order",
+                "description": "Get details of a specific order for a member",
                 "consumes": [
                     "application/json"
                 ],
@@ -523,7 +532,7 @@ const docTemplate = `{
                 "tags": [
                     "orders"
                 ],
-                "summary": "Get purchase order details",
+                "summary": "Get order details for a member",
                 "parameters": [
                     {
                         "type": "string",
@@ -538,20 +547,8 @@ const docTemplate = `{
                     "200": {
                         "description": "Order details",
                         "schema": {
-                            "$ref": "#/definitions/db.PurchaseOrderDetails"
+                            "$ref": "#/definitions/db.MemberOrderDetails"
                         }
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    },
-                    "403": {
-                        "description": "Forbidden - User does not have permission to access this order"
-                    },
-                    "404": {
-                        "description": "User not Found\u003cbr/\u003eOrder not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
@@ -599,27 +596,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderByBuyerTxResult"
                         }
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    },
-                    "403": {
-                        "description": "Forbidden - User does not have permission to cancel this order"
-                    },
-                    "404": {
-                        "description": "User not found\u003cbr/\u003eOrder not found"
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity - Order cannot be canceled in the current status"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
         },
         "/orders/{orderID}/received": {
-            "post": {
+            "patch": {
                 "security": [
                     {
                         "accessToken": []
@@ -652,21 +634,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.ConfirmOrderReceivedTxResult"
                         }
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    },
-                    "403": {
-                        "description": "Forbidden - User does not have permission to confirm this order"
-                    },
-                    "404": {
-                        "description": "User not found\u003cbr/\u003eOrder not found"
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity - Order is not in delivered status"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
@@ -964,7 +931,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Get all sale orders that belong to the specified seller ID",
+                "description": "Get all sales orders that belong to the specified seller ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -974,7 +941,7 @@ const docTemplate = `{
                 "tags": [
                     "sellers"
                 ],
-                "summary": "List all sale orders for a specific seller",
+                "summary": "List all sales orders (excluding exchange orders) for a specific seller",
                 "parameters": [
                     {
                         "type": "string",
@@ -1008,12 +975,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/db.SalesOrderInfo"
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Invalid order status"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
@@ -1035,7 +996,7 @@ const docTemplate = `{
                 "tags": [
                     "sellers"
                 ],
-                "summary": "Get sales order details",
+                "summary": "Get sales order details (excluding exchange orders)",
                 "parameters": [
                     {
                         "type": "string",
@@ -1058,15 +1019,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.SalesOrderDetails"
                         }
-                    },
-                    "400": {
-                        "description": "Invalid order ID"
-                    },
-                    "404": {
-                        "description": "Order not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
@@ -1110,144 +1062,6 @@ const docTemplate = `{
                         "description": "Successfully confirmed order",
                         "schema": {
                             "$ref": "#/definitions/db.ConfirmOrderTxResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid order ID or seller ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Order does not belong to this seller",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Order is not in pending status",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/sellers/:sellerID/orders/:orderID/package": {
-            "patch": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Package an order for the specified seller. This endpoint checks the order's status before proceeding.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Package an order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Order ID",
-                        "name": "orderID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Package images",
-                        "name": "package_images",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully packaged order",
-                        "schema": {
-                            "$ref": "#/definitions/db.PackageOrderTxResult"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid order ID or seller ID\u003cbr/\u003eAt least one package image is required",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Order does not belong to this seller",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Order not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Order is not in packaging status\u003cbr/\u003eOrder is already packaged",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     }
                 }
@@ -2537,7 +2351,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "buyer_address_id": {
-                    "description": "ID of the buyer's address\nexample: 42",
+                    "description": "ID of the buyer's chosen address\nexample: 42",
                     "type": "integer"
                 },
                 "delivery_fee": {
@@ -3265,6 +3079,93 @@ const docTemplate = `{
                 }
             }
         },
+        "db.MemberOrderDetails": {
+            "type": "object",
+            "required": [
+                "buyer_info",
+                "order",
+                "order_delivery",
+                "order_items",
+                "order_transaction",
+                "seller_info",
+                "to_delivery_information"
+            ],
+            "properties": {
+                "buyer_info": {
+                    "description": "Thông tin người nhận (null nếu là người nhận)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
+                },
+                "order": {
+                    "description": "Thông tin đơn hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Order"
+                        }
+                    ]
+                },
+                "order_delivery": {
+                    "description": "Thông tin vận chuyển",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderDelivery"
+                        }
+                    ]
+                },
+                "order_items": {
+                    "description": "Danh sách sản phẩm trong đơn hàng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                },
+                "order_transaction": {
+                    "description": "Thông tin giao dịch thanh toán của đơn hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderTransaction"
+                        }
+                    ]
+                },
+                "seller_info": {
+                    "description": "Thông tin người gửi (null nếu là người gửi)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.SellerInfo"
+                        }
+                    ]
+                },
+                "to_delivery_information": {
+                    "description": "Địa chỉ nhận hàng của người mua",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.DeliveryInformation"
+                        }
+                    ]
+                }
+            }
+        },
+        "db.MemberOrderInfo": {
+            "type": "object",
+            "required": [
+                "order",
+                "order_items"
+            ],
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "order_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.OrderItem"
+                    }
+                }
+            }
+        },
         "db.NullDeliveryOverralStatus": {
             "type": "object",
             "required": [
@@ -3299,6 +3200,7 @@ const docTemplate = `{
                 "seller_id",
                 "status",
                 "total_amount",
+                "type",
                 "updated_at"
             ],
             "properties": {
@@ -3349,6 +3251,9 @@ const docTemplate = `{
                 },
                 "total_amount": {
                     "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/db.OrderType"
                 },
                 "updated_at": {
                     "type": "string"
@@ -3536,6 +3441,19 @@ const docTemplate = `{
                 "OrderTransactionStatusFailed"
             ]
         },
+        "db.OrderType": {
+            "type": "string",
+            "enum": [
+                "regular",
+                "exchange",
+                "auction"
+            ],
+            "x-enum-varnames": [
+                "OrderTypeRegular",
+                "OrderTypeExchange",
+                "OrderTypeAuction"
+            ]
+        },
         "db.PackageOrderTxResult": {
             "type": "object",
             "required": [
@@ -3562,63 +3480,6 @@ const docTemplate = `{
                 "PaymentMethodWallet"
             ]
         },
-        "db.PurchaseOrderDetails": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_delivery",
-                "order_items",
-                "order_transaction",
-                "seller_info",
-                "to_delivery_information"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_delivery": {
-                    "$ref": "#/definitions/db.OrderDelivery"
-                },
-                "order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.OrderItem"
-                    }
-                },
-                "order_transaction": {
-                    "$ref": "#/definitions/db.OrderTransaction"
-                },
-                "seller_info": {
-                    "$ref": "#/definitions/db.SellerInfo"
-                },
-                "to_delivery_information": {
-                    "description": "Thông tin nhận hàng",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.DeliveryInformation"
-                        }
-                    ]
-                }
-            }
-        },
-        "db.PurchaseOrderInfo": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_items"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.OrderItem"
-                    }
-                }
-            }
-        },
         "db.SalesOrderDetails": {
             "type": "object",
             "required": [
@@ -3631,25 +3492,46 @@ const docTemplate = `{
             ],
             "properties": {
                 "buyer_info": {
-                    "$ref": "#/definitions/db.User"
+                    "description": "Thông tin người mua",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
                 },
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "description": "Thông tin đơn hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Order"
+                        }
+                    ]
                 },
                 "order_delivery": {
-                    "$ref": "#/definitions/db.OrderDelivery"
+                    "description": "Thông tin vận chuyển",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderDelivery"
+                        }
+                    ]
                 },
                 "order_items": {
+                    "description": "Danh sách sản phẩm trong đơn hàng",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
                 },
                 "order_transaction": {
-                    "$ref": "#/definitions/db.OrderTransaction"
+                    "description": "Thông tin giao dịch thanh toán của đơn hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.OrderTransaction"
+                        }
+                    ]
                 },
                 "to_delivery_information": {
-                    "description": "Thông tin nhận hàng",
+                    "description": "Địa chỉ nhận hàng của người mua",
                     "allOf": [
                         {
                             "$ref": "#/definitions/db.DeliveryInformation"
@@ -4013,10 +3895,6 @@ const docTemplate = `{
                 "WalletReferenceTypeAffiliate",
                 "WalletReferenceTypeZalopay"
             ]
-        },
-        "gin.H": {
-            "type": "object",
-            "additionalProperties": {}
         },
         "pgtype.InfinityModifier": {
             "type": "integer",

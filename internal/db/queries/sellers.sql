@@ -4,18 +4,20 @@ FROM users
 WHERE id = $1
   AND role = 'seller';
 
--- name: ListOrdersBySellerID :many
+-- name: ListSalesOrders :many
 SELECT *
 FROM orders
 WHERE seller_id = $1
+  AND type != 'exchange'
   AND status = COALESCE(sqlc.narg('status')::order_status, status)
 ORDER BY updated_at DESC, created_at DESC;
 
--- name: GetSalesOrderBySellerID :one
+-- name: GetSalesOrder :one
 SELECT *
 FROM orders
 WHERE id = sqlc.arg('order_id')
-  AND seller_id = sqlc.arg('seller_id');
+  AND seller_id = sqlc.arg('seller_id')
+  AND type != 'exchange';
 
 -- name: UpdateSellerProfileByID :one
 UPDATE seller_profiles

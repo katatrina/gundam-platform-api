@@ -43,18 +43,20 @@ func ConvertGundamAccessoryToDTO(accessory GundamAccessory) GundamAccessoryDTO {
 	}
 }
 
-type PurchaseOrderInfo struct {
+type MemberOrderInfo struct {
 	Order      Order       `json:"order"`
 	OrderItems []OrderItem `json:"order_items"`
 }
 
-type PurchaseOrderDetails struct {
-	SellerInfo            SellerInfo          `json:"seller_info"`
-	Order                 Order               `json:"order"`
-	OrderItems            []OrderItem         `json:"order_items"`
-	OrderDelivery         OrderDelivery       `json:"order_delivery"`
-	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Thông tin nhận hàng
-	OrderTransaction      OrderTransaction    `json:"order_transaction"`
+type MemberOrderDetails struct {
+	SellerInfo            *SellerInfo         `json:"seller_info"`             // Thông tin người gửi (null nếu là người gửi)
+	BuyerInfo             *User               `json:"buyer_info"`              // Thông tin người nhận (null nếu là người nhận)
+	Order                 Order               `json:"order"`                   // Thông tin đơn hàng
+	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
+	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
+	OrderTransaction      OrderTransaction    `json:"order_transaction"`       // Thông tin giao dịch thanh toán của đơn hàng
+	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
+	// FromDeliveryInformation *DeliveryInformation `json:"from_delivery_information"` // Địa chỉ gửi hàng của người bán
 }
 
 type SalesOrderInfo struct {
@@ -63,12 +65,12 @@ type SalesOrderInfo struct {
 }
 
 type SalesOrderDetails struct {
-	BuyerInfo             User                `json:"buyer_info"`
-	Order                 Order               `json:"order"`
-	OrderItems            []OrderItem         `json:"order_items"`
-	OrderDelivery         OrderDelivery       `json:"order_delivery"`
-	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Thông tin nhận hàng
-	OrderTransaction      OrderTransaction    `json:"order_transaction"`
+	BuyerInfo             User                `json:"buyer_info"`              // Thông tin người mua
+	Order                 Order               `json:"order"`                   // Thông tin đơn hàng
+	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
+	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
+	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
+	OrderTransaction      OrderTransaction    `json:"order_transaction"`       // Thông tin giao dịch thanh toán của đơn hàng
 }
 
 type SellerInfo struct {

@@ -18,6 +18,8 @@ type Querier interface {
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
+	CreateExchangePost(ctx context.Context, arg CreateExchangePostParams) (ExchangePost, error)
+	CreateExchangePostItems(ctx context.Context, arg CreateExchangePostItemsParams) ([]ExchangePostItem, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
 	CreateGundamAccessory(ctx context.Context, arg CreateGundamAccessoryParams) (GundamAccessory, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
@@ -48,7 +50,7 @@ type Querier interface {
 	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
 	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
-	GetSalesOrderBySellerID(ctx context.Context, arg GetSalesOrderBySellerIDParams) (Order, error)
+	GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
@@ -64,9 +66,9 @@ type Querier interface {
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsByUserID(ctx context.Context, arg ListGundamsByUserIDParams) ([]ListGundamsByUserIDRow, error)
 	ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error)
+	ListMemberOrders(ctx context.Context, arg ListMemberOrdersParams) ([]Order, error)
 	ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error)
-	ListOrdersBySellerID(ctx context.Context, arg ListOrdersBySellerIDParams) ([]Order, error)
-	ListPurchaseOrders(ctx context.Context, arg ListPurchaseOrdersParams) ([]Order, error)
+	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
@@ -74,6 +76,7 @@ type Querier interface {
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
+	UpdateExchangePost(ctx context.Context, arg UpdateExchangePostParams) (ExchangePost, error)
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error)
@@ -83,7 +86,6 @@ type Querier interface {
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error)
-	ValidateGundamBeforeCheckout(ctx context.Context, id int64) (ValidateGundamBeforeCheckoutRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

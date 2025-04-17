@@ -80,6 +80,204 @@ func AllDeliveryOverralStatusValues() []DeliveryOverralStatus {
 	}
 }
 
+type ExchangeOfferStatus string
+
+const (
+	ExchangeOfferStatusPending  ExchangeOfferStatus = "pending"
+	ExchangeOfferStatusAccepted ExchangeOfferStatus = "accepted"
+	ExchangeOfferStatusRejected ExchangeOfferStatus = "rejected"
+	ExchangeOfferStatusCanceled ExchangeOfferStatus = "canceled"
+)
+
+func (e *ExchangeOfferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExchangeOfferStatus(s)
+	case string:
+		*e = ExchangeOfferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExchangeOfferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullExchangeOfferStatus struct {
+	ExchangeOfferStatus ExchangeOfferStatus `json:"exchange_offer_status"`
+	Valid               bool                `json:"valid"` // Valid is true if ExchangeOfferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExchangeOfferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExchangeOfferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExchangeOfferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExchangeOfferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExchangeOfferStatus), nil
+}
+
+func (e ExchangeOfferStatus) Valid() bool {
+	switch e {
+	case ExchangeOfferStatusPending,
+		ExchangeOfferStatusAccepted,
+		ExchangeOfferStatusRejected,
+		ExchangeOfferStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func AllExchangeOfferStatusValues() []ExchangeOfferStatus {
+	return []ExchangeOfferStatus{
+		ExchangeOfferStatusPending,
+		ExchangeOfferStatusAccepted,
+		ExchangeOfferStatusRejected,
+		ExchangeOfferStatusCanceled,
+	}
+}
+
+type ExchangePostStatus string
+
+const (
+	ExchangePostStatusOpen       ExchangePostStatus = "open"
+	ExchangePostStatusExchanging ExchangePostStatus = "exchanging"
+	ExchangePostStatusCompleted  ExchangePostStatus = "completed"
+	ExchangePostStatusClosed     ExchangePostStatus = "closed"
+)
+
+func (e *ExchangePostStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExchangePostStatus(s)
+	case string:
+		*e = ExchangePostStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExchangePostStatus: %T", src)
+	}
+	return nil
+}
+
+type NullExchangePostStatus struct {
+	ExchangePostStatus ExchangePostStatus `json:"exchange_post_status"`
+	Valid              bool               `json:"valid"` // Valid is true if ExchangePostStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExchangePostStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExchangePostStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExchangePostStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExchangePostStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExchangePostStatus), nil
+}
+
+func (e ExchangePostStatus) Valid() bool {
+	switch e {
+	case ExchangePostStatusOpen,
+		ExchangePostStatusExchanging,
+		ExchangePostStatusCompleted,
+		ExchangePostStatusClosed:
+		return true
+	}
+	return false
+}
+
+func AllExchangePostStatusValues() []ExchangePostStatus {
+	return []ExchangePostStatus{
+		ExchangePostStatusOpen,
+		ExchangePostStatusExchanging,
+		ExchangePostStatusCompleted,
+		ExchangePostStatusClosed,
+	}
+}
+
+type ExchangeStatus string
+
+const (
+	ExchangeStatusPending    ExchangeStatus = "pending"
+	ExchangeStatusDelivering ExchangeStatus = "delivering"
+	ExchangeStatusDelivered  ExchangeStatus = "delivered"
+	ExchangeStatusCompleted  ExchangeStatus = "completed"
+	ExchangeStatusCanceled   ExchangeStatus = "canceled"
+	ExchangeStatusFailed     ExchangeStatus = "failed"
+)
+
+func (e *ExchangeStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ExchangeStatus(s)
+	case string:
+		*e = ExchangeStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ExchangeStatus: %T", src)
+	}
+	return nil
+}
+
+type NullExchangeStatus struct {
+	ExchangeStatus ExchangeStatus `json:"exchange_status"`
+	Valid          bool           `json:"valid"` // Valid is true if ExchangeStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullExchangeStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ExchangeStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ExchangeStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullExchangeStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ExchangeStatus), nil
+}
+
+func (e ExchangeStatus) Valid() bool {
+	switch e {
+	case ExchangeStatusPending,
+		ExchangeStatusDelivering,
+		ExchangeStatusDelivered,
+		ExchangeStatusCompleted,
+		ExchangeStatusCanceled,
+		ExchangeStatusFailed:
+		return true
+	}
+	return false
+}
+
+func AllExchangeStatusValues() []ExchangeStatus {
+	return []ExchangeStatus{
+		ExchangeStatusPending,
+		ExchangeStatusDelivering,
+		ExchangeStatusDelivered,
+		ExchangeStatusCompleted,
+		ExchangeStatusCanceled,
+		ExchangeStatusFailed,
+	}
+}
+
 type GundamCondition string
 
 const (
@@ -214,6 +412,7 @@ const (
 	GundamStatusPendingauctionapproval GundamStatus = "pending auction approval"
 	GundamStatusAuctioning             GundamStatus = "auctioning"
 	GundamStatusForexchange            GundamStatus = "for exchange"
+	GundamStatusExchanging             GundamStatus = "exchanging"
 )
 
 func (e *GundamStatus) Scan(src interface{}) error {
@@ -258,7 +457,8 @@ func (e GundamStatus) Valid() bool {
 		GundamStatusProcessing,
 		GundamStatusPendingauctionapproval,
 		GundamStatusAuctioning,
-		GundamStatusForexchange:
+		GundamStatusForexchange,
+		GundamStatusExchanging:
 		return true
 	}
 	return false
@@ -272,6 +472,7 @@ func AllGundamStatusValues() []GundamStatus {
 		GundamStatusPendingauctionapproval,
 		GundamStatusAuctioning,
 		GundamStatusForexchange,
+		GundamStatusExchanging,
 	}
 }
 
@@ -409,6 +610,67 @@ func AllOrderTransactionStatusValues() []OrderTransactionStatus {
 		OrderTransactionStatusCompleted,
 		OrderTransactionStatusRefunded,
 		OrderTransactionStatusFailed,
+	}
+}
+
+type OrderType string
+
+const (
+	OrderTypeRegular  OrderType = "regular"
+	OrderTypeExchange OrderType = "exchange"
+	OrderTypeAuction  OrderType = "auction"
+)
+
+func (e *OrderType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = OrderType(s)
+	case string:
+		*e = OrderType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for OrderType: %T", src)
+	}
+	return nil
+}
+
+type NullOrderType struct {
+	OrderType OrderType `json:"order_type"`
+	Valid     bool      `json:"valid"` // Valid is true if OrderType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullOrderType) Scan(value interface{}) error {
+	if value == nil {
+		ns.OrderType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.OrderType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullOrderType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.OrderType), nil
+}
+
+func (e OrderType) Valid() bool {
+	switch e {
+	case OrderTypeRegular,
+		OrderTypeExchange,
+		OrderTypeAuction:
+		return true
+	}
+	return false
+}
+
+func AllOrderTypeValues() []OrderType {
+	return []OrderType{
+		OrderTypeRegular,
+		OrderTypeExchange,
+		OrderTypeAuction,
 	}
 }
 
@@ -956,6 +1218,56 @@ type DeliveryInformation struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type Exchange struct {
+	ID                 uuid.UUID          `json:"id"`
+	PostID             uuid.UUID          `json:"post_id"`
+	OfferID            uuid.UUID          `json:"offer_id"`
+	PosterOrderID      uuid.UUID          `json:"poster_order_id"`
+	OffererOrderID     uuid.UUID          `json:"offerer_order_id"`
+	PayerID            *string            `json:"payer_id"`
+	CompensationAmount *int64             `json:"compensation_amount"`
+	Status             ExchangeStatus     `json:"status"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	CompletedAt        pgtype.Timestamptz `json:"completed_at"`
+}
+
+type ExchangeOffer struct {
+	ID                 uuid.UUID           `json:"id"`
+	PostID             uuid.UUID           `json:"post_id"`
+	OffererID          string              `json:"offerer_id"`
+	Message            *string             `json:"message"`
+	PayerID            *string             `json:"payer_id"`
+	CompensationAmount *int64              `json:"compensation_amount"`
+	Status             ExchangeOfferStatus `json:"status"`
+	CreatedAt          time.Time           `json:"created_at"`
+	UpdatedAt          time.Time           `json:"updated_at"`
+}
+
+type ExchangeOfferItem struct {
+	ID        uuid.UUID `json:"id"`
+	OfferID   uuid.UUID `json:"offer_id"`
+	GundamID  int64     `json:"gundam_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type ExchangePost struct {
+	ID            uuid.UUID          `json:"id"`
+	UserID        string             `json:"user_id"`
+	Content       string             `json:"content"`
+	PostImageUrls []string           `json:"post_image_urls"`
+	Status        ExchangePostStatus `json:"status"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+}
+
+type ExchangePostItem struct {
+	ID        uuid.UUID `json:"id"`
+	PostID    uuid.UUID `json:"post_id"`
+	GundamID  int64     `json:"gundam_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Gundam struct {
 	ID                   int64           `json:"id"`
 	OwnerID              string          `json:"owner_id"`
@@ -1014,6 +1326,7 @@ type Order struct {
 	TotalAmount        int64         `json:"total_amount"`
 	Status             OrderStatus   `json:"status"`
 	PaymentMethod      PaymentMethod `json:"payment_method"`
+	Type               OrderType     `json:"type"`
 	Note               *string       `json:"note"`
 	IsPackaged         bool          `json:"is_packaged"`
 	PackagingImageURLs []string      `json:"packaging_image_urls"`

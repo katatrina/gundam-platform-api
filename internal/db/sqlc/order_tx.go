@@ -68,6 +68,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			TotalAmount:   arg.TotalAmount,
 			Status:        OrderStatusPending,
 			PaymentMethod: arg.PaymentMethod,
+			Type:          OrderTypeRegular,
 			Note:          arg.Note,
 		})
 		if err != nil {
@@ -311,6 +312,8 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 		}
 		result.Order = updatedOrder
 		
+		// TODO: Nếu đây là đơn hàng liên quan đến trao đổi hay đấu giá, cập nhật trạng thái tương ứng
+		
 		return nil
 	})
 	
@@ -333,6 +336,8 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 	var result CancelOrderByBuyerTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// TODO: Tùy vào đơn hàng này là đơn hàng thông thường, trao đổi hay đấu giá, mà cần quy trình xử lý khác nhau
+		
 		// 1. Cập nhật trạng thái đơn hàng thành "canceled"
 		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
 			OrderID: arg.Order.ID,

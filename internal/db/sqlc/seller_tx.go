@@ -186,6 +186,8 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 		}
 		result.OrderTransaction = orderTransaction
 		
+		// TODO: Cần xử lý thêm nếu đơn hàng là
+		
 		return nil
 	})
 	
@@ -268,7 +270,7 @@ func (store *SQLStore) PackageOrderBySellerTx(ctx context.Context, arg PackageOr
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		// 1. Upload packaging images and store the URLs
-		packagingImageURLs, err := arg.UploadImagesFunc("packaging images", arg.Order.Code, util.FolderOrders, arg.PackageImages...)
+		packagingImageURLs, err := arg.UploadImagesFunc("packaging_image", arg.Order.Code, util.FolderOrders, arg.PackageImages...)
 		if err != nil {
 			return err
 		}
@@ -343,6 +345,8 @@ func (store *SQLStore) PackageOrderBySellerTx(ctx context.Context, arg PackageOr
 			return fmt.Errorf("failed to update order delivery: %w", err)
 		}
 		result.OrderDelivery = updatedDelivery
+		
+		// TODO: Cần xử lý thêm nếu đơn hàng là đơn trao đổi hoặc đấu giá.
 		
 		return nil
 	})

@@ -300,8 +300,8 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 	})
 }
 
-//	@Summary		List all sale orders for a specific seller
-//	@Description	Get all sale orders that belong to the specified seller ID
+//	@Summary		List all sales orders (excluding exchange orders) for a specific seller
+//	@Description	Get all sales orders that belong to the specified seller ID
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
@@ -309,11 +309,9 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 //	@Param			sellerID	path	string				true	"Seller ID"
 //	@Param			status		query	string				false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
 //	@Success		200			array	db.SalesOrderInfo	"List of sales orders"
-//	@Failure		400			"Invalid order status"
-//	@Failure		500			"Internal server error"
 //	@Router			/sellers/:sellerID/orders [get]
 func (server *Server) listSalesOrders(c *gin.Context) {
-	seller := c.MustGet(sellerPayloadKey).(*db.User)
+	user := c.MustGet(sellerPayloadKey).(*db.User)
 	status := c.Query("status")
 	
 	if status != "" {
@@ -326,22 +324,21 @@ func (server *Server) listSalesOrders(c *gin.Context) {
 	
 	var resp []db.SalesOrderInfo
 	
-	arg := db.ListOrdersBySellerIDParams{
-		SellerID: seller.ID,
+	arg := db.ListSalesOrdersParams{
+		SellerID: user.ID,
 		Status: db.NullOrderStatus{
 			OrderStatus: db.OrderStatus(status),
 			Valid:       status != "",
 		},
 	}
 	
-	orders, err := server.dbStore.ListOrdersBySellerID(c, arg)
+	orders, err := server.dbStore.ListSalesOrders(c, arg)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to list orders by seller")
+		log.Error().Err(err).Msg("Failed to list orders by user")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
-	// Duyệt qua từng đơn hàng để lấy thông tin chi tiết
 	for _, order := range orders {
 		var orderInfo db.SalesOrderInfo
 		orderItems, err := server.dbStore.ListOrderItems(c, order.ID)
@@ -373,30 +370,20 @@ type confirmOrderRequestParams struct {
 //	@Param			orderID		path	string	true	"Order ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
-//	@Failure		400	{object}	map[string]string		"Invalid order ID or seller ID"
-//	@Failure		404	{object}	map[string]string		"Order not found"
-//	@Failure		403	{object}	map[string]string		"Order does not belong to this seller"
-//	@Failure		409	{object}	map[string]string		"Order is not in pending status"
-//	@Failure		500	{object}	map[string]string		"Internal server error"
 //	@Router			/sellers/:sellerID/orders/:orderID/confirm [patch]
 func (server *Server) confirmOrder(c *gin.Context) {
-	var url confirmOrderRequestParams
-	if err := c.ShouldBindUri(&url); err != nil {
-		log.Error().Err(err).Msg("Failed to bind URI")
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
-	orderID, err := uuid.Parse(url.OrderID)
+	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse order ID")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	order, err := server.dbStore.GetSalesOrderBySellerID(c.Request.Context(), db.GetSalesOrderBySellerIDParams{
+	order, err := server.dbStore.GetSalesOrder(c.Request.Context(), db.GetSalesOrderParams{
 		OrderID:  orderID,
-		SellerID: url.SellerID,
+		SellerID: user.ID,
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -411,8 +398,8 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	}
 	
 	// Kiểm tra quyền sở hữu đơn hàng
-	if order.SellerID != url.SellerID {
-		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, url.SellerID)
+	if order.SellerID != user.ID {
+		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -426,7 +413,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	
 	result, err := server.dbStore.ConfirmOrderBySellerTx(c, db.ConfirmOrderTxParams{
 		Order:    &order,
-		SellerID: url.SellerID,
+		SellerID: user.ID,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to confirm order")
@@ -466,7 +453,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	if err != nil {
 		log.Err(err).Msg("failed to send notification to seller")
 	}
-	log.Info().Msgf("Notification sent to seller: %s", url.SellerID)
+	log.Info().Msgf("Notification sent to seller: %s", user.ID)
 	
 	c.JSON(http.StatusOK, result)
 }
@@ -482,52 +469,37 @@ type packageOrderRequestBody struct {
 }
 
 //	@Summary		Package an order
-//	@Description	Package an order for the specified seller. This endpoint checks the order's status before proceeding.
-//	@Tags			sellers
+//	@Description	Package an order for the specified user.
+//	@Tags			orders
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Param			orderID		path	string	true	"Order ID"
 //	@Security		accessToken
 //	@Param			package_images	formData	file					true	"Package images"
 //	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order"
-//	@Failure		400				{object}	map[string]string		"Invalid order ID or seller ID<br/>At least one package image is required"
-//	@Failure		404				{object}	map[string]string		"Order not found"
-//	@Failure		403				{object}	map[string]string		"Order does not belong to this seller"
-//	@Failure		409				{object}	map[string]string		"Order is not in packaging status<br/>Order is already packaged"
-//	@Failure		500				{object}	map[string]string		"Internal server error"
-//	@Router			/sellers/:sellerID/orders/:orderID/package [patch]
+//	@Router			/orders/:orderID/package [patch]
 func (server *Server) packageOrder(c *gin.Context) {
-	var url packageOrderRequestParams
-	if err := c.ShouldBindUri(&url); err != nil {
-		log.Error().Err(err).Msg("Failed to bind URI")
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
 	
-	orderID, err := uuid.Parse(url.OrderID)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse order ID")
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	
-	// Bind form data including multipart files
 	var req packageOrderRequestBody
-	if err = c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
-		log.Error().Err(err).Msg("Failed to bind form data")
+	if err := c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	// Validate that at least one image is provided
+	orderID, err := uuid.Parse(c.Param("orderID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
 	if len(req.PackageImages) == 0 {
 		err = errors.New("at least one package image is required")
-		log.Error().Err(err).Msg("No package images provided")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	// Validate that the order belongs to the seller
 	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -542,8 +514,8 @@ func (server *Server) packageOrder(c *gin.Context) {
 	}
 	
 	// Kiểm tra quyền sở hữu đơn hàng
-	if order.SellerID != url.SellerID {
-		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, url.SellerID)
+	if order.SellerID != userID {
+		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -579,8 +551,8 @@ func (server *Server) packageOrder(c *gin.Context) {
 	// Gửi thông báo cho người mua
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
-		Title:       fmt.Sprintf("Đơn hàng #%s đã được đóng gói", result.Order.Code),
-		Message: fmt.Sprintf("Đơn hàng #%s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
+		Title:       fmt.Sprintf("Đơn hàng %s đã được đóng gói", result.Order.Code),
+		Message: fmt.Sprintf("Đơn hàng %s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
 			result.Order.Code,
 			result.OrderDelivery.DeliveryTrackingCode,
 			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
@@ -630,7 +602,7 @@ func (server *Server) updateSellerProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
-//	@Summary		Get sales order details
+//	@Summary		Get sales order details (excluding exchange orders)
 //	@Description	Get details of a specific sales order for the seller
 //	@Tags			sellers
 //	@Accept			json
@@ -639,12 +611,9 @@ func (server *Server) updateSellerProfile(c *gin.Context) {
 //	@Param			orderID		path	string	true	"Order ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.SalesOrderDetails	"Sales order details"
-//	@Failure		400	"Invalid order ID"
-//	@Failure		404	"Order not found"
-//	@Failure		500	"Internal server error"
 //	@Router			/sellers/:sellerID/orders/:orderID [get]
 func (server *Server) getSalesOrderDetails(c *gin.Context) {
-	seller := c.MustGet(sellerPayloadKey).(*db.User)
+	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
@@ -655,9 +624,9 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	
 	var resp db.SalesOrderDetails
 	
-	order, err := server.dbStore.GetSalesOrderBySellerID(c.Request.Context(), db.GetSalesOrderBySellerIDParams{
+	order, err := server.dbStore.GetSalesOrder(c.Request.Context(), db.GetSalesOrderParams{
 		OrderID:  orderID,
-		SellerID: seller.ID,
+		SellerID: user.ID,
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -672,8 +641,8 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	}
 	
 	// Kiểm tra xem người dùng có quyền truy cập đơn hàng không
-	if seller.ID != order.SellerID {
-		err = fmt.Errorf("order ID %s does not belong to user %s", order.ID, seller.ID)
+	if user.ID != order.SellerID {
+		err = fmt.Errorf("order ID %s does not belong to user %s", order.ID, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -717,7 +686,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	}
 	resp.OrderDelivery = orderDelivery
 	
-	// Lấy thông tin địa chỉ giao hàng
+	// Lấy thông tin địa chỉ giao hàng của người nhận
 	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -775,14 +744,9 @@ type cancelOrderRequestParams struct {
 //	@Security		accessToken
 //	@Router			/sellers/{sellerID}/orders/{orderID}/cancel [patch]
 func (server *Server) cancelOrderBySeller(c *gin.Context) {
-	var url cancelOrderRequestParams
-	if err := c.ShouldBindUri(&url); err != nil {
-		log.Error().Err(err).Msg("Failed to bind URI")
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
-	orderID, err := uuid.Parse(url.OrderID)
+	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse order ID")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
@@ -796,9 +760,9 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 		return
 	}
 	
-	order, err := server.dbStore.GetSalesOrderBySellerID(c.Request.Context(), db.GetSalesOrderBySellerIDParams{
+	order, err := server.dbStore.GetSalesOrder(c.Request.Context(), db.GetSalesOrderParams{
 		OrderID:  orderID,
-		SellerID: url.SellerID,
+		SellerID: user.ID,
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -812,8 +776,8 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 		return
 	}
 	
-	if order.SellerID != url.SellerID {
-		err = fmt.Errorf("order ID %s does not belong to seller ID %s", order.ID, url.SellerID)
+	if order.SellerID != user.ID {
+		err = fmt.Errorf("order ID %s does not belong to seller ID %s", order.ID, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}

@@ -131,34 +131,31 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 	}
 	
+	// Nhóm api cho các đơn hàng thông thường và đơn hàng trao đổi
 	orderGroup := v1.Group("/orders", authMiddleware(server.tokenMaker))
 	{
-		orderGroup.POST("", server.createOrder)
-		orderGroup.GET("", server.listPurchaseOrders)
-		orderGroup.GET(":orderID", server.getPurchaseOrderDetails)
-		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived)
-		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)
+		// Tạo đơn hàng mua thông thường khi user thanh toán thành công
+		// Client cần gọi api này nhiều lần để tạo nhiều đơn hàng nếu có nhiều sản phẩm thuộc nhiều seller khác nhau trong giỏ hàng
+		orderGroup.POST("", server.createOrder)                            // ✅ Tạo đơn hàng thông thường
+		orderGroup.GET("", server.listMemberOrders)                        // ✅ Liệt kê tất cả đơn hàng thông thường và đơn hàng trao đổi trong tab "Đơn hàng" trong trang "Tài khoản của tôi"
+		orderGroup.GET(":orderID", server.getMemberOrderDetails)           // ✅ Lấy thông tin chi tiết của một đơn hàng thông thường hoặc đơn hàng trao đổi
+		orderGroup.PATCH(":orderID/package", server.packageOrder)          // Người gửi đóng gói đơn hàng
+		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived) // Người nhận hàng xác nhận đã nhận hàng thành công
+		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)     // Người mua hủy đơn hàng
 	}
 	
-	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
-	{
-		zalopayGroup := walletGroup.Group("/zalopay")
-		{
-			zalopayGroup.POST("/create", server.createZalopayOrder)
-		}
-	}
-	
-	v1.GET("/grades", server.listGundamGrades)
-	
-	sellerProfileGroup := v1.Group("/seller/profile")
-	{
-		sellerProfileGroup.POST("", server.createSellerProfile)
-		sellerProfileGroup.GET("", server.getSellerProfile)
-		sellerProfileGroup.PATCH("", server.updateSellerProfile)
-	}
-	
+	// Nhóm các API chỉ dành cho seller
 	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerRole(server.dbStore))
 	{
+		// Nhóm các API chỉ liên quan đến đơn bán (không bao gồm đơn hàng trao đổi)
+		sellerOrderGroup := sellerGroup.Group("orders")
+		{
+			sellerOrderGroup.GET("", server.listSalesOrders)                      // ✅ Liệt kê tất cả đơn bán
+			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)         // ✅ Lấy thông tin chi tiết của một đơn bán
+			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)       // ✅ Người bán xác nhận sẽ gửi đơn hàng
+			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // Người bán hủy đơn hàng
+		}
+		
 		gundamGroup := sellerGroup.Group("gundams")
 		{
 			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)
@@ -169,15 +166,30 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
 		}
-		
-		sellerOrderGroup := sellerGroup.Group("orders")
+	}
+	
+	walletGroup := v1.Group("/wallet", authMiddleware(server.tokenMaker))
+	{
+		zalopayGroup := walletGroup.Group("/zalopay")
 		{
-			sellerOrderGroup.GET("", server.listSalesOrders)
-			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)
-			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)
-			sellerOrderGroup.PATCH(":orderID/package", server.packageOrder)
-			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller)
+			zalopayGroup.POST("/create", server.createZalopayOrder)
 		}
+	}
+	
+	// Nhóm API cho bài đăng trao đổi (exchange posts)
+	exchangePostGroup := v1.Group("/exchange-posts", authMiddleware(server.tokenMaker))
+	{
+		// Tạo bài đăng trao đổi mới
+		exchangePostGroup.POST("", server.createExchangePost)
+	}
+	
+	v1.GET("/grades", server.listGundamGrades)
+	
+	sellerProfileGroup := v1.Group("/seller/profile")
+	{
+		sellerProfileGroup.POST("", server.createSellerProfile)
+		sellerProfileGroup.GET("", server.getSellerProfile)
+		sellerProfileGroup.PATCH("", server.updateSellerProfile)
 	}
 	
 	gundamGroup := v1.Group("/gundams")
