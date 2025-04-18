@@ -256,6 +256,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/exchanges": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new exchange post.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Create a new exchange post",
+                "parameters": [
+                    {
+                        "description": "Create exchange post request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createExchangePostRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Create exchange post response",
+                        "schema": {
+                            "$ref": "#/definitions/db.CreateExchangePostTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/grades": {
             "get": {
                 "description": "Retrieves a list of all available Gundam model grades",
@@ -721,7 +760,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/phone_number/generate": {
+        "/otp/phone-number/generate": {
             "post": {
                 "description": "Generates and sends an OTP to the specified phone number. The OTP will be valid for 10 minutes.",
                 "consumes": [
@@ -761,7 +800,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/otp/phone_number/verify": {
+        "/otp/phone-number/verify": {
             "post": {
                 "description": "Verifies the OTP sent to a user's phone number and updates the user's phone number if valid",
                 "consumes": [
@@ -2336,6 +2375,31 @@ const docTemplate = `{
                 }
             }
         },
+        "api.createExchangePostRequest": {
+            "type": "object",
+            "required": [
+                "content",
+                "post_images",
+                "post_item_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "post_images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/multipart.FileHeader"
+                    }
+                },
+                "post_item_id": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "api.createOrderRequest": {
             "type": "object",
             "required": [
@@ -2791,6 +2855,24 @@ const docTemplate = `{
                 }
             }
         },
+        "db.CreateExchangePostTxResult": {
+            "type": "object",
+            "required": [
+                "exchange_post",
+                "exchange_post_items"
+            ],
+            "properties": {
+                "exchange_post": {
+                    "$ref": "#/definitions/db.ExchangePost"
+                },
+                "exchange_post_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangePostItem"
+                    }
+                }
+            }
+        },
         "db.CreateOrderTxResult": {
             "type": "object",
             "required": [
@@ -2887,6 +2969,82 @@ const docTemplate = `{
                 "DeliveryOverralStatusDelivered",
                 "DeliveryOverralStatusFailed",
                 "DeliveryOverralStatusReturn"
+            ]
+        },
+        "db.ExchangePost": {
+            "type": "object",
+            "required": [
+                "content",
+                "created_at",
+                "id",
+                "post_image_urls",
+                "status",
+                "updated_at",
+                "user_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "post_image_urls": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/db.ExchangePostStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.ExchangePostItem": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "gundam_id",
+                "id",
+                "post_id"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "post_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.ExchangePostStatus": {
+            "type": "string",
+            "enum": [
+                "open",
+                "exchanging",
+                "completed",
+                "closed"
+            ],
+            "x-enum-varnames": [
+                "ExchangePostStatusOpen",
+                "ExchangePostStatusExchanging",
+                "ExchangePostStatusCompleted",
+                "ExchangePostStatusClosed"
             ]
         },
         "db.GundamAccessoryDTO": {
@@ -3896,6 +4054,20 @@ const docTemplate = `{
                 "WalletReferenceTypeZalopay"
             ]
         },
+        "multipart.FileHeader": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string"
+                },
+                "header": {
+                    "$ref": "#/definitions/textproto.MIMEHeader"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "pgtype.InfinityModifier": {
             "type": "integer",
             "enum": [
@@ -3920,6 +4092,15 @@ const docTemplate = `{
                 },
                 "valid": {
                     "type": "boolean"
+                }
+            }
+        },
+        "textproto.MIMEHeader": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string"
                 }
             }
         },

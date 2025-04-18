@@ -105,6 +105,23 @@ definitions:
     required:
     - email
     type: object
+  api.createExchangePostRequest:
+    properties:
+      content:
+        type: string
+      post_images:
+        items:
+          $ref: '#/definitions/multipart.FileHeader'
+        type: array
+      post_item_id:
+        items:
+          type: integer
+        type: array
+    required:
+    - content
+    - post_images
+    - post_item_id
+    type: object
   api.createOrderRequest:
     properties:
       buyer_address_id:
@@ -445,6 +462,18 @@ definitions:
     - order_transaction
     - seller_entry
     type: object
+  db.CreateExchangePostTxResult:
+    properties:
+      exchange_post:
+        $ref: '#/definitions/db.ExchangePost'
+      exchange_post_items:
+        items:
+          $ref: '#/definitions/db.ExchangePostItem'
+        type: array
+    required:
+    - exchange_post
+    - exchange_post_items
+    type: object
   db.CreateOrderTxResult:
     properties:
       buyer_entry:
@@ -517,6 +546,61 @@ definitions:
     - DeliveryOverralStatusDelivered
     - DeliveryOverralStatusFailed
     - DeliveryOverralStatusReturn
+  db.ExchangePost:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      post_image_urls:
+        items:
+          type: string
+        type: array
+      status:
+        $ref: '#/definitions/db.ExchangePostStatus'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - content
+    - created_at
+    - id
+    - post_image_urls
+    - status
+    - updated_at
+    - user_id
+    type: object
+  db.ExchangePostItem:
+    properties:
+      created_at:
+        type: string
+      gundam_id:
+        type: integer
+      id:
+        type: string
+      post_id:
+        type: string
+    required:
+    - created_at
+    - gundam_id
+    - id
+    - post_id
+    type: object
+  db.ExchangePostStatus:
+    enum:
+    - open
+    - exchanging
+    - completed
+    - closed
+    type: string
+    x-enum-varnames:
+    - ExchangePostStatusOpen
+    - ExchangePostStatusExchanging
+    - ExchangePostStatusCompleted
+    - ExchangePostStatusClosed
   db.GundamAccessoryDTO:
     properties:
       name:
@@ -1238,6 +1322,15 @@ definitions:
     - WalletReferenceTypePromotion
     - WalletReferenceTypeAffiliate
     - WalletReferenceTypeZalopay
+  multipart.FileHeader:
+    properties:
+      filename:
+        type: string
+      header:
+        $ref: '#/definitions/textproto.MIMEHeader'
+      size:
+        type: integer
+    type: object
   pgtype.InfinityModifier:
     enum:
     - 1
@@ -1256,6 +1349,12 @@ definitions:
         type: string
       valid:
         type: boolean
+    type: object
+  textproto.MIMEHeader:
+    additionalProperties:
+      items:
+        type: string
+      type: array
     type: object
   zalopay.CreateOrderZalopayResponse:
     properties:
@@ -1447,6 +1546,30 @@ paths:
       summary: Check Email Exists
       tags:
       - authentication
+  /exchanges:
+    post:
+      consumes:
+      - application/json
+      description: Create a new exchange post.
+      parameters:
+      - description: Create exchange post request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createExchangePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Create exchange post response
+          schema:
+            $ref: '#/definitions/db.CreateExchangePostTxResult'
+      security:
+      - accessToken: []
+      summary: Create a new exchange post
+      tags:
+      - exchanges
   /grades:
     get:
       description: Retrieves a list of all available Gundam model grades
@@ -1752,7 +1875,7 @@ paths:
       summary: Verify One-Time Password (OTP) via email
       tags:
       - authentication
-  /otp/phone_number/generate:
+  /otp/phone-number/generate:
     post:
       consumes:
       - application/json
@@ -1779,7 +1902,7 @@ paths:
       summary: Generate a One-Time Password (OTP) for phone number
       tags:
       - authentication
-  /otp/phone_number/verify:
+  /otp/phone-number/verify:
     post:
       consumes:
       - application/json

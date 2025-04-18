@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"mime/multipart"
 	
 	"github.com/google/uuid"
@@ -52,13 +53,22 @@ func (store *SQLStore) CreateExchangePostTx(ctx context.Context, arg CreateExcha
 		}
 		result.ExchangePostItems = exchangePostItems
 		
-		// 3. Upload images
+		// 3. Update gundam status
+		err = qTx.BulkUpdateGundamsForExchange(ctx, BulkUpdateGundamsForExchangeParams{
+			OwnerID:   arg.UserID,
+			GundamIds: arg.PostItemIDs,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update gundam status to 'for exchange': %w", err)
+		}
+		
+		// 4. Upload images
 		imageUrls, err := arg.UploadImagesFunc("exchange_post", exchangePost.ID.String()[:10], util.FolderExchanges, arg.PostImages...)
 		if err != nil {
 			return err
 		}
 		
-		// 4. Update exchange post with image URLs
+		// 5. Update exchange post with image URLs
 		updatedExchangePost, err := qTx.UpdateExchangePost(ctx, UpdateExchangePostParams{
 			ID:            exchangePost.ID,
 			PostImageUrls: imageUrls,

@@ -14,6 +14,7 @@ type Querier interface {
 	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
 	AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error)
 	AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error
+	BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error

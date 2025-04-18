@@ -10,6 +10,27 @@ import (
 	"time"
 )
 
+const bulkUpdateGundamsForExchange = `-- name: BulkUpdateGundamsForExchange :exec
+UPDATE gundams
+SET status     = 'for exchange',
+    updated_at = NOW() FROM
+    (SELECT unnest($2::bigint[]) as id) as data
+WHERE
+    gundams.id = data.id
+  AND gundams.status = 'in store'
+  AND gundams.owner_id = $1
+`
+
+type BulkUpdateGundamsForExchangeParams struct {
+	OwnerID   string  `json:"owner_id"`
+	GundamIds []int64 `json:"gundam_ids"`
+}
+
+func (q *Queries) BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateGundamsForExchange, arg.OwnerID, arg.GundamIds)
+	return err
+}
+
 const createAccessory = `-- name: CreateAccessory :exec
 INSERT INTO gundam_accessories (gundam_id,
                                 name,
@@ -216,9 +237,9 @@ SELECT g.id            AS gundam_id,
        g.slug,
        gg.display_name AS grade,
        g.series,
-         g.parts_total,
-            g.material,
-         g.version,
+       g.parts_total,
+       g.material,
+       g.version,
        g.quantity,
        g.condition,
        g.condition_description,
@@ -227,7 +248,7 @@ SELECT g.id            AS gundam_id,
        g.weight,
        g.description,
        g.price,
-            g.release_year,
+       g.release_year,
        g.status,
        g.created_at,
        g.updated_at
@@ -416,9 +437,9 @@ SELECT g.id            AS gundam_id,
        g.slug,
        gg.display_name AS grade,
        g.series,
-         g.parts_total,
-         g.material,
-         g.version,
+       g.parts_total,
+       g.material,
+       g.version,
        g.quantity,
        g.condition,
        g.condition_description,
@@ -427,7 +448,7 @@ SELECT g.id            AS gundam_id,
        g.weight,
        g.description,
        g.price,
-         g.release_year,
+       g.release_year,
        g.status,
        g.created_at,
        g.updated_at

@@ -41,9 +41,9 @@ SELECT g.id            AS gundam_id,
        g.slug,
        gg.display_name AS grade,
        g.series,
-         g.parts_total,
-         g.material,
-         g.version,
+       g.parts_total,
+       g.material,
+       g.version,
        g.quantity,
        g.condition,
        g.condition_description,
@@ -52,7 +52,7 @@ SELECT g.id            AS gundam_id,
        g.weight,
        g.description,
        g.price,
-         g.release_year,
+       g.release_year,
        g.status,
        g.created_at,
        g.updated_at
@@ -75,9 +75,9 @@ SELECT g.id            AS gundam_id,
        g.slug,
        gg.display_name AS grade,
        g.series,
-         g.parts_total,
-            g.material,
-         g.version,
+       g.parts_total,
+       g.material,
+       g.version,
        g.quantity,
        g.condition,
        g.condition_description,
@@ -86,7 +86,7 @@ SELECT g.id            AS gundam_id,
        g.weight,
        g.description,
        g.price,
-            g.release_year,
+       g.release_year,
        g.status,
        g.created_at,
        g.updated_at
@@ -121,3 +121,13 @@ FROM gundams g
 WHERE owner_id = $1
   AND (sqlc.narg('name')::text IS NULL OR g.name ILIKE concat('%', sqlc.narg('name')::text, '%'))
 ORDER BY g.created_at DESC, g.updated_at DESC;
+
+-- name: BulkUpdateGundamsForExchange :exec
+UPDATE gundams
+SET status     = 'for exchange',
+    updated_at = NOW() FROM
+    (SELECT unnest(sqlc.arg(gundam_ids)::bigint[]) as id) as data
+WHERE
+    gundams.id = data.id
+  AND gundams.status = 'in store'
+  AND gundams.owner_id = sqlc.arg(owner_id);

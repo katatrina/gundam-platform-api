@@ -37,7 +37,7 @@ type GeneratePhoneOTPResponse struct {
 // @Success		200		{object}	GeneratePhoneOTPResponse	"OTP generated successfully"
 // @Failure		400		"Bad Request - Invalid phone number format"
 // @Failure		500		"Internal Server Error - Failed to generate or send OTP"
-// @Router			/otp/phone_number/generate [post]
+// @Router			/otp/phone-number/generate [post]
 func (server *Server) generatePhoneNumberOTP(c *gin.Context) {
 	var req GeneratePhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -86,7 +86,7 @@ type VerifyPhoneOTPRequest struct {
 // @Failure		401		"Unauthorized - Invalid OTP code"
 // @Failure		404		"Not Found - User not found"
 // @Failure		500		"Internal Server Error - Failed to update user information"
-// @Router			/otp/phone_number/verify [post]
+// @Router			/otp/phone-number/verify [post]
 func (server *Server) verifyPhoneNumberOTP(c *gin.Context) {
 	var req VerifyPhoneOTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

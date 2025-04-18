@@ -129,6 +129,61 @@ func (server *Server) setupRouter() *gin.Engine {
 			userGundamGroup.POST("", server.createGundam)
 			userGundamGroup.GET("", server.listGundamsByUser)
 		}
+		
+		// API cho bài đăng trao đổi của người dùng hiện tại (đã đăng nhập)
+		userExchangePostGroup := userGroup.Group("/me/exchange-posts")
+		{
+			// // Liệt kê các bài đăng trao đổi của người dùng hiện tại
+			// userExchangePostGroup.GET("", server.listUserExchangePosts)
+			//
+			// Tạo bài đăng trao đổi mới
+			userExchangePostGroup.POST("", server.createExchangePost)
+			//
+			// // Lấy chi tiết một bài đăng trao đổi cụ thể của người dùng hiện tại
+			// userExchangePostGroup.GET("/:id", server.getMyExchangePostDetails)
+			//
+			// // Chỉnh sửa bài đăng trao đổi
+			// userExchangePostGroup.PUT("/:id", server.updateExchangePost)
+			//
+			// // Đóng/hủy bài đăng trao đổi
+			// userExchangePostGroup.PATCH("/:id/close", server.closeExchangePost)
+			
+			// API cho đề xuất trao đổi của một bài đăng
+			// offerGroup := userExchangePostGroup.Group("/:id/offers")
+			// {
+			// 	// Liệt kê các đề xuất cho bài đăng trao đổi
+			// 	offerGroup.GET("", server.listExchangeOffers)
+			//
+			// 	// Chấp nhận đề xuất trao đổi
+			// 	offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
+			//
+			// 	// Từ chối đề xuất trao đổi
+			// 	offerGroup.PATCH("/:offerID/reject", server.rejectExchangeOffer)
+			// }
+		}
+		
+		// // API cho đề xuất trao đổi của người dùng hiện tại
+		// userOffersGroup := userGroup.Group("/me/exchange-offers")
+		// {
+		// 	// Liệt kê đề xuất trao đổi mà người dùng đã gửi
+		// 	userOffersGroup.GET("", server.listMyExchangeOffers)
+		//
+		// 	// Tạo đề xuất trao đổi cho một bài đăng
+		// 	userOffersGroup.POST("", server.createExchangeOffer)
+		//
+		// 	// Hủy đề xuất trao đổi
+		// 	userOffersGroup.PATCH("/:offerID/cancel", server.cancelExchangeOffer)
+		// }
+	}
+	
+	// API public cho bài đăng trao đổi - không cần đăng nhập
+	// exchangePostPublicGroup := v1.Group("/exchange-posts")
+	{
+		// Liệt kê các bài post trao đổi đang mở trên nền tảng
+		// exchangePostPublicGroup.GET("", server.listOpenExchangePosts)
+		
+		// Lấy chi tiết một bài post trao đổi
+		// exchangePostPublicGroup.GET("/:id", server.getExchangePostDetails)
 	}
 	
 	// Nhóm api cho các đơn hàng thông thường và đơn hàng trao đổi
@@ -176,13 +231,6 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 	}
 	
-	// Nhóm API cho bài đăng trao đổi (exchange posts)
-	exchangePostGroup := v1.Group("/exchange-posts", authMiddleware(server.tokenMaker))
-	{
-		// Tạo bài đăng trao đổi mới
-		exchangePostGroup.POST("", server.createExchangePost)
-	}
-	
 	v1.GET("/grades", server.listGundamGrades)
 	
 	sellerProfileGroup := v1.Group("/seller/profile")
@@ -207,8 +255,8 @@ func (server *Server) setupRouter() *gin.Engine {
 	
 	otpGroup := v1.Group("/otp")
 	{
-		otpGroup.POST("/phone_number/generate", server.generatePhoneNumberOTP)
-		otpGroup.POST("/phone_number/verify", server.verifyPhoneNumberOTP)
+		otpGroup.POST("/phone-number/generate", server.generatePhoneNumberOTP)
+		otpGroup.POST("/phone-number/verify", server.verifyPhoneNumberOTP)
 		
 		otpGroup.POST("/email/generate", server.generateEmailOTP)
 		otpGroup.POST("/email/verify", server.verifyEmailOTP)
