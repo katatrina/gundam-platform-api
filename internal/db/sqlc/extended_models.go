@@ -83,3 +83,12 @@ type SellerInfo struct {
 	Role            string  `json:"role"`
 	AvatarURL       *string `json:"avatar_url"`
 }
+
+type ExchangePostInfo struct {
+	ExchangePost                ExchangePost    `json:"exchange_post"`                  // Thông tin bài đăng
+	ExchangePostItems           []GundamDetails `json:"exchange_post_items"`            // Danh sách Gundam trong bài đăng
+	Poster                      User            `json:"poster"`                         // Người đăng bài
+	OfferCount                  int64           `json:"offer_count"`                    // Số lượng offer
+	AuthenticatedUserOffer      *ExchangeOffer  `json:"authenticated_user_offer"`       // Offer của người dùng đã đăng nhập
+	AuthenticatedUserOfferItems []GundamDetails `json:"authenticated_user_offer_items"` // Danh sách Gundam trong offer của người dùng đã đăng nhập
+}

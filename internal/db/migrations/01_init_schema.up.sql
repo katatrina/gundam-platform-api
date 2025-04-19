@@ -111,16 +111,7 @@ CREATE TYPE "payment_transaction_type" AS ENUM (
 
 CREATE TYPE "exchange_post_status" AS ENUM (
   'open',
-  'exchanging',
-  'completed',
   'closed'
-);
-
-CREATE TYPE "exchange_offer_status" AS ENUM (
-  'pending',
-  'accepted',
-  'rejected',
-  'canceled'
 );
 
 CREATE TYPE "exchange_status" AS ENUM (
@@ -409,14 +400,12 @@ CREATE TABLE "exchange_post_items"
 CREATE TABLE "exchange_offers"
 (
     "id"                  uuid PRIMARY KEY,
-    "post_id"             uuid                  NOT NULL,
-    "offerer_id"          text                  NOT NULL,
-    "message"             text,
+    "post_id"             uuid        NOT NULL,
+    "offerer_id"          text        NOT NULL,
     "payer_id"            text,
     "compensation_amount" bigint,
-    "status"              exchange_offer_status NOT NULL DEFAULT 'pending',
-    "created_at"          timestamptz           NOT NULL DEFAULT (now()),
-    "updated_at"          timestamptz           NOT NULL DEFAULT (now())
+    "created_at"          timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"          timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "exchange_offer_items"
@@ -430,8 +419,8 @@ CREATE TABLE "exchange_offer_items"
 CREATE TABLE "exchanges"
 (
     "id"                  uuid PRIMARY KEY,
-    "post_id"             uuid            NOT NULL,
-    "offer_id"            uuid            NOT NULL,
+    "poster_id"           text            NOT NULL,
+    "offerer_id"          text            NOT NULL,
     "poster_order_id"     uuid            NOT NULL,
     "offerer_order_id"    uuid            NOT NULL,
     "payer_id"            text,
@@ -440,6 +429,16 @@ CREATE TABLE "exchanges"
     "created_at"          timestamptz     NOT NULL DEFAULT (now()),
     "updated_at"          timestamptz     NOT NULL DEFAULT (now()),
     "completed_at"        timestamptz
+);
+
+CREATE TABLE "exchange_items"
+(
+    "id"             uuid PRIMARY KEY,
+    "exchange_id"    uuid        NOT NULL,
+    "gundam_id"      bigint      NOT NULL,
+    "owner_id"       text        NOT NULL,
+    "is_poster_item" boolean     NOT NULL,
+    "created_at"     timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");
@@ -474,19 +473,19 @@ CREATE INDEX ON "exchange_offers" ("post_id");
 
 CREATE INDEX ON "exchange_offers" ("offerer_id");
 
-CREATE INDEX ON "exchange_offers" ("status");
-
 CREATE INDEX ON "exchange_offers" ("created_at");
 
-CREATE UNIQUE INDEX ON "exchange_offer_items" ("offer_id", "gundam_id");
+CREATE UNIQUE INDEX ON "exchange_offers" ("post_id", "offerer_id");
 
-CREATE UNIQUE INDEX ON "exchanges" ("offer_id");
+CREATE UNIQUE INDEX ON "exchange_offer_items" ("offer_id", "gundam_id");
 
 CREATE UNIQUE INDEX ON "exchanges" ("poster_order_id");
 
 CREATE UNIQUE INDEX ON "exchanges" ("offerer_order_id");
 
 CREATE INDEX ON "exchanges" ("status");
+
+CREATE UNIQUE INDEX ON "exchange_items" ("exchange_id", "gundam_id");
 
 ALTER TABLE "seller_profiles"
     ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id") ON DELETE CASCADE;
@@ -591,12 +590,6 @@ ALTER TABLE "exchange_offer_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
 
 ALTER TABLE "exchanges"
-    ADD FOREIGN KEY ("post_id") REFERENCES "exchange_posts" ("id");
-
-ALTER TABLE "exchanges"
-    ADD FOREIGN KEY ("offer_id") REFERENCES "exchange_offers" ("id");
-
-ALTER TABLE "exchanges"
     ADD FOREIGN KEY ("poster_order_id") REFERENCES "orders" ("id");
 
 ALTER TABLE "exchanges"
@@ -604,3 +597,12 @@ ALTER TABLE "exchanges"
 
 ALTER TABLE "exchanges"
     ADD FOREIGN KEY ("payer_id") REFERENCES "users" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "exchange_items"
+    ADD FOREIGN KEY ("exchange_id") REFERENCES "exchanges" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "exchange_items"
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE RESTRICT;
+
+ALTER TABLE "exchange_items"
+    ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE RESTRICT;

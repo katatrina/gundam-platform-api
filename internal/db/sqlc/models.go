@@ -80,77 +80,11 @@ func AllDeliveryOverralStatusValues() []DeliveryOverralStatus {
 	}
 }
 
-type ExchangeOfferStatus string
-
-const (
-	ExchangeOfferStatusPending  ExchangeOfferStatus = "pending"
-	ExchangeOfferStatusAccepted ExchangeOfferStatus = "accepted"
-	ExchangeOfferStatusRejected ExchangeOfferStatus = "rejected"
-	ExchangeOfferStatusCanceled ExchangeOfferStatus = "canceled"
-)
-
-func (e *ExchangeOfferStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ExchangeOfferStatus(s)
-	case string:
-		*e = ExchangeOfferStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ExchangeOfferStatus: %T", src)
-	}
-	return nil
-}
-
-type NullExchangeOfferStatus struct {
-	ExchangeOfferStatus ExchangeOfferStatus `json:"exchange_offer_status"`
-	Valid               bool                `json:"valid"` // Valid is true if ExchangeOfferStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullExchangeOfferStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.ExchangeOfferStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ExchangeOfferStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullExchangeOfferStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ExchangeOfferStatus), nil
-}
-
-func (e ExchangeOfferStatus) Valid() bool {
-	switch e {
-	case ExchangeOfferStatusPending,
-		ExchangeOfferStatusAccepted,
-		ExchangeOfferStatusRejected,
-		ExchangeOfferStatusCanceled:
-		return true
-	}
-	return false
-}
-
-func AllExchangeOfferStatusValues() []ExchangeOfferStatus {
-	return []ExchangeOfferStatus{
-		ExchangeOfferStatusPending,
-		ExchangeOfferStatusAccepted,
-		ExchangeOfferStatusRejected,
-		ExchangeOfferStatusCanceled,
-	}
-}
-
 type ExchangePostStatus string
 
 const (
-	ExchangePostStatusOpen       ExchangePostStatus = "open"
-	ExchangePostStatusExchanging ExchangePostStatus = "exchanging"
-	ExchangePostStatusCompleted  ExchangePostStatus = "completed"
-	ExchangePostStatusClosed     ExchangePostStatus = "closed"
+	ExchangePostStatusOpen   ExchangePostStatus = "open"
+	ExchangePostStatusClosed ExchangePostStatus = "closed"
 )
 
 func (e *ExchangePostStatus) Scan(src interface{}) error {
@@ -191,8 +125,6 @@ func (ns NullExchangePostStatus) Value() (driver.Value, error) {
 func (e ExchangePostStatus) Valid() bool {
 	switch e {
 	case ExchangePostStatusOpen,
-		ExchangePostStatusExchanging,
-		ExchangePostStatusCompleted,
 		ExchangePostStatusClosed:
 		return true
 	}
@@ -202,8 +134,6 @@ func (e ExchangePostStatus) Valid() bool {
 func AllExchangePostStatusValues() []ExchangePostStatus {
 	return []ExchangePostStatus{
 		ExchangePostStatusOpen,
-		ExchangePostStatusExchanging,
-		ExchangePostStatusCompleted,
 		ExchangePostStatusClosed,
 	}
 }
@@ -1220,8 +1150,8 @@ type DeliveryInformation struct {
 
 type Exchange struct {
 	ID                 uuid.UUID          `json:"id"`
-	PostID             uuid.UUID          `json:"post_id"`
-	OfferID            uuid.UUID          `json:"offer_id"`
+	PosterID           string             `json:"poster_id"`
+	OffererID          string             `json:"offerer_id"`
 	PosterOrderID      uuid.UUID          `json:"poster_order_id"`
 	OffererOrderID     uuid.UUID          `json:"offerer_order_id"`
 	PayerID            *string            `json:"payer_id"`
@@ -1232,16 +1162,23 @@ type Exchange struct {
 	CompletedAt        pgtype.Timestamptz `json:"completed_at"`
 }
 
+type ExchangeItem struct {
+	ID           uuid.UUID `json:"id"`
+	ExchangeID   uuid.UUID `json:"exchange_id"`
+	GundamID     int64     `json:"gundam_id"`
+	OwnerID      string    `json:"owner_id"`
+	IsPosterItem bool      `json:"is_poster_item"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type ExchangeOffer struct {
-	ID                 uuid.UUID           `json:"id"`
-	PostID             uuid.UUID           `json:"post_id"`
-	OffererID          string              `json:"offerer_id"`
-	Message            *string             `json:"message"`
-	PayerID            *string             `json:"payer_id"`
-	CompensationAmount *int64              `json:"compensation_amount"`
-	Status             ExchangeOfferStatus `json:"status"`
-	CreatedAt          time.Time           `json:"created_at"`
-	UpdatedAt          time.Time           `json:"updated_at"`
+	ID                 uuid.UUID `json:"id"`
+	PostID             uuid.UUID `json:"post_id"`
+	OffererID          string    `json:"offerer_id"`
+	PayerID            *string   `json:"payer_id"`
+	CompensationAmount *int64    `json:"compensation_amount"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 type ExchangeOfferItem struct {

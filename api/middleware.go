@@ -54,6 +54,48 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 	}
 }
 
+func optionalAuthMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		authorizationHeader := ctx.GetHeader(authorizationHeaderKey)
+		
+		// Nếu không có header xác thực, vẫn cho phép tiếp tục
+		if authorizationHeader == "" {
+			ctx.Set(authorizationPayloadKey, nil) // Set payload là nil để biết là chưa xác thực
+			ctx.Next()
+			return
+		}
+		
+		fields := strings.Fields(authorizationHeader)
+		if len(fields) != 2 {
+			// Định dạng không đúng nhưng vẫn cho phép tiếp tục
+			ctx.Set(authorizationPayloadKey, nil)
+			ctx.Next()
+			return
+		}
+		
+		authorizationHeaderType := fields[0]
+		if authorizationHeaderType != authorizationTypeBearer {
+			// Loại header không được hỗ trợ nhưng vẫn cho phép tiếp tục
+			ctx.Set(authorizationPayloadKey, nil)
+			ctx.Next()
+			return
+		}
+		
+		accessToken := fields[1]
+		payload, err := tokenMaker.VerifyToken(accessToken)
+		if err != nil {
+			// Token không hợp lệ nhưng vẫn cho phép tiếp tục
+			ctx.Set(authorizationPayloadKey, nil)
+			ctx.Next()
+			return
+		}
+		
+		// Nếu token hợp lệ, lưu payload vào context
+		ctx.Set(authorizationPayloadKey, payload)
+		ctx.Next()
+	}
+}
+
 func requiredSellerRole(dbStore db.Store) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)

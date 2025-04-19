@@ -46,6 +46,73 @@ func (q *Queries) CreateExchangePost(ctx context.Context, arg CreateExchangePost
 	return i, err
 }
 
+const listExchangePostItems = `-- name: ListExchangePostItems :many
+SELECT id, post_id, gundam_id, created_at
+FROM "exchange_post_items"
+WHERE post_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error) {
+	rows, err := q.db.Query(ctx, listExchangePostItems, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangePostItem{}
+	for rows.Next() {
+		var i ExchangePostItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.PostID,
+			&i.GundamID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listExchangePosts = `-- name: ListExchangePosts :many
+SELECT id, user_id, content, post_image_urls, status, created_at, updated_at
+FROM "exchange_posts"
+WHERE status = coalesce($1, status)
+ORDER BY created_at DESC, updated_at DESC
+`
+
+func (q *Queries) ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error) {
+	rows, err := q.db.Query(ctx, listExchangePosts, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangePost{}
+	for rows.Next() {
+		var i ExchangePost
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.PostImageUrls,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateExchangePost = `-- name: UpdateExchangePost :one
 UPDATE "exchange_posts"
 SET "post_image_urls" = $2

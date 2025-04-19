@@ -17,6 +17,7 @@ type Querier interface {
 	BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
+	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateExchangePost(ctx context.Context, arg CreateExchangePostParams) (ExchangePost, error)
@@ -59,11 +60,15 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error)
+	GetUserExchangeOfferForPost(ctx context.Context, arg GetUserExchangeOfferForPostParams) (ExchangeOffer, error)
 	GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error)
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
+	ListExchangeOfferItems(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferItem, error)
+	ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error)
+	ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)
 	ListGundamsByUserID(ctx context.Context, arg ListGundamsByUserIDParams) ([]ListGundamsByUserIDRow, error)
 	ListGundamsWithFilters(ctx context.Context, arg ListGundamsWithFiltersParams) ([]ListGundamsWithFiltersRow, error)
