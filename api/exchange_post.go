@@ -13,15 +13,15 @@ import (
 )
 
 type createExchangePostRequest struct {
-	Content     string                  `form:"content" binding:"required"`
-	PostImages  []*multipart.FileHeader `form:"post_images" binding:"required"`
-	PostItemIDs []int64                 `form:"post_item_id" binding:"required"`
+	Content     string                  `form:"content" binding:"required"`                 // Nội dung bài post
+	PostImages  []*multipart.FileHeader `form:"post_images" binding:"required,max=5,min=1"` // Ảnh bài post
+	PostItemIDs []int64                 `form:"post_item_id" binding:"required"`            // ID của các Gundam mà chủ bài post cho phép trao đổi
 }
 
 //	@Summary		Create a new exchange post
 //	@Description	Create a new exchange post.
 //	@Tags			exchanges
-//	@Accept			json
+//	@Accept			multipart/form-data
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			request	body		createExchangePostRequest		true	"Create exchange post request"
@@ -49,8 +49,6 @@ func (server *Server) createExchangePost(c *gin.Context) {
 		return
 	}
 	
-	// Kiểm tra xem người dùng có đang sở hữu các Gundam trong post_item_ids không
-	// và có thể thêm các Gundam này vào bài post không.
 	for _, itemID := range req.PostItemIDs {
 		gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), itemID)
 		if err != nil {
@@ -64,12 +62,14 @@ func (server *Server) createExchangePost(c *gin.Context) {
 			return
 		}
 		
+		// Kiểm tra người dùng có phải là chủ sở hữu của Gundam không
 		if gundam.OwnerID != userID {
 			err = fmt.Errorf("user ID %s does not own gundam ID %d", userID, itemID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		
+		// Kiểm tra trạng thái hiện tại của Gundam có được phép trao đổi không
 		if gundam.Status != db.GundamStatusInstore {
 			err = fmt.Errorf("gundam ID %d is not available for exchange", itemID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
@@ -96,6 +96,12 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 
 }
 
+//	@Summary		List all open exchange posts
+//	@Description	List all open exchange posts.
+//	@Tags			exchanges
+//	@Produce		json
+//	@Success		200	{array}	db.ExchangePostInfo	"List of open exchange posts"
+//	@Router			/exchange-posts [get]
 func (server *Server) listOpenExchangePosts(c *gin.Context) {
 	var userID string
 	

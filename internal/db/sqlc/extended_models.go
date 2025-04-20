@@ -89,6 +89,6 @@ type ExchangePostInfo struct {
 	ExchangePostItems           []GundamDetails `json:"exchange_post_items"`            // Danh sách Gundam trong bài đăng
 	Poster                      User            `json:"poster"`                         // Người đăng bài
 	OfferCount                  int64           `json:"offer_count"`                    // Số lượng offer
-	AuthenticatedUserOffer      *ExchangeOffer  `json:"authenticated_user_offer"`       // Offer của người dùng đã đăng nhập
-	AuthenticatedUserOfferItems []GundamDetails `json:"authenticated_user_offer_items"` // Danh sách Gundam trong offer của người dùng đã đăng nhập
+	AuthenticatedUserOffer      *ExchangeOffer  `json:"authenticated_user_offer"`       // Offer của người dùng đã đăng nhập (nếu có)
+	AuthenticatedUserOfferItems []GundamDetails `json:"authenticated_user_offer_items"` // Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)
 }

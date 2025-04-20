@@ -288,7 +288,7 @@ type createGundamRequest struct {
 //	@Param			grade_id				formData	integer	true	"Gundam grade ID"
 //	@Param			series					formData	string	true	"Gundam series name"
 // @Param			parts_total				formData	integer	true	"Total number of parts"
-//	@Param			material				formData	string	true	"Gundam material"	Enums(plastic, metal)
+//	@Param			material				formData	string	true	"Gundam material"
 //	@Param			version					formData	string	true	"Gundam version"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, used)
 //	@Param			manufacturer			formData	string	true	"Manufacturer name"
@@ -386,10 +386,6 @@ type listGundamsByUserRequest struct {
 //	@Param			name	query	string	false	"Gundam name to filter by"
 //	@Security		accessToken
 //	@Success		200	array	db.GundamDetails	"Successfully retrieved list of gundams"
-//	@Failure		400	"Invalid user ID"
-//	@Failure		403 "Forbidden - User is not authorized to view gundams for this user"
-//	@Failure		404 "User not found"
-//	@Failure		500	"Internal server error"
 //	@Router			/users/:id/gundams [get]
 func (server *Server) listGundamsByUser(ctx *gin.Context) {
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)

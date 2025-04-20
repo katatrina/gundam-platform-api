@@ -12,12 +12,12 @@ import (
 
 const bulkUpdateGundamsForExchange = `-- name: BulkUpdateGundamsForExchange :exec
 UPDATE gundams
-SET status     = 'for exchange',
+SET status     = 'for_exchange',
     updated_at = NOW() FROM
     (SELECT unnest($2::bigint[]) as id) as data
 WHERE
     gundams.id = data.id
-  AND gundams.status = 'in store'
+  AND gundams.status = 'in_store'
   AND gundams.owner_id = $1
 `
 

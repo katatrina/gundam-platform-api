@@ -781,7 +781,7 @@ func AllPaymentTransactionStatusValues() []PaymentTransactionStatus {
 type PaymentTransactionType string
 
 const (
-	PaymentTransactionTypeWalletDeposit PaymentTransactionType = "wallet_deposit"
+	PaymentTransactionTypeWalletdeposit PaymentTransactionType = "wallet deposit"
 )
 
 func (e *PaymentTransactionType) Scan(src interface{}) error {
@@ -821,7 +821,7 @@ func (ns NullPaymentTransactionType) Value() (driver.Value, error) {
 
 func (e PaymentTransactionType) Valid() bool {
 	switch e {
-	case PaymentTransactionTypeWalletDeposit:
+	case PaymentTransactionTypeWalletdeposit:
 		return true
 	}
 	return false
@@ -829,7 +829,7 @@ func (e PaymentTransactionType) Valid() bool {
 
 func AllPaymentTransactionTypeValues() []PaymentTransactionType {
 	return []PaymentTransactionType{
-		PaymentTransactionTypeWalletDeposit,
+		PaymentTransactionTypeWalletdeposit,
 	}
 }
 
@@ -967,14 +967,14 @@ const (
 	WalletEntryTypeDeposit         WalletEntryType = "deposit"
 	WalletEntryTypeWithdrawal      WalletEntryType = "withdrawal"
 	WalletEntryTypePayment         WalletEntryType = "payment"
-	WalletEntryTypePaymentReceived WalletEntryType = "payment_received"
+	WalletEntryTypePaymentreceived WalletEntryType = "payment received"
 	WalletEntryTypeNonWithdrawable WalletEntryType = "non_withdrawable"
 	WalletEntryTypeRefund          WalletEntryType = "refund"
-	WalletEntryTypeRefundDeduction WalletEntryType = "refund_deduction"
-	WalletEntryTypeAuctionLock     WalletEntryType = "auction_lock"
-	WalletEntryTypeAuctionRelease  WalletEntryType = "auction_release"
-	WalletEntryTypeAuctionPayment  WalletEntryType = "auction_payment"
-	WalletEntryTypePlatformFee     WalletEntryType = "platform_fee"
+	WalletEntryTypeRefunddeduction WalletEntryType = "refund deduction"
+	WalletEntryTypeAuctionlock     WalletEntryType = "auction lock"
+	WalletEntryTypeAuctionrelease  WalletEntryType = "auction release"
+	WalletEntryTypeAuctionpayment  WalletEntryType = "auction payment"
+	WalletEntryTypePlatformfee     WalletEntryType = "platform fee"
 )
 
 func (e *WalletEntryType) Scan(src interface{}) error {
@@ -1017,14 +1017,14 @@ func (e WalletEntryType) Valid() bool {
 	case WalletEntryTypeDeposit,
 		WalletEntryTypeWithdrawal,
 		WalletEntryTypePayment,
-		WalletEntryTypePaymentReceived,
+		WalletEntryTypePaymentreceived,
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefundDeduction,
-		WalletEntryTypeAuctionLock,
-		WalletEntryTypeAuctionRelease,
-		WalletEntryTypeAuctionPayment,
-		WalletEntryTypePlatformFee:
+		WalletEntryTypeRefunddeduction,
+		WalletEntryTypeAuctionlock,
+		WalletEntryTypeAuctionrelease,
+		WalletEntryTypeAuctionpayment,
+		WalletEntryTypePlatformfee:
 		return true
 	}
 	return false
@@ -1035,14 +1035,14 @@ func AllWalletEntryTypeValues() []WalletEntryType {
 		WalletEntryTypeDeposit,
 		WalletEntryTypeWithdrawal,
 		WalletEntryTypePayment,
-		WalletEntryTypePaymentReceived,
+		WalletEntryTypePaymentreceived,
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefundDeduction,
-		WalletEntryTypeAuctionLock,
-		WalletEntryTypeAuctionRelease,
-		WalletEntryTypeAuctionPayment,
-		WalletEntryTypePlatformFee,
+		WalletEntryTypeRefunddeduction,
+		WalletEntryTypeAuctionlock,
+		WalletEntryTypeAuctionrelease,
+		WalletEntryTypeAuctionpayment,
+		WalletEntryTypePlatformfee,
 	}
 }
 
@@ -1051,8 +1051,8 @@ type WalletReferenceType string
 const (
 	WalletReferenceTypeOrder             WalletReferenceType = "order"
 	WalletReferenceTypeAuction           WalletReferenceType = "auction"
-	WalletReferenceTypeWithdrawalRequest WalletReferenceType = "withdrawal_request"
-	WalletReferenceTypeDepositRequest    WalletReferenceType = "deposit_request"
+	WalletReferenceTypeWithdrawalrequest WalletReferenceType = "withdrawal request"
+	WalletReferenceTypeDepositrequest    WalletReferenceType = "deposit request"
 	WalletReferenceTypePromotion         WalletReferenceType = "promotion"
 	WalletReferenceTypeAffiliate         WalletReferenceType = "affiliate"
 	WalletReferenceTypeZalopay           WalletReferenceType = "zalopay"
@@ -1097,8 +1097,8 @@ func (e WalletReferenceType) Valid() bool {
 	switch e {
 	case WalletReferenceTypeOrder,
 		WalletReferenceTypeAuction,
-		WalletReferenceTypeWithdrawalRequest,
-		WalletReferenceTypeDepositRequest,
+		WalletReferenceTypeWithdrawalrequest,
+		WalletReferenceTypeDepositrequest,
 		WalletReferenceTypePromotion,
 		WalletReferenceTypeAffiliate,
 		WalletReferenceTypeZalopay:
@@ -1111,8 +1111,8 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 	return []WalletReferenceType{
 		WalletReferenceTypeOrder,
 		WalletReferenceTypeAuction,
-		WalletReferenceTypeWithdrawalRequest,
-		WalletReferenceTypeDepositRequest,
+		WalletReferenceTypeWithdrawalrequest,
+		WalletReferenceTypeDepositrequest,
 		WalletReferenceTypePromotion,
 		WalletReferenceTypeAffiliate,
 		WalletReferenceTypeZalopay,

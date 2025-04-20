@@ -24,12 +24,49 @@ func (q *Queries) CountExchangeOffers(ctx context.Context, postID uuid.UUID) (in
 	return count, err
 }
 
+const createExchangeOffer = `-- name: CreateExchangeOffer :one
+INSERT INTO exchange_offers (id,
+                             post_id,
+                             offerer_id,
+                             payer_id,
+                             compensation_amount)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
+`
+
+type CreateExchangeOfferParams struct {
+	ID                 uuid.UUID `json:"id"`
+	PostID             uuid.UUID `json:"post_id"`
+	OffererID          string    `json:"offerer_id"`
+	PayerID            *string   `json:"payer_id"`
+	CompensationAmount *int64    `json:"compensation_amount"`
+}
+
+func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOfferParams) (ExchangeOffer, error) {
+	row := q.db.QueryRow(ctx, createExchangeOffer,
+		arg.ID,
+		arg.PostID,
+		arg.OffererID,
+		arg.PayerID,
+		arg.CompensationAmount,
+	)
+	var i ExchangeOffer
+	err := row.Scan(
+		&i.ID,
+		&i.PostID,
+		&i.OffererID,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserExchangeOfferForPost = `-- name: GetUserExchangeOfferForPost :one
 SELECT id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
 FROM exchange_offers
 WHERE post_id = $1
-  AND offerer_id = $2
-  AND status = 'pending' LIMIT 1
+  AND offerer_id = $2 LIMIT 1
 `
 
 type GetUserExchangeOfferForPostParams struct {

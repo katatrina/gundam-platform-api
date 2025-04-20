@@ -128,12 +128,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/db.ListCartItemsWithDetailsRow"
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid input"
-                    },
-                    "500": {
-                        "description": "Internal Server Error - Failed to retrieve cart items"
                     }
                 }
             },
@@ -171,15 +165,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.AddCartItemRow"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid input"
-                    },
-                    "401": {
-                        "description": "Unauthorized - Authentication required"
-                    },
-                    "500": {
-                        "description": "Internal Server Error - Failed to add cart item"
                     }
                 }
             }
@@ -209,12 +194,6 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "Successfully deleted cart item"
-                    },
-                    "400": {
-                        "description": "Bad Request - Invalid cart item ID"
-                    },
-                    "500": {
-                        "description": "Internal Server Error - Failed to delete cart item"
                     }
                 }
             }
@@ -256,40 +235,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/exchanges": {
-            "post": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Create a new exchange post.",
-                "consumes": [
-                    "application/json"
-                ],
+        "/exchange-posts": {
+            "get": {
+                "description": "List all open exchange posts.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "exchanges"
                 ],
-                "summary": "Create a new exchange post",
-                "parameters": [
-                    {
-                        "description": "Create exchange post request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/api.createExchangePostRequest"
-                        }
-                    }
-                ],
+                "summary": "List all open exchange posts",
                 "responses": {
-                    "201": {
-                        "description": "Create exchange post response",
+                    "200": {
+                        "description": "List of open exchange posts",
                         "schema": {
-                            "$ref": "#/definitions/db.CreateExchangePostTxResult"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.ExchangePostInfo"
+                            }
                         }
                     }
                 }
@@ -1521,18 +1484,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/db.GundamDetails"
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Invalid user ID"
-                    },
-                    "403": {
-                        "description": "Forbidden - User is not authorized to view gundams for this user"
-                    },
-                    "404": {
-                        "description": "User not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             },
@@ -1590,10 +1541,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "enum": [
-                            "plastic",
-                            "metal"
-                        ],
                         "type": "string",
                         "description": "Gundam material",
                         "name": "material",
@@ -1828,6 +1775,45 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/users/me/exchange-posts": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new exchange post.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Create a new exchange post",
+                "parameters": [
+                    {
+                        "description": "Create exchange post request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createExchangePostRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Create exchange post response",
+                        "schema": {
+                            "$ref": "#/definitions/db.CreateExchangePostTxResult"
+                        }
                     }
                 }
             }
@@ -2384,15 +2370,20 @@ const docTemplate = `{
             ],
             "properties": {
                 "content": {
+                    "description": "Nội dung bài post",
                     "type": "string"
                 },
                 "post_images": {
+                    "description": "Ảnh bài post",
                     "type": "array",
+                    "maxItems": 5,
+                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/multipart.FileHeader"
                     }
                 },
                 "post_item_id": {
+                    "description": "ID của các Gundam mà chủ bài post cho phép trao đổi",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -2971,6 +2962,41 @@ const docTemplate = `{
                 "DeliveryOverralStatusReturn"
             ]
         },
+        "db.ExchangeOffer": {
+            "type": "object",
+            "required": [
+                "compensation_amount",
+                "created_at",
+                "id",
+                "offerer_id",
+                "payer_id",
+                "post_id",
+                "updated_at"
+            ],
+            "properties": {
+                "compensation_amount": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "offerer_id": {
+                    "type": "string"
+                },
+                "payer_id": {
+                    "type": "string"
+                },
+                "post_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "db.ExchangePost": {
             "type": "object",
             "required": [
@@ -3009,6 +3035,61 @@ const docTemplate = `{
                 }
             }
         },
+        "db.ExchangePostInfo": {
+            "type": "object",
+            "required": [
+                "authenticated_user_offer",
+                "authenticated_user_offer_items",
+                "exchange_post",
+                "exchange_post_items",
+                "offer_count",
+                "poster"
+            ],
+            "properties": {
+                "authenticated_user_offer": {
+                    "description": "Offer của người dùng đã đăng nhập (nếu có)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeOffer"
+                        }
+                    ]
+                },
+                "authenticated_user_offer_items": {
+                    "description": "Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "exchange_post": {
+                    "description": "Thông tin bài đăng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangePost"
+                        }
+                    ]
+                },
+                "exchange_post_items": {
+                    "description": "Danh sách Gundam trong bài đăng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "offer_count": {
+                    "description": "Số lượng offer",
+                    "type": "integer"
+                },
+                "poster": {
+                    "description": "Người đăng bài",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
+                }
+            }
+        },
         "db.ExchangePostItem": {
             "type": "object",
             "required": [
@@ -3036,14 +3117,10 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "open",
-                "exchanging",
-                "completed",
                 "closed"
             ],
             "x-enum-varnames": [
                 "ExchangePostStatusOpen",
-                "ExchangePostStatusExchanging",
-                "ExchangePostStatusCompleted",
                 "ExchangePostStatusClosed"
             ]
         },
@@ -4010,27 +4087,27 @@ const docTemplate = `{
                 "deposit",
                 "withdrawal",
                 "payment",
-                "payment_received",
+                "payment received",
                 "non_withdrawable",
                 "refund",
-                "refund_deduction",
-                "auction_lock",
-                "auction_release",
-                "auction_payment",
-                "platform_fee"
+                "refund deduction",
+                "auction lock",
+                "auction release",
+                "auction payment",
+                "platform fee"
             ],
             "x-enum-varnames": [
                 "WalletEntryTypeDeposit",
                 "WalletEntryTypeWithdrawal",
                 "WalletEntryTypePayment",
-                "WalletEntryTypePaymentReceived",
+                "WalletEntryTypePaymentreceived",
                 "WalletEntryTypeNonWithdrawable",
                 "WalletEntryTypeRefund",
-                "WalletEntryTypeRefundDeduction",
-                "WalletEntryTypeAuctionLock",
-                "WalletEntryTypeAuctionRelease",
-                "WalletEntryTypeAuctionPayment",
-                "WalletEntryTypePlatformFee"
+                "WalletEntryTypeRefunddeduction",
+                "WalletEntryTypeAuctionlock",
+                "WalletEntryTypeAuctionrelease",
+                "WalletEntryTypeAuctionpayment",
+                "WalletEntryTypePlatformfee"
             ]
         },
         "db.WalletReferenceType": {
@@ -4038,8 +4115,8 @@ const docTemplate = `{
             "enum": [
                 "order",
                 "auction",
-                "withdrawal_request",
-                "deposit_request",
+                "withdrawal request",
+                "deposit request",
                 "promotion",
                 "affiliate",
                 "zalopay"
@@ -4047,8 +4124,8 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "WalletReferenceTypeOrder",
                 "WalletReferenceTypeAuction",
-                "WalletReferenceTypeWithdrawalRequest",
-                "WalletReferenceTypeDepositRequest",
+                "WalletReferenceTypeWithdrawalrequest",
+                "WalletReferenceTypeDepositrequest",
                 "WalletReferenceTypePromotion",
                 "WalletReferenceTypeAffiliate",
                 "WalletReferenceTypeZalopay"

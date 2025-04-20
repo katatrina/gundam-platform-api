@@ -20,6 +20,8 @@ type Querier interface {
 	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
+	CreateExchangeOffer(ctx context.Context, arg CreateExchangeOfferParams) (ExchangeOffer, error)
+	CreateExchangeOfferItem(ctx context.Context, arg CreateExchangeOfferItemParams) (ExchangeOfferItem, error)
 	CreateExchangePost(ctx context.Context, arg CreateExchangePostParams) (ExchangePost, error)
 	CreateExchangePostItems(ctx context.Context, arg CreateExchangePostItemsParams) ([]ExchangePostItem, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
@@ -41,6 +43,7 @@ type Querier interface {
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
+	GetExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	GetGradeByID(ctx context.Context, id int64) (GundamGrade, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)

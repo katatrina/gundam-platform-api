@@ -67,7 +67,7 @@ func (server *Server) createZalopayOrder(c *gin.Context) {
 	transaction := db.CreatePaymentTransactionParams{
 		UserID:                appUser,
 		Amount:                req.Amount,
-		TransactionType:       db.PaymentTransactionTypeWalletDeposit,
+		TransactionType:       db.PaymentTransactionTypeWalletdeposit,
 		Provider:              db.PaymentTransactionProviderZalopay,
 		ProviderTransactionID: transID,
 		Status:                db.PaymentTransactionStatusPending,

@@ -27,7 +27,7 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 		}
 		
 		switch transaction.TransactionType {
-		case PaymentTransactionTypeWalletDeposit:
+		case PaymentTransactionTypeWalletdeposit:
 			// Lấy thông tin ví người dùng
 			wallet, err := qTx.GetWalletForUpdate(ctx, arg.AppUser)
 			if err != nil {

@@ -7,5 +7,12 @@ WHERE post_id = $1;
 SELECT *
 FROM exchange_offers
 WHERE post_id = $1
-  AND offerer_id = $2
-  AND status = 'pending' LIMIT 1;
+  AND offerer_id = $2 LIMIT 1;
+
+-- name: CreateExchangeOffer :one
+INSERT INTO exchange_offers (id,
+                             post_id,
+                             offerer_id,
+                             payer_id,
+                             compensation_amount)
+VALUES ($1, $2, $3, $4, $5) RETURNING *;

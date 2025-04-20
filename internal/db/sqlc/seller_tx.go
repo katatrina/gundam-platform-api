@@ -166,7 +166,7 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 			WalletID:      sellerWallet.UserID,
 			ReferenceID:   &updatedOrder.Code,
 			ReferenceType: WalletReferenceTypeOrder,
-			EntryType:     WalletEntryTypePaymentReceived,
+			EntryType:     WalletEntryTypePaymentreceived,
 			Amount:        updatedOrder.ItemsSubtotal, // Số dương (+)
 			Status:        WalletEntryStatusPending,   // Chờ người mua xác nhận nhận hàng thành công
 		})

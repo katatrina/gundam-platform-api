@@ -22,9 +22,6 @@ type addCartItemRequest struct {
 //	@Security		accessToken
 //	@Param			request	body		addCartItemRequest	true	"Gundam to add to cart"
 //	@Success		200		{object}	db.AddCartItemRow	"Successfully added item to cart"
-//	@Failure		400		"Bad Request - Invalid input"
-//	@Failure		401		"Unauthorized - Authentication required"
-//	@Failure		500		"Internal Server Error - Failed to add cart item"
 //	@Router			/cart/items [post]
 func (server *Server) addCartItem(ctx *gin.Context) {
 	req := new(addCartItemRequest)
@@ -97,8 +94,6 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 //	@Produce		json
 //	@Security		accessToken
 //	@Success		200	{array}	db.ListCartItemsWithDetailsRow	"Successfully retrieved cart items"
-//	@Failure		400	"Bad Request - Invalid input"
-//	@Failure		500	"Internal Server Error - Failed to retrieve cart items"
 //	@Router			/cart/items [get]
 func (server *Server) listCartItems(ctx *gin.Context) {
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
@@ -126,8 +121,6 @@ func (server *Server) listCartItems(ctx *gin.Context) {
 //	@Security		accessToken
 //	@Param			id	path	string	true	"Cart Item ID to delete"	example(1)
 //	@Success		204	"Successfully deleted cart item"
-//	@Failure		400	"Bad Request - Invalid cart item ID"
-//	@Failure		500	"Internal Server Error - Failed to delete cart item"
 //	@Router			/cart/items/{id} [delete]
 func (server *Server) deleteCartItem(ctx *gin.Context) {
 	cartItemID := ctx.Param("id")

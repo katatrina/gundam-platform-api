@@ -61,21 +61,21 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
   'deposit',
   'withdrawal',
   'payment',
-  'payment_received',
+  'payment received',
   'non_withdrawable',
   'refund',
-  'refund_deduction',
-  'auction_lock',
-  'auction_release',
-  'auction_payment',
-  'platform_fee'
+  'refund deduction',
+  'auction lock',
+  'auction release',
+  'auction payment',
+  'platform fee'
 );
 
 CREATE TYPE "wallet_reference_type" AS ENUM (
   'order',
   'auction',
-  'withdrawal_request',
-  'deposit_request',
+  'withdrawal request',
+  'deposit request',
   'promotion',
   'affiliate',
   'zalopay'
@@ -106,7 +106,7 @@ CREATE TYPE "payment_transaction_status" AS ENUM (
 );
 
 CREATE TYPE "payment_transaction_type" AS ENUM (
-  'wallet_deposit'
+  'wallet deposit'
 );
 
 CREATE TYPE "exchange_post_status" AS ENUM (

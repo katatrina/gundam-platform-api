@@ -108,12 +108,17 @@ definitions:
   api.createExchangePostRequest:
     properties:
       content:
+        description: Nội dung bài post
         type: string
       post_images:
+        description: Ảnh bài post
         items:
           $ref: '#/definitions/multipart.FileHeader'
+        maxItems: 5
+        minItems: 1
         type: array
       post_item_id:
+        description: ID của các Gundam mà chủ bài post cho phép trao đổi
         items:
           type: integer
         type: array
@@ -546,6 +551,31 @@ definitions:
     - DeliveryOverralStatusDelivered
     - DeliveryOverralStatusFailed
     - DeliveryOverralStatusReturn
+  db.ExchangeOffer:
+    properties:
+      compensation_amount:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      offerer_id:
+        type: string
+      payer_id:
+        type: string
+      post_id:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - compensation_amount
+    - created_at
+    - id
+    - offerer_id
+    - payer_id
+    - post_id
+    - updated_at
+    type: object
   db.ExchangePost:
     properties:
       content:
@@ -573,6 +603,42 @@ definitions:
     - updated_at
     - user_id
     type: object
+  db.ExchangePostInfo:
+    properties:
+      authenticated_user_offer:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeOffer'
+        description: Offer của người dùng đã đăng nhập (nếu có)
+      authenticated_user_offer_items:
+        description: Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu
+          có)
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      exchange_post:
+        allOf:
+        - $ref: '#/definitions/db.ExchangePost'
+        description: Thông tin bài đăng
+      exchange_post_items:
+        description: Danh sách Gundam trong bài đăng
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      offer_count:
+        description: Số lượng offer
+        type: integer
+      poster:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Người đăng bài
+    required:
+    - authenticated_user_offer
+    - authenticated_user_offer_items
+    - exchange_post
+    - exchange_post_items
+    - offer_count
+    - poster
+    type: object
   db.ExchangePostItem:
     properties:
       created_at:
@@ -592,14 +658,10 @@ definitions:
   db.ExchangePostStatus:
     enum:
     - open
-    - exchanging
-    - completed
     - closed
     type: string
     x-enum-varnames:
     - ExchangePostStatusOpen
-    - ExchangePostStatusExchanging
-    - ExchangePostStatusCompleted
     - ExchangePostStatusClosed
   db.GundamAccessoryDTO:
     properties:
@@ -1283,33 +1345,33 @@ definitions:
     - deposit
     - withdrawal
     - payment
-    - payment_received
+    - payment received
     - non_withdrawable
     - refund
-    - refund_deduction
-    - auction_lock
-    - auction_release
-    - auction_payment
-    - platform_fee
+    - refund deduction
+    - auction lock
+    - auction release
+    - auction payment
+    - platform fee
     type: string
     x-enum-varnames:
     - WalletEntryTypeDeposit
     - WalletEntryTypeWithdrawal
     - WalletEntryTypePayment
-    - WalletEntryTypePaymentReceived
+    - WalletEntryTypePaymentreceived
     - WalletEntryTypeNonWithdrawable
     - WalletEntryTypeRefund
-    - WalletEntryTypeRefundDeduction
-    - WalletEntryTypeAuctionLock
-    - WalletEntryTypeAuctionRelease
-    - WalletEntryTypeAuctionPayment
-    - WalletEntryTypePlatformFee
+    - WalletEntryTypeRefunddeduction
+    - WalletEntryTypeAuctionlock
+    - WalletEntryTypeAuctionrelease
+    - WalletEntryTypeAuctionpayment
+    - WalletEntryTypePlatformfee
   db.WalletReferenceType:
     enum:
     - order
     - auction
-    - withdrawal_request
-    - deposit_request
+    - withdrawal request
+    - deposit request
     - promotion
     - affiliate
     - zalopay
@@ -1317,8 +1379,8 @@ definitions:
     x-enum-varnames:
     - WalletReferenceTypeOrder
     - WalletReferenceTypeAuction
-    - WalletReferenceTypeWithdrawalRequest
-    - WalletReferenceTypeDepositRequest
+    - WalletReferenceTypeWithdrawalrequest
+    - WalletReferenceTypeDepositrequest
     - WalletReferenceTypePromotion
     - WalletReferenceTypeAffiliate
     - WalletReferenceTypeZalopay
@@ -1462,10 +1524,6 @@ paths:
             items:
               $ref: '#/definitions/db.ListCartItemsWithDetailsRow'
             type: array
-        "400":
-          description: Bad Request - Invalid input
-        "500":
-          description: Internal Server Error - Failed to retrieve cart items
       security:
       - accessToken: []
       summary: List Cart Items
@@ -1489,12 +1547,6 @@ paths:
           description: Successfully added item to cart
           schema:
             $ref: '#/definitions/db.AddCartItemRow'
-        "400":
-          description: Bad Request - Invalid input
-        "401":
-          description: Unauthorized - Authentication required
-        "500":
-          description: Internal Server Error - Failed to add cart item
       security:
       - accessToken: []
       summary: Add Item to Cart
@@ -1513,10 +1565,6 @@ paths:
       responses:
         "204":
           description: Successfully deleted cart item
-        "400":
-          description: Bad Request - Invalid cart item ID
-        "500":
-          description: Internal Server Error - Failed to delete cart item
       security:
       - accessToken: []
       summary: Delete Cart Item
@@ -1546,28 +1594,19 @@ paths:
       summary: Check Email Exists
       tags:
       - authentication
-  /exchanges:
-    post:
-      consumes:
-      - application/json
-      description: Create a new exchange post.
-      parameters:
-      - description: Create exchange post request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/api.createExchangePostRequest'
+  /exchange-posts:
+    get:
+      description: List all open exchange posts.
       produces:
       - application/json
       responses:
-        "201":
-          description: Create exchange post response
+        "200":
+          description: List of open exchange posts
           schema:
-            $ref: '#/definitions/db.CreateExchangePostTxResult'
-      security:
-      - accessToken: []
-      summary: Create a new exchange post
+            items:
+              $ref: '#/definitions/db.ExchangePostInfo'
+            type: array
+      summary: List all open exchange posts
       tags:
       - exchanges
   /grades:
@@ -2375,15 +2414,6 @@ paths:
             items:
               $ref: '#/definitions/db.GundamDetails'
             type: array
-        "400":
-          description: Invalid user ID
-        "403":
-          description: Forbidden - User is not authorized to view gundams for this
-            user
-        "404":
-          description: User not found
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
       summary: List all gundams for a specific user
@@ -2420,9 +2450,6 @@ paths:
         required: true
         type: integer
       - description: Gundam material
-        enum:
-        - plastic
-        - metal
         in: formData
         name: material
         required: true
@@ -2816,6 +2843,30 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /users/me/exchange-posts:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new exchange post.
+      parameters:
+      - description: Create exchange post request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createExchangePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Create exchange post response
+          schema:
+            $ref: '#/definitions/db.CreateExchangePostTxResult'
+      security:
+      - accessToken: []
+      summary: Create a new exchange post
+      tags:
+      - exchanges
   /wallet/zalopay/create:
     post:
       consumes:

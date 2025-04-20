@@ -11,8 +11,34 @@ import (
 	"github.com/google/uuid"
 )
 
+const createExchangeOfferItem = `-- name: CreateExchangeOfferItem :one
+INSERT INTO exchange_offer_items (id,
+                                  offer_id,
+                                  gundam_id)
+VALUES ($1, $2, $3) RETURNING id, offer_id, gundam_id, created_at
+`
+
+type CreateExchangeOfferItemParams struct {
+	ID       uuid.UUID `json:"id"`
+	OfferID  uuid.UUID `json:"offer_id"`
+	GundamID int64     `json:"gundam_id"`
+}
+
+func (q *Queries) CreateExchangeOfferItem(ctx context.Context, arg CreateExchangeOfferItemParams) (ExchangeOfferItem, error) {
+	row := q.db.QueryRow(ctx, createExchangeOfferItem, arg.ID, arg.OfferID, arg.GundamID)
+	var i ExchangeOfferItem
+	err := row.Scan(
+		&i.ID,
+		&i.OfferID,
+		&i.GundamID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listExchangeOfferItems = `-- name: ListExchangeOfferItems :many
-SELECT id, offer_id, gundam_id, created_at FROM exchange_offer_items
+SELECT id, offer_id, gundam_id, created_at
+FROM exchange_offer_items
 WHERE offer_id = $1
 ORDER BY created_at DESC
 `

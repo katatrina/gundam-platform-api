@@ -21,3 +21,8 @@ SELECT *
 FROM "exchange_post_items"
 WHERE post_id = $1
 ORDER BY created_at DESC;
+
+-- name: GetExchangePost :one
+SELECT *
+FROM "exchange_posts"
+WHERE id = $1;
