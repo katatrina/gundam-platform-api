@@ -475,7 +475,7 @@ CREATE INDEX ON "exchange_offers" ("offerer_id");
 
 CREATE INDEX ON "exchange_offers" ("created_at");
 
-CREATE UNIQUE INDEX ON "exchange_offers" ("post_id", "offerer_id");
+CREATE UNIQUE INDEX "unique_exchange_offer" ON "exchange_offers" ("post_id", "offerer_id");
 
 CREATE UNIQUE INDEX ON "exchange_offer_items" ("offer_id", "gundam_id");
 

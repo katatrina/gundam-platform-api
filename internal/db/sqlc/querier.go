@@ -44,6 +44,7 @@ type Querier interface {
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
 	GetExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
+	GetExchangePostItemByGundamID(ctx context.Context, arg GetExchangePostItemByGundamIDParams) (ExchangePostItem, error)
 	GetGradeByID(ctx context.Context, id int64) (GundamGrade, error)
 	GetGundamAccessories(ctx context.Context, gundamID int64) ([]GundamAccessory, error)
 	GetGundamByID(ctx context.Context, id int64) (Gundam, error)

@@ -27,6 +27,7 @@ var (
 	ErrSubscriptionLimitExceeded = errors.New("subscription limit exceeded")
 	ErrSubscriptionExpired       = errors.New("subscription has expired")
 	ErrCartItemExists            = errors.New("item already exists in cart")
+	ErrExchangeOfferUnique       = errors.New("user already has an offer for this exchange post")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name
@@ -34,6 +35,7 @@ type PgError struct {
 	Code           string
 	Message        string
 	ConstraintName string
+	Detail         string
 }
 
 // ErrorDescription returns details about a PostgreSQL error if present
@@ -44,6 +46,7 @@ func ErrorDescription(err error) *PgError {
 			Code:           pgErr.Code,
 			Message:        pgErr.Message,
 			ConstraintName: pgErr.ConstraintName,
+			Detail:         pgErr.Detail,
 		}
 	}
 	return nil

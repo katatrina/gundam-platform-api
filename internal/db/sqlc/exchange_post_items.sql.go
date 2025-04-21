@@ -49,3 +49,28 @@ func (q *Queries) CreateExchangePostItems(ctx context.Context, arg CreateExchang
 	}
 	return items, nil
 }
+
+const getExchangePostItemByGundamID = `-- name: GetExchangePostItemByGundamID :one
+SELECT id, post_id, gundam_id, created_at
+FROM exchange_post_items
+WHERE gundam_id = $1::bigint
+  AND post_id = $2::uuid
+LIMIT 1
+`
+
+type GetExchangePostItemByGundamIDParams struct {
+	GundamID int64     `json:"gundam_id"`
+	PostID   uuid.UUID `json:"post_id"`
+}
+
+func (q *Queries) GetExchangePostItemByGundamID(ctx context.Context, arg GetExchangePostItemByGundamIDParams) (ExchangePostItem, error) {
+	row := q.db.QueryRow(ctx, getExchangePostItemByGundamID, arg.GundamID, arg.PostID)
+	var i ExchangePostItem
+	err := row.Scan(
+		&i.ID,
+		&i.PostID,
+		&i.GundamID,
+		&i.CreatedAt,
+	)
+	return i, err
+}

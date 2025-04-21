@@ -249,7 +249,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.ExchangePostInfo"
+                                "$ref": "#/definitions/db.OpenExchangePostInfo"
                             }
                         }
                     }
@@ -1777,6 +1777,45 @@
                 }
             }
         },
+        "/users/me/exchange-offers": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a 1-1 exchange offer with optional compensation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Create an exchange offer",
+                "parameters": [
+                    {
+                        "description": "Create exchange offer request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createExchangeOfferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Create exchange offer response",
+                        "schema": {
+                            "$ref": "#/definitions/db.CreateExchangeOfferTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/exchange-posts": {
             "post": {
                 "security": [
@@ -2359,6 +2398,38 @@
                 }
             }
         },
+        "api.createExchangeOfferRequest": {
+            "type": "object",
+            "required": [
+                "compensation_amount",
+                "exchange_post_id",
+                "offerer_gundam_id",
+                "payer_id",
+                "poster_gundam_id"
+            ],
+            "properties": {
+                "compensation_amount": {
+                    "description": "Số tiền bù (null nếu không có bù tiền)",
+                    "type": "integer"
+                },
+                "exchange_post_id": {
+                    "description": "ID bài đăng trao đổi",
+                    "type": "string"
+                },
+                "offerer_gundam_id": {
+                    "description": "ID Gundam của người đề xuất",
+                    "type": "integer"
+                },
+                "payer_id": {
+                    "description": "ID người bù tiền (poster_id hoặc offerer_id, hoặc null)",
+                    "type": "string"
+                },
+                "poster_gundam_id": {
+                    "description": "ID Gundam của người đăng bài",
+                    "type": "integer"
+                }
+            }
+        },
         "api.createExchangePostRequest": {
             "type": "object",
             "required": [
@@ -2844,6 +2915,24 @@
                 }
             }
         },
+        "db.CreateExchangeOfferTxResult": {
+            "type": "object",
+            "required": [
+                "offer",
+                "offer_items"
+            ],
+            "properties": {
+                "offer": {
+                    "$ref": "#/definitions/db.ExchangeOffer"
+                },
+                "offer_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeOfferItem"
+                    }
+                }
+            }
+        },
         "db.CreateExchangePostTxResult": {
             "type": "object",
             "required": [
@@ -2995,6 +3084,29 @@
                 }
             }
         },
+        "db.ExchangeOfferItem": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "gundam_id",
+                "id",
+                "offer_id"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "offer_id": {
+                    "type": "string"
+                }
+            }
+        },
         "db.ExchangePost": {
             "type": "object",
             "required": [
@@ -3030,61 +3142,6 @@
                 },
                 "user_id": {
                     "type": "string"
-                }
-            }
-        },
-        "db.ExchangePostInfo": {
-            "type": "object",
-            "required": [
-                "authenticated_user_offer",
-                "authenticated_user_offer_items",
-                "exchange_post",
-                "exchange_post_items",
-                "offer_count",
-                "poster"
-            ],
-            "properties": {
-                "authenticated_user_offer": {
-                    "description": "Offer của người dùng đã đăng nhập (nếu có)",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.ExchangeOffer"
-                        }
-                    ]
-                },
-                "authenticated_user_offer_items": {
-                    "description": "Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GundamDetails"
-                    }
-                },
-                "exchange_post": {
-                    "description": "Thông tin bài đăng",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.ExchangePost"
-                        }
-                    ]
-                },
-                "exchange_post_items": {
-                    "description": "Danh sách Gundam trong bài đăng",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GundamDetails"
-                    }
-                },
-                "offer_count": {
-                    "description": "Số lượng offer",
-                    "type": "integer"
-                },
-                "poster": {
-                    "description": "Người đăng bài",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.User"
-                        }
-                    ]
                 }
             }
         },
@@ -3412,6 +3469,61 @@
                 "valid": {
                     "description": "Valid is true if DeliveryOverralStatus is not NULL",
                     "type": "boolean"
+                }
+            }
+        },
+        "db.OpenExchangePostInfo": {
+            "type": "object",
+            "required": [
+                "authenticated_user_offer",
+                "authenticated_user_offer_items",
+                "exchange_post",
+                "exchange_post_items",
+                "offer_count",
+                "poster"
+            ],
+            "properties": {
+                "authenticated_user_offer": {
+                    "description": "Offer của người dùng đã đăng nhập (nếu có)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeOffer"
+                        }
+                    ]
+                },
+                "authenticated_user_offer_items": {
+                    "description": "Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "exchange_post": {
+                    "description": "Thông tin bài đăng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangePost"
+                        }
+                    ]
+                },
+                "exchange_post_items": {
+                    "description": "Danh sách Gundam mà Người đăng bài cho phép trao đổi",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "offer_count": {
+                    "description": "Số lượng offer của bài đăng",
+                    "type": "integer"
+                },
+                "poster": {
+                    "description": "Thông tin Người đăng bài",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
                 }
             }
         },

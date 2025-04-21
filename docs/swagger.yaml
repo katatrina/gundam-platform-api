@@ -105,6 +105,30 @@ definitions:
     required:
     - email
     type: object
+  api.createExchangeOfferRequest:
+    properties:
+      compensation_amount:
+        description: Số tiền bù (null nếu không có bù tiền)
+        type: integer
+      exchange_post_id:
+        description: ID bài đăng trao đổi
+        type: string
+      offerer_gundam_id:
+        description: ID Gundam của người đề xuất
+        type: integer
+      payer_id:
+        description: ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
+        type: string
+      poster_gundam_id:
+        description: ID Gundam của người đăng bài
+        type: integer
+    required:
+    - compensation_amount
+    - exchange_post_id
+    - offerer_gundam_id
+    - payer_id
+    - poster_gundam_id
+    type: object
   api.createExchangePostRequest:
     properties:
       content:
@@ -467,6 +491,18 @@ definitions:
     - order_transaction
     - seller_entry
     type: object
+  db.CreateExchangeOfferTxResult:
+    properties:
+      offer:
+        $ref: '#/definitions/db.ExchangeOffer'
+      offer_items:
+        items:
+          $ref: '#/definitions/db.ExchangeOfferItem'
+        type: array
+    required:
+    - offer
+    - offer_items
+    type: object
   db.CreateExchangePostTxResult:
     properties:
       exchange_post:
@@ -576,6 +612,22 @@ definitions:
     - post_id
     - updated_at
     type: object
+  db.ExchangeOfferItem:
+    properties:
+      created_at:
+        type: string
+      gundam_id:
+        type: integer
+      id:
+        type: string
+      offer_id:
+        type: string
+    required:
+    - created_at
+    - gundam_id
+    - id
+    - offer_id
+    type: object
   db.ExchangePost:
     properties:
       content:
@@ -602,42 +654,6 @@ definitions:
     - status
     - updated_at
     - user_id
-    type: object
-  db.ExchangePostInfo:
-    properties:
-      authenticated_user_offer:
-        allOf:
-        - $ref: '#/definitions/db.ExchangeOffer'
-        description: Offer của người dùng đã đăng nhập (nếu có)
-      authenticated_user_offer_items:
-        description: Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu
-          có)
-        items:
-          $ref: '#/definitions/db.GundamDetails'
-        type: array
-      exchange_post:
-        allOf:
-        - $ref: '#/definitions/db.ExchangePost'
-        description: Thông tin bài đăng
-      exchange_post_items:
-        description: Danh sách Gundam trong bài đăng
-        items:
-          $ref: '#/definitions/db.GundamDetails'
-        type: array
-      offer_count:
-        description: Số lượng offer
-        type: integer
-      poster:
-        allOf:
-        - $ref: '#/definitions/db.User'
-        description: Người đăng bài
-    required:
-    - authenticated_user_offer
-    - authenticated_user_offer_items
-    - exchange_post
-    - exchange_post_items
-    - offer_count
-    - poster
     type: object
   db.ExchangePostItem:
     properties:
@@ -862,6 +878,42 @@ definitions:
     required:
     - delivery_overral_status
     - valid
+    type: object
+  db.OpenExchangePostInfo:
+    properties:
+      authenticated_user_offer:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeOffer'
+        description: Offer của người dùng đã đăng nhập (nếu có)
+      authenticated_user_offer_items:
+        description: Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu
+          có)
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      exchange_post:
+        allOf:
+        - $ref: '#/definitions/db.ExchangePost'
+        description: Thông tin bài đăng
+      exchange_post_items:
+        description: Danh sách Gundam mà Người đăng bài cho phép trao đổi
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      offer_count:
+        description: Số lượng offer của bài đăng
+        type: integer
+      poster:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin Người đăng bài
+    required:
+    - authenticated_user_offer
+    - authenticated_user_offer_items
+    - exchange_post
+    - exchange_post_items
+    - offer_count
+    - poster
     type: object
   db.Order:
     properties:
@@ -1604,7 +1656,7 @@ paths:
           description: List of open exchange posts
           schema:
             items:
-              $ref: '#/definitions/db.ExchangePostInfo'
+              $ref: '#/definitions/db.OpenExchangePostInfo'
             type: array
       summary: List all open exchange posts
       tags:
@@ -2843,6 +2895,30 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /users/me/exchange-offers:
+    post:
+      consumes:
+      - application/json
+      description: Create a 1-1 exchange offer with optional compensation.
+      parameters:
+      - description: Create exchange offer request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createExchangeOfferRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Create exchange offer response
+          schema:
+            $ref: '#/definitions/db.CreateExchangeOfferTxResult'
+      security:
+      - accessToken: []
+      summary: Create an exchange offer
+      tags:
+      - exchanges
   /users/me/exchange-posts:
     post:
       consumes:
