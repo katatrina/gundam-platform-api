@@ -85,10 +85,11 @@ type SellerInfo struct {
 }
 
 type OpenExchangePostInfo struct {
-	ExchangePost                ExchangePost    `json:"exchange_post"`                  // Thông tin bài đăng
-	ExchangePostItems           []GundamDetails `json:"exchange_post_items"`            // Danh sách Gundam mà Người đăng bài cho phép trao đổi
-	Poster                      User            `json:"poster"`                         // Thông tin Người đăng bài
-	OfferCount                  int64           `json:"offer_count"`                    // Số lượng offer của bài đăng
-	AuthenticatedUserOffer      *ExchangeOffer  `json:"authenticated_user_offer"`       // Offer của người dùng đã đăng nhập (nếu có)
-	AuthenticatedUserOfferItems []GundamDetails `json:"authenticated_user_offer_items"` // Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)
+	ExchangePost                 ExchangePost    `json:"exchange_post"`                   // Thông tin bài đăng
+	ExchangePostItems            []GundamDetails `json:"exchange_post_items"`             // Danh sách Gundam mà Người đăng bài cho phép trao đổi
+	Poster                       User            `json:"poster"`                          // Thông tin Người đăng bài
+	OfferCount                   int64           `json:"offer_count"`                     // Số lượng offer của bài đăng
+	AuthenticatedUserOffer       *ExchangeOffer  `json:"authenticated_user_offer"`        // Offer của người dùng đã đăng nhập (nếu có)
+	AuthenticatedUserOfferItems  []GundamDetails `json:"authenticated_user_offer_items"`  // Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)
+	AuthenticatedUserWantedItems []GundamDetails `json:"authenticated_user_wanted_items"` // Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)
 }

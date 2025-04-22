@@ -19,7 +19,7 @@ import (
 type createExchangePostRequest struct {
 	Content     string                  `form:"content" binding:"required"`                 // Nội dung bài post
 	PostImages  []*multipart.FileHeader `form:"post_images" binding:"required,max=5,min=1"` // Ảnh bài post
-	PostItemIDs []int64                 `form:"post_item_id" binding:"required"`            // ID của các Gundam mà chủ bài post cho phép trao đổi
+	PostItemIDs []int64                 `form:"post_item_id" binding:"required,min=1"`      // ID của các Gundam mà chủ bài post cho phép trao đổi
 }
 
 //	@Summary		Create a new exchange post
@@ -266,7 +266,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		postInfo.OfferCount = offerCount
 		
 		// Lấy offer của người dùng đã đăng nhập (nếu có)
-		if userID != "" {
+		if userID != "" && userID != post.UserID { // Kiểm tra người dùng không phải là người đăng bài
 			offer, err := server.dbStore.GetUserExchangeOfferForPost(c.Request.Context(), db.GetUserExchangeOfferForPostParams{
 				PostID:    post.ID,
 				OffererID: userID,
@@ -280,8 +280,8 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			} else {
 				postInfo.AuthenticatedUserOffer = &offer
 				
-				// Nếu tìm thấy offer, lấy thêm thông tin chi tiết về các gundam trong offer
-				offerItems, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
+				// Lấy thông tin các Gundam trong offer (chỉ từ người đề xuất)
+				offerItemsFromOfferer, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
 					OfferID:      offer.ID,
 					IsFromPoster: util.BoolPointer(false),
 				})
@@ -289,11 +289,9 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 					c.JSON(http.StatusInternalServerError, errorResponse(err))
 					return
 				}
-				
-				offerGundamDetails := make([]db.GundamDetails, 0, len(offerItems))
-				
+				offerGundamDetails := make([]db.GundamDetails, 0, len(offerItemsFromOfferer))
 				// Lặp qua từng item trong offer để lấy thông tin chi tiết của Gundam
-				for _, item := range offerItems {
+				for _, item := range offerItemsFromOfferer {
 					// Lấy thông tin Gundam của mỗi item
 					gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 					if err != nil {
@@ -395,8 +393,110 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 					
 					offerGundamDetails = append(offerGundamDetails, detail)
 				}
-				
 				postInfo.AuthenticatedUserOfferItems = offerGundamDetails
+				
+				// Lấy thông tin các Gundam từ người đăng mà người đề xuất muốn nhận
+				offerItemsFromPoster, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
+					OfferID:      offer.ID,
+					IsFromPoster: util.BoolPointer(true),
+				})
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, errorResponse(err))
+					return
+				}
+				wantedGundamDetails := make([]db.GundamDetails, 0, len(offerItemsFromOfferer))
+				// Lặp qua từng item trong offer để lấy thông tin chi tiết của Gundam
+				for _, item := range offerItemsFromPoster {
+					// Lấy thông tin Gundam của mỗi item
+					gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
+					if err != nil {
+						if errors.Is(err, db.ErrRecordNotFound) {
+							err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+							c.JSON(http.StatusNotFound, errorResponse(err))
+							return
+						}
+						
+						c.JSON(http.StatusInternalServerError, errorResponse(err))
+						return
+					}
+					
+					// Lấy thông tin grade của Gundam
+					grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
+					if err != nil {
+						if errors.Is(err, db.ErrRecordNotFound) {
+							err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
+							c.JSON(http.StatusNotFound, errorResponse(err))
+							return
+						}
+						
+						c.JSON(http.StatusInternalServerError, errorResponse(err))
+						return
+					}
+					
+					// Lấy ảnh chính của Gundam
+					primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.ID)
+					if err != nil {
+						if errors.Is(err, db.ErrRecordNotFound) {
+							err = fmt.Errorf("primary image of gundam ID %d not found", gundam.ID)
+							c.JSON(http.StatusNotFound, errorResponse(err))
+							return
+						}
+						
+						c.JSON(http.StatusInternalServerError, errorResponse(err))
+						return
+					}
+					
+					// Lấy ảnh phụ của Gundam
+					secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.ID)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, errorResponse(err))
+						return
+					}
+					
+					// Lấy thông tin phụ kiện của Gundam
+					accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.ID)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, errorResponse(err))
+						return
+					}
+					
+					// Chuyển đổi phụ kiện sang định dạng DTO
+					accessoryDTOs := make([]db.GundamAccessoryDTO, len(accessories))
+					for i, accessory := range accessories {
+						accessoryDTOs[i] = db.ConvertGundamAccessoryToDTO(accessory)
+					}
+					
+					// Tạo đối tượng GundamDetails
+					detail := db.GundamDetails{
+						ID:                   gundam.ID,
+						OwnerID:              gundam.OwnerID,
+						Name:                 gundam.Name,
+						Slug:                 gundam.Slug,
+						Grade:                grade.DisplayName,
+						Series:               gundam.Series,
+						PartsTotal:           gundam.PartsTotal,
+						Material:             gundam.Material,
+						Version:              gundam.Version,
+						Quantity:             gundam.Quantity,
+						Condition:            string(gundam.Condition),
+						ConditionDescription: gundam.ConditionDescription,
+						Manufacturer:         gundam.Manufacturer,
+						Weight:               gundam.Weight,
+						Scale:                string(gundam.Scale),
+						Description:          gundam.Description,
+						Price:                gundam.Price,
+						ReleaseYear:          gundam.ReleaseYear,
+						Status:               string(gundam.Status),
+						Accessories:          accessoryDTOs,
+						PrimaryImageURL:      primaryImageURL,
+						SecondaryImageURLs:   secondaryImageURLs,
+						CreatedAt:            gundam.CreatedAt,
+						UpdatedAt:            gundam.UpdatedAt,
+					}
+					
+					wantedGundamDetails = append(wantedGundamDetails, detail)
+				}
+				postInfo.AuthenticatedUserWantedItems = wantedGundamDetails
 			}
 		}
 		
@@ -406,14 +506,14 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-//  @Summary      Delete an exchange post
-//  @Description  Deletes an exchange post and resets the status of associated gundams. Only the post owner can delete it.
-//  @Tags         exchanges
-//  @Produce      json
-//  @Security     accessToken
-//  @Param        id   path      string  true  "Exchange Post ID"
-//  @Success      200  {object}  messageResponse "Post successfully deleted"
-//  @Router       /users/me/exchange-posts/{id} [delete]
+//	@Summary		Delete an exchange post
+//	@Description	Deletes an exchange post and resets the status of associated gundams. Only the post owner can delete it.
+//	@Tags			exchanges
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			id	path		string							true	"Exchange Post ID"
+//	@Success		200	{object}	db.DeleteExchangePostTxResult	"Delete exchange post response"
+//	@Router			/users/me/exchange-posts/{id} [delete]
 func (server *Server) deleteExchangePost(c *gin.Context) {
 	// Lấy thông tin người dùng đã đăng nhập
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)

@@ -1857,6 +1857,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/exchange-posts/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Deletes an exchange post and resets the status of associated gundams. Only the post owner can delete it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Delete an exchange post",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Post ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Delete exchange post response",
+                        "schema": {
+                            "$ref": "#/definitions/db.DeleteExchangePostTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}": {
             "get": {
                 "description": "Get detailed information about a specific user",
@@ -2456,6 +2490,7 @@ const docTemplate = `{
                 "post_item_id": {
                     "description": "ID của các Gundam mà chủ bài post cho phép trao đổi",
                     "type": "array",
+                    "minItems": 1,
                     "items": {
                         "type": "integer"
                     }
@@ -2983,6 +3018,24 @@ const docTemplate = `{
                 }
             }
         },
+        "db.DeleteExchangePostTxResult": {
+            "type": "object",
+            "required": [
+                "deleted_exchange_post",
+                "deleted_exchange_post_offers"
+            ],
+            "properties": {
+                "deleted_exchange_post": {
+                    "$ref": "#/definitions/db.ExchangePost"
+                },
+                "deleted_exchange_post_offers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeOffer"
+                    }
+                }
+            }
+        },
         "db.DeliveryInformation": {
             "type": "object",
             "required": [
@@ -3092,6 +3145,7 @@ const docTemplate = `{
                 "created_at",
                 "gundam_id",
                 "id",
+                "is_from_poster",
                 "offer_id"
             ],
             "properties": {
@@ -3103,6 +3157,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_from_poster": {
+                    "type": "boolean"
                 },
                 "offer_id": {
                     "type": "string"
@@ -3479,6 +3536,7 @@ const docTemplate = `{
             "required": [
                 "authenticated_user_offer",
                 "authenticated_user_offer_items",
+                "authenticated_user_wanted_items",
                 "exchange_post",
                 "exchange_post_items",
                 "offer_count",
@@ -3495,6 +3553,13 @@ const docTemplate = `{
                 },
                 "authenticated_user_offer_items": {
                     "description": "Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "authenticated_user_wanted_items": {
+                    "description": "Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/db.GundamDetails"

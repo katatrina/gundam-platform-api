@@ -145,6 +145,7 @@ definitions:
         description: ID của các Gundam mà chủ bài post cho phép trao đổi
         items:
           type: integer
+        minItems: 1
         type: array
     required:
     - content
@@ -536,6 +537,18 @@ definitions:
     - order_items
     - order_transaction
     type: object
+  db.DeleteExchangePostTxResult:
+    properties:
+      deleted_exchange_post:
+        $ref: '#/definitions/db.ExchangePost'
+      deleted_exchange_post_offers:
+        items:
+          $ref: '#/definitions/db.ExchangeOffer'
+        type: array
+    required:
+    - deleted_exchange_post
+    - deleted_exchange_post_offers
+    type: object
   db.DeliveryInformation:
     properties:
       created_at:
@@ -620,12 +633,15 @@ definitions:
         type: integer
       id:
         type: string
+      is_from_poster:
+        type: boolean
       offer_id:
         type: string
     required:
     - created_at
     - gundam_id
     - id
+    - is_from_poster
     - offer_id
     type: object
   db.ExchangePost:
@@ -891,6 +907,11 @@ definitions:
         items:
           $ref: '#/definitions/db.GundamDetails'
         type: array
+      authenticated_user_wanted_items:
+        description: Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
       exchange_post:
         allOf:
         - $ref: '#/definitions/db.ExchangePost'
@@ -910,6 +931,7 @@ definitions:
     required:
     - authenticated_user_offer
     - authenticated_user_offer_items
+    - authenticated_user_wanted_items
     - exchange_post
     - exchange_post_items
     - offer_count
@@ -2941,6 +2963,28 @@ paths:
       security:
       - accessToken: []
       summary: Create a new exchange post
+      tags:
+      - exchanges
+  /users/me/exchange-posts/{id}:
+    delete:
+      description: Deletes an exchange post and resets the status of associated gundams.
+        Only the post owner can delete it.
+      parameters:
+      - description: Exchange Post ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Delete exchange post response
+          schema:
+            $ref: '#/definitions/db.DeleteExchangePostTxResult'
+      security:
+      - accessToken: []
+      summary: Delete an exchange post
       tags:
       - exchanges
   /wallet/zalopay/create:
