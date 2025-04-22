@@ -56,9 +56,10 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		}
 		
 		offererItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
-			ID:       offererItemID,
-			OfferID:  offerID,
-			GundamID: arg.OffererGundamID,
+			ID:           offererItemID,
+			OfferID:      offerID,
+			GundamID:     arg.OffererGundamID,
+			IsFromPoster: false,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create offerer exchange item: %w", err)
@@ -71,9 +72,10 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		}
 		
 		posterItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
-			ID:       posterItemID,
-			OfferID:  offerID,
-			GundamID: arg.PosterGundamID,
+			ID:           posterItemID,
+			OfferID:      offerID,
+			GundamID:     arg.PosterGundamID,
+			IsFromPoster: true,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create poster exchange item: %w", err)

@@ -1182,10 +1182,11 @@ type ExchangeOffer struct {
 }
 
 type ExchangeOfferItem struct {
-	ID        uuid.UUID `json:"id"`
-	OfferID   uuid.UUID `json:"offer_id"`
-	GundamID  int64     `json:"gundam_id"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           uuid.UUID `json:"id"`
+	OfferID      uuid.UUID `json:"offer_id"`
+	GundamID     int64     `json:"gundam_id"`
+	IsFromPoster bool      `json:"is_from_poster"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type ExchangePost struct {

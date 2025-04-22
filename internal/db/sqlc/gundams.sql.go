@@ -31,6 +31,27 @@ func (q *Queries) BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpda
 	return err
 }
 
+const bulkUpdateGundamsInStore = `-- name: BulkUpdateGundamsInStore :exec
+UPDATE gundams
+SET status     = 'in store',
+    updated_at = NOW() FROM
+    (SELECT unnest($2::bigint[]) as id) as data
+WHERE
+    gundams.id = data.id
+  AND gundams.status = 'for exchange'
+  AND gundams.owner_id = $1
+`
+
+type BulkUpdateGundamsInStoreParams struct {
+	OwnerID   string  `json:"owner_id"`
+	GundamIds []int64 `json:"gundam_ids"`
+}
+
+func (q *Queries) BulkUpdateGundamsInStore(ctx context.Context, arg BulkUpdateGundamsInStoreParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateGundamsInStore, arg.OwnerID, arg.GundamIds)
+	return err
+}
+
 const createAccessory = `-- name: CreateAccessory :exec
 INSERT INTO gundam_accessories (gundam_id,
                                 name,

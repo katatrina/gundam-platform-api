@@ -14,37 +14,51 @@ import (
 const createExchangeOfferItem = `-- name: CreateExchangeOfferItem :one
 INSERT INTO exchange_offer_items (id,
                                   offer_id,
-                                  gundam_id)
-VALUES ($1, $2, $3) RETURNING id, offer_id, gundam_id, created_at
+                                  gundam_id,
+                                  is_from_poster)
+VALUES ($1, $2, $3, $4) RETURNING id, offer_id, gundam_id, is_from_poster, created_at
 `
 
 type CreateExchangeOfferItemParams struct {
-	ID       uuid.UUID `json:"id"`
-	OfferID  uuid.UUID `json:"offer_id"`
-	GundamID int64     `json:"gundam_id"`
+	ID           uuid.UUID `json:"id"`
+	OfferID      uuid.UUID `json:"offer_id"`
+	GundamID     int64     `json:"gundam_id"`
+	IsFromPoster bool      `json:"is_from_poster"`
 }
 
 func (q *Queries) CreateExchangeOfferItem(ctx context.Context, arg CreateExchangeOfferItemParams) (ExchangeOfferItem, error) {
-	row := q.db.QueryRow(ctx, createExchangeOfferItem, arg.ID, arg.OfferID, arg.GundamID)
+	row := q.db.QueryRow(ctx, createExchangeOfferItem,
+		arg.ID,
+		arg.OfferID,
+		arg.GundamID,
+		arg.IsFromPoster,
+	)
 	var i ExchangeOfferItem
 	err := row.Scan(
 		&i.ID,
 		&i.OfferID,
 		&i.GundamID,
+		&i.IsFromPoster,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listExchangeOfferItems = `-- name: ListExchangeOfferItems :many
-SELECT id, offer_id, gundam_id, created_at
+SELECT id, offer_id, gundam_id, is_from_poster, created_at
 FROM exchange_offer_items
 WHERE offer_id = $1
+  AND ($2::boolean IS NULL OR is_from_poster = $2::boolean)
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListExchangeOfferItems(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferItem, error) {
-	rows, err := q.db.Query(ctx, listExchangeOfferItems, offerID)
+type ListExchangeOfferItemsParams struct {
+	OfferID      uuid.UUID `json:"offer_id"`
+	IsFromPoster *bool     `json:"is_from_poster"`
+}
+
+func (q *Queries) ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error) {
+	rows, err := q.db.Query(ctx, listExchangeOfferItems, arg.OfferID, arg.IsFromPoster)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +70,7 @@ func (q *Queries) ListExchangeOfferItems(ctx context.Context, offerID uuid.UUID)
 			&i.ID,
 			&i.OfferID,
 			&i.GundamID,
+			&i.IsFromPoster,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

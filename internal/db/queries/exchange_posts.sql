@@ -26,3 +26,8 @@ ORDER BY created_at DESC;
 SELECT *
 FROM "exchange_posts"
 WHERE id = $1;
+
+-- name: DeleteExchangePost :one
+DELETE
+FROM "exchange_posts"
+WHERE id = $1 RETURNING *;

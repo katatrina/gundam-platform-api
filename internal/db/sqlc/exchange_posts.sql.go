@@ -46,6 +46,27 @@ func (q *Queries) CreateExchangePost(ctx context.Context, arg CreateExchangePost
 	return i, err
 }
 
+const deleteExchangePost = `-- name: DeleteExchangePost :one
+DELETE
+FROM "exchange_posts"
+WHERE id = $1 RETURNING id, user_id, content, post_image_urls, status, created_at, updated_at
+`
+
+func (q *Queries) DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error) {
+	row := q.db.QueryRow(ctx, deleteExchangePost, id)
+	var i ExchangePost
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.PostImageUrls,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getExchangePost = `-- name: GetExchangePost :one
 SELECT id, user_id, content, post_image_urls, status, created_at, updated_at
 FROM "exchange_posts"

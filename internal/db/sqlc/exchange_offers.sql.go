@@ -88,3 +88,38 @@ func (q *Queries) GetUserExchangeOfferForPost(ctx context.Context, arg GetUserEx
 	)
 	return i, err
 }
+
+const listExchangeOffers = `-- name: ListExchangeOffers :many
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
+FROM exchange_offers
+WHERE post_id = $1
+ORDER BY created_at DESC, updated_at DESC
+`
+
+func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]ExchangeOffer, error) {
+	rows, err := q.db.Query(ctx, listExchangeOffers, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangeOffer{}
+	for rows.Next() {
+		var i ExchangeOffer
+		if err := rows.Scan(
+			&i.ID,
+			&i.PostID,
+			&i.OffererID,
+			&i.PayerID,
+			&i.CompensationAmount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

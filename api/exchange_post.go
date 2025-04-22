@@ -8,8 +8,12 @@ import (
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/google/uuid"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/katatrina/gundam-BE/internal/worker"
+	"github.com/rs/zerolog/log"
 )
 
 type createExchangePostRequest struct {
@@ -277,7 +281,10 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 				postInfo.AuthenticatedUserOffer = &offer
 				
 				// Nếu tìm thấy offer, lấy thêm thông tin chi tiết về các gundam trong offer
-				offerItems, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), offer.ID)
+				offerItems, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
+					OfferID:      offer.ID,
+					IsFromPoster: util.BoolPointer(false),
+				})
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, errorResponse(err))
 					return
@@ -394,6 +401,73 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		}
 		
 		result = append(result, postInfo)
+	}
+	
+	c.JSON(http.StatusOK, result)
+}
+
+//  @Summary      Delete an exchange post
+//  @Description  Deletes an exchange post and resets the status of associated gundams. Only the post owner can delete it.
+//  @Tags         exchanges
+//  @Produce      json
+//  @Security     accessToken
+//  @Param        id   path      string  true  "Exchange Post ID"
+//  @Success      200  {object}  messageResponse "Post successfully deleted"
+//  @Router       /users/me/exchange-posts/{id} [delete]
+func (server *Server) deleteExchangePost(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Lấy ID bài đăng từ URL
+	postIDStr := c.Param("postID")
+	postID, err := uuid.Parse(postIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post ID format: %s", postIDStr)))
+		return
+	}
+	
+	// Kiểm tra bài đăng có tồn tại không
+	post, err := server.dbStore.GetExchangePost(c.Request.Context(), postID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange post ID %s not found", postIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra người dùng có quyền xóa bài đăng không
+	if post.UserID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of exchange post ID %s", userID, post.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Xóa bài đăng và các thông tin liên quan
+	result, err := server.dbStore.DeleteExchangePostTx(c.Request.Context(), db.DeleteExchangePostTxParams{
+		PostID: postID,
+		UserID: userID,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Thông báo cho những người đã gửi offer về việc bài đăng đã bị xóa
+	for _, offer := range result.DeletedExchangePostOffers {
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: offer.OffererID,
+			Title:       "Bài đăng đã bị xóa",
+			Message:     fmt.Sprintf("Bài đăng trao đổi với ID %s đã bị xóa bởi người đăng. Nếu bạn đã gửi đề xuất, đề xuất của bạn cũng sẽ bị xóa.", offer.PostID),
+			Type:        "exchange",
+			ReferenceID: offer.ID.String(),
+		})
+		if err != nil {
+			log.Info().Msgf("failed to send notification to user %s: %v", offer.OffererID, err)
+		}
 	}
 	
 	c.JSON(http.StatusOK, result)

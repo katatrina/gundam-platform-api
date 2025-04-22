@@ -15,6 +15,7 @@ type Querier interface {
 	AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error)
 	AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error
 	BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error
+	BulkUpdateGundamsInStore(ctx context.Context, arg BulkUpdateGundamsInStoreParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
@@ -38,6 +39,7 @@ type Querier interface {
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
+	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
@@ -70,7 +72,8 @@ type Querier interface {
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
-	ListExchangeOfferItems(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferItem, error)
+	ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error)
+	ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]ExchangeOffer, error)
 	ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error)
 	ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)

@@ -9,6 +9,12 @@ FROM exchange_offers
 WHERE post_id = $1
   AND offerer_id = $2 LIMIT 1;
 
+-- name: ListExchangeOffers :many
+SELECT *
+FROM exchange_offers
+WHERE post_id = $1
+ORDER BY created_at DESC, updated_at DESC;
+
 -- name: CreateExchangeOffer :one
 INSERT INTO exchange_offers (id,
                              post_id,

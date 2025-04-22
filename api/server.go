@@ -145,8 +145,8 @@ func (server *Server) setupRouter() *gin.Engine {
 			// // Chỉnh sửa bài đăng trao đổi
 			// userExchangePostGroup.PUT("/:id", server.updateExchangePost)
 			//
-			// // Đóng/hủy bài đăng trao đổi
-			// userExchangePostGroup.PATCH("/:id/close", server.closeExchangePost)
+			// Xóa bài đăng trao đổi
+			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost)
 			
 			// API cho đề xuất trao đổi của một bài đăng
 			// offerGroup := userExchangePostGroup.Group("/:id/offers")

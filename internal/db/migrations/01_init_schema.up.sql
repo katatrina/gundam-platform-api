@@ -410,10 +410,11 @@ CREATE TABLE "exchange_offers"
 
 CREATE TABLE "exchange_offer_items"
 (
-    "id"         uuid PRIMARY KEY,
-    "offer_id"   uuid        NOT NULL,
-    "gundam_id"  bigint      NOT NULL,
-    "created_at" timestamptz NOT NULL DEFAULT (now())
+    "id"             uuid PRIMARY KEY,
+    "offer_id"       uuid        NOT NULL,
+    "gundam_id"      bigint      NOT NULL,
+    "is_from_poster" bool        NOT NULL DEFAULT false,
+    "created_at"     timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "exchanges"
@@ -584,10 +585,10 @@ ALTER TABLE "exchange_offers"
     ADD FOREIGN KEY ("payer_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "exchange_offer_items"
-    ADD FOREIGN KEY ("offer_id") REFERENCES "exchange_offers" ("id");
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
 
 ALTER TABLE "exchange_offer_items"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");
+    ADD FOREIGN KEY ("offer_id") REFERENCES "exchange_offers" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "exchanges"
     ADD FOREIGN KEY ("poster_order_id") REFERENCES "orders" ("id");
