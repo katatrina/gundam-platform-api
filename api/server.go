@@ -149,13 +149,13 @@ func (server *Server) setupRouter() *gin.Engine {
 			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost)
 			
 			// API cho đề xuất trao đổi của một bài đăng
-			// offerGroup := userExchangePostGroup.Group("/:postID/offers")
+			offerGroup := userExchangePostGroup.Group("/:postID/offers")
 			{
 				// Liệt kê các đề xuất cho bài đăng trao đổi
 				// offerGroup.GET("", server.listExchangeOffers)
 				
 				// Thêm endpoint cho yêu cầu thương lượng
-				// offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiation)
+				offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiationForOffer)
 				
 				// Chấp nhận đề xuất trao đổi
 				// offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)

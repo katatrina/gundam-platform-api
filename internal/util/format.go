@@ -32,6 +32,14 @@ func FormatVND(amount int64) string {
 	return result.String()
 }
 
+// Hàm helper để rút gọn tiêu đề
+func TruncateContent(title string, maxLength int) string {
+	if len(title) <= maxLength {
+		return title
+	}
+	return title[:maxLength] + "..."
+}
+
 func BoolPointer(b bool) *bool {
 	return &b
 }

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -33,7 +34,7 @@ INSERT INTO exchange_offers (id,
                              negotiations_count,
                              max_negotiations,
                              negotiation_requested)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
 `
 
 type CreateExchangeOfferParams struct {
@@ -69,7 +70,31 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 		&i.MaxNegotiations,
 		&i.NegotiationRequested,
 		&i.LastNegotiationAt,
-		&i.NegotiationExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getExchangeOffer = `-- name: GetExchangeOffer :one
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+FROM exchange_offers
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error) {
+	row := q.db.QueryRow(ctx, getExchangeOffer, id)
+	var i ExchangeOffer
+	err := row.Scan(
+		&i.ID,
+		&i.PostID,
+		&i.OffererID,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.NegotiationsCount,
+		&i.MaxNegotiations,
+		&i.NegotiationRequested,
+		&i.LastNegotiationAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -77,7 +102,7 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 }
 
 const getUserExchangeOfferForPost = `-- name: GetUserExchangeOfferForPost :one
-SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
 FROM exchange_offers
 WHERE post_id = $1
   AND offerer_id = $2 LIMIT 1
@@ -101,7 +126,6 @@ func (q *Queries) GetUserExchangeOfferForPost(ctx context.Context, arg GetUserEx
 		&i.MaxNegotiations,
 		&i.NegotiationRequested,
 		&i.LastNegotiationAt,
-		&i.NegotiationExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -109,7 +133,7 @@ func (q *Queries) GetUserExchangeOfferForPost(ctx context.Context, arg GetUserEx
 }
 
 const listExchangeOffers = `-- name: ListExchangeOffers :many
-SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
 FROM exchange_offers
 WHERE post_id = $1
 ORDER BY created_at DESC, updated_at DESC
@@ -134,7 +158,6 @@ func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]E
 			&i.MaxNegotiations,
 			&i.NegotiationRequested,
 			&i.LastNegotiationAt,
-			&i.NegotiationExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -146,4 +169,36 @@ func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]E
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateExchangeOffer = `-- name: UpdateExchangeOffer :one
+UPDATE exchange_offers
+SET negotiation_requested  = COALESCE($1, negotiation_requested),
+    last_negotiation_at    = COALESCE($2, last_negotiation_at)
+WHERE id = $3 RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+`
+
+type UpdateExchangeOfferParams struct {
+	NegotiationRequested *bool      `json:"negotiation_requested"`
+	LastNegotiationAt    *time.Time `json:"last_negotiation_at"`
+	ID                   uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error) {
+	row := q.db.QueryRow(ctx, updateExchangeOffer, arg.NegotiationRequested, arg.LastNegotiationAt, arg.ID)
+	var i ExchangeOffer
+	err := row.Scan(
+		&i.ID,
+		&i.PostID,
+		&i.OffererID,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.NegotiationsCount,
+		&i.MaxNegotiations,
+		&i.NegotiationRequested,
+		&i.LastNegotiationAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

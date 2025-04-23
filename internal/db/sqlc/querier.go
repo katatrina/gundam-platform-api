@@ -23,6 +23,7 @@ type Querier interface {
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateExchangeOffer(ctx context.Context, arg CreateExchangeOfferParams) (ExchangeOffer, error)
 	CreateExchangeOfferItem(ctx context.Context, arg CreateExchangeOfferItemParams) (ExchangeOfferItem, error)
+	CreateExchangeOfferNote(ctx context.Context, arg CreateExchangeOfferNoteParams) (ExchangeOfferNote, error)
 	CreateExchangePost(ctx context.Context, arg CreateExchangePostParams) (ExchangePost, error)
 	CreateExchangePostItems(ctx context.Context, arg CreateExchangePostItemsParams) ([]ExchangePostItem, error)
 	CreateGundam(ctx context.Context, arg CreateGundamParams) (Gundam, error)
@@ -45,6 +46,7 @@ type Querier interface {
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
+	GetExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	GetExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	GetExchangePostItemByGundamID(ctx context.Context, arg GetExchangePostItemByGundamIDParams) (ExchangePostItem, error)
 	GetGradeByID(ctx context.Context, id int64) (GundamGrade, error)
@@ -91,6 +93,7 @@ type Querier interface {
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
+	UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error)
 	UpdateExchangePost(ctx context.Context, arg UpdateExchangePostParams) (ExchangePost, error)
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)

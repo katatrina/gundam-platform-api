@@ -10,6 +10,7 @@ import (
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
+	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
@@ -227,4 +228,165 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusCreated, result)
+}
+
+// PostOfferURIParams định nghĩa tham số trên URI
+type PostOfferURIParams struct {
+	PostID  string `uri:"postID" binding:"required,uuid"`
+	OfferID string `uri:"offerID" binding:"required,uuid"`
+}
+
+// requestNegotiationForOfferRequest là cấu trúc yêu cầu thương lượng
+type requestNegotiationForOfferRequest struct {
+	Note *string `json:"note"` // Ghi chú từ người yêu cầu thương lượng, không bắt buộc
+}
+
+//	@Summary		Request negotiation for an exchange offer
+//	@Description	As a post owner, request negotiation with an offerer.
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			postID	path		string									true	"Exchange Post ID"
+//	@Param			offerID	path		string									true	"Exchange Offer ID"
+//	@Param			request	body		requestNegotiationForOfferRequest		false	"Negotiation request"
+//	@Success		200		{object}	db.RequestNegotiationForOfferTxResult	"Negotiation request response"
+//	@Router			/users/me/exchange-posts/{postID}/offers/{offerID}/negotiate [patch]
+func (server *Server) requestNegotiationForOffer(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Bind các tham số từ URI
+	var uriParams PostOfferURIParams
+	if err := c.ShouldBindUri(&uriParams); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Parse UUID từ string
+	postID, err := uuid.Parse(uriParams.PostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post ID: %s", uriParams.PostID)))
+		return
+	}
+	
+	offerID, err := uuid.Parse(uriParams.OfferID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer ID: %s", uriParams.OfferID)))
+		return
+	}
+	
+	// Đọc request body
+	var req requestNegotiationForOfferRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// -------------------
+	// PHẦN 1: Kiểm tra business rules
+	// -------------------
+	
+	// 1. Kiểm tra bài đăng tồn tại và người dùng là chủ sở hữu
+	post, err := server.dbStore.GetExchangePost(c, postID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("exchange post ID %s not found", uriParams.PostID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if post.UserID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of exchange post ID %s", userID, uriParams.PostID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	if post.Status != db.ExchangePostStatusOpen {
+		err = fmt.Errorf("exchange post ID %s is not open for negotiation", uriParams.PostID)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 2. Kiểm tra đề xuất tồn tại và thuộc về bài đăng này
+	offer, err := server.dbStore.GetExchangeOffer(c, offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("exchange offer ID %s not found", uriParams.OfferID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if offer.PostID != postID {
+		err = fmt.Errorf("exchange offer ID %s does not belong to exchange post ID %s", uriParams.OfferID, uriParams.PostID)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 3. Kiểm tra số lần thương lượng đã sử dụng
+	if offer.NegotiationsCount >= offer.MaxNegotiations {
+		err = fmt.Errorf("maximum number of negotiations reached for exchange offer ID %s, current count: %d, max: %d", uriParams.OfferID, offer.NegotiationsCount, offer.MaxNegotiations)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 4. Kiểm tra xem hiện tại có đang yêu cầu thương lượng không
+	if offer.NegotiationRequested {
+		err = fmt.Errorf("negotiation already requested for exchange offer ID %s", uriParams.OfferID)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// -------------------
+	// PHẦN 2: Xử lý transaction để cập nhật dữ liệu
+	// -------------------
+	
+	// Thực hiện transaction
+	result, err := server.dbStore.RequestNegotiationForOfferTx(c, db.RequestNegotiationForOfferTxParams{
+		OfferID: offerID,
+		UserID:  userID,
+		Note:    req.Note,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Gửi thông báo cho người đề xuất về yêu cầu thương lượng
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Tạo thông báo ngắn gọn nhưng đủ thông tin
+	notificationMessage := fmt.Sprintf(
+		"Chủ bài đăng '%s' đã yêu cầu thương lượng cho đề xuất trao đổi Gundam của bạn.",
+		util.TruncateContent(post.Content, 20), // Hàm rút gọn tiêu đề nếu quá dài
+	)
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: offer.OffererID,
+		Title:       "Yêu cầu thương lượng Gundam",
+		Message:     notificationMessage,
+		Type:        "exchange",
+		ReferenceID: result.Offer.ID.String(),
+	}, opts...)
+	if err != nil {
+		log.Err(err).
+			Str("offerID", result.Offer.ID.String()).
+			Str("postID", post.ID.String()).
+			Msgf("failed to send notification to user ID %s", offer.OffererID)
+	}
+	
+	// Trả về kết quả
+	c.JSON(http.StatusOK, result)
 }

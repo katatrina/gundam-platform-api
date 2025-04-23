@@ -326,6 +326,14 @@ definitions:
     required:
     - id_token
     type: object
+  api.requestNegotiationForOfferRequest:
+    properties:
+      note:
+        description: Ghi chú từ người yêu cầu thương lượng, không bắt buộc
+        type: string
+    required:
+    - note
+    type: object
   api.updateAvatarResponse:
     properties:
       avatar_url:
@@ -612,8 +620,6 @@ definitions:
         type: string
       max_negotiations:
         type: integer
-      negotiation_expires_at:
-        type: string
       negotiation_requested:
         type: boolean
       negotiations_count:
@@ -632,7 +638,6 @@ definitions:
     - id
     - last_negotiation_at
     - max_negotiations
-    - negotiation_expires_at
     - negotiation_requested
     - negotiations_count
     - offerer_id
@@ -657,9 +662,6 @@ definitions:
       max_negotiations:
         description: Số lần thương lượng tối đa
         type: integer
-      negotiation_expires_at:
-        description: Thời gian hết hạn thương lượng
-        type: string
       negotiation_requested:
         description: Đã yêu cầu thương lượng chưa
         type: boolean
@@ -702,7 +704,6 @@ definitions:
     - id
     - last_negotiation_at
     - max_negotiations
-    - negotiation_expires_at
     - negotiation_requested
     - negotiations_count
     - notes
@@ -1246,6 +1247,18 @@ definitions:
     x-enum-varnames:
     - PaymentMethodCod
     - PaymentMethodWallet
+  db.RequestNegotiationForOfferTxResult:
+    properties:
+      note:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeOfferNote'
+        description: Có thể là nil nếu không có ghi chú
+      offer:
+        $ref: '#/definitions/db.ExchangeOffer'
+    required:
+    - note
+    - offer
+    type: object
   db.SalesOrderDetails:
     properties:
       buyer_info:
@@ -3101,6 +3114,39 @@ paths:
       security:
       - accessToken: []
       summary: Delete an exchange post
+      tags:
+      - exchanges
+  /users/me/exchange-posts/{postID}/offers/{offerID}/negotiate:
+    patch:
+      consumes:
+      - application/json
+      description: As a post owner, request negotiation with an offerer.
+      parameters:
+      - description: Exchange Post ID
+        in: path
+        name: postID
+        required: true
+        type: string
+      - description: Exchange Offer ID
+        in: path
+        name: offerID
+        required: true
+        type: string
+      - description: Negotiation request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/api.requestNegotiationForOfferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Negotiation request response
+          schema:
+            $ref: '#/definitions/db.RequestNegotiationForOfferTxResult'
+      security:
+      - accessToken: []
+      summary: Request negotiation for an exchange offer
       tags:
       - exchanges
   /wallet/zalopay/create:

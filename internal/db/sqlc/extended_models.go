@@ -114,12 +114,11 @@ type ExchangeOfferInfo struct {
 	OffererExchangeItems []GundamDetails `json:"offerer_exchange_items"` // Danh sách Gundam của người đề xuất
 	PosterExchangeItems  []GundamDetails `json:"poster_exchange_items"`  // Danh sách Gundam của người đăng bài mà người đề xuất muốn trao đổi
 	
-	NegotiationsCount    int64               `json:"negotiations_count"`     // Số lần đã thương lượng
-	MaxNegotiations      int64               `json:"max_negotiations"`       // Số lần thương lượng tối đa
-	NegotiationRequested bool                `json:"negotiation_requested"`  // Đã yêu cầu thương lượng chưa
-	LastNegotiationAt    *time.Time          `json:"last_negotiation_at"`    // Thời gian thương lượng gần nhất
-	NegotiationExpiresAt *time.Time          `json:"negotiation_expires_at"` // Thời gian hết hạn thương lượng
-	Notes                []ExchangeOfferNote `json:"notes"`                  // Các ghi chú/tin nhắn thương lượng
+	NegotiationsCount    int64               `json:"negotiations_count"`    // Số lần đã thương lượng
+	MaxNegotiations      int64               `json:"max_negotiations"`      // Số lần thương lượng tối đa
+	NegotiationRequested bool                `json:"negotiation_requested"` // Đã yêu cầu thương lượng chưa
+	LastNegotiationAt    *time.Time          `json:"last_negotiation_at"`   // Thời gian thương lượng gần nhất
+	Notes                []ExchangeOfferNote `json:"notes"`                 // Các ghi chú/tin nhắn thương lượng
 	
 	CreatedAt time.Time `json:"created_at"` // Thời gian tạo offer
 	UpdatedAt time.Time `json:"updated_at"` // Thời gian cập nhật offer

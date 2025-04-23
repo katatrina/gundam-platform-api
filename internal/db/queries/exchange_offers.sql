@@ -9,6 +9,11 @@ FROM exchange_offers
 WHERE post_id = $1
   AND offerer_id = $2 LIMIT 1;
 
+-- name: GetExchangeOffer :one
+SELECT *
+FROM exchange_offers
+WHERE id = $1 LIMIT 1;
+
 -- name: ListExchangeOffers :many
 SELECT *
 FROM exchange_offers
@@ -25,3 +30,9 @@ INSERT INTO exchange_offers (id,
                              max_negotiations,
                              negotiation_requested)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
+
+-- name: UpdateExchangeOffer :one
+UPDATE exchange_offers
+SET negotiation_requested  = COALESCE(sqlc.narg('negotiation_requested'), negotiation_requested),
+    last_negotiation_at    = COALESCE(sqlc.narg('last_negotiation_at'), last_negotiation_at)
+WHERE id = sqlc.arg(id) RETURNING *;

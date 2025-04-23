@@ -11,6 +11,39 @@ import (
 	"github.com/google/uuid"
 )
 
+const createExchangeOfferNote = `-- name: CreateExchangeOfferNote :one
+INSERT INTO exchange_offer_notes (id,
+                                  offer_id,
+                                  user_id,
+                                  content)
+VALUES ($1, $2, $3, $4) RETURNING id, offer_id, user_id, content, created_at
+`
+
+type CreateExchangeOfferNoteParams struct {
+	ID      uuid.UUID `json:"id"`
+	OfferID uuid.UUID `json:"offer_id"`
+	UserID  string    `json:"user_id"`
+	Content string    `json:"content"`
+}
+
+func (q *Queries) CreateExchangeOfferNote(ctx context.Context, arg CreateExchangeOfferNoteParams) (ExchangeOfferNote, error) {
+	row := q.db.QueryRow(ctx, createExchangeOfferNote,
+		arg.ID,
+		arg.OfferID,
+		arg.UserID,
+		arg.Content,
+	)
+	var i ExchangeOfferNote
+	err := row.Scan(
+		&i.ID,
+		&i.OfferID,
+		&i.UserID,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listExchangeOfferNotes = `-- name: ListExchangeOfferNotes :many
 SELECT id, offer_id, user_id, content, created_at
 FROM exchange_offer_notes

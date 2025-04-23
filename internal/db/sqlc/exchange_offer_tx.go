@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	
 	"github.com/google/uuid"
+	"github.com/katatrina/gundam-BE/internal/util"
 )
 
 type CreateExchangeOfferTxParams struct {
@@ -102,6 +104,57 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// Việc trừ tiền bù sẽ được thực hiện khi đề xuất được chấp nhận, không trừ ngay tại đây.
 		
 		// TODO: Có thể thực hiện việc trừ tiền bù nếu người đề xuất là người bù tiền ngay tại đây nếu có thay đổi trong tương lai.
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type RequestNegotiationForOfferTxParams struct {
+	OfferID uuid.UUID // ID đề xuất trao đổi
+	UserID  string    // ID người yêu cầu thương lượng
+	Note    *string   // Ghi chú yêu cầu thương lượng
+}
+
+type RequestNegotiationForOfferTxResult struct {
+	Offer ExchangeOffer      `json:"offer"`
+	Note  *ExchangeOfferNote `json:"note"` // Có thể là nil nếu không có ghi chú
+}
+
+func (store *SQLStore) RequestNegotiationForOfferTx(ctx context.Context, arg RequestNegotiationForOfferTxParams) (RequestNegotiationForOfferTxResult, error) {
+	var result RequestNegotiationForOfferTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Cập nhật trạng thái đề xuất
+		updateOfferParams := UpdateExchangeOfferParams{
+			NegotiationRequested: util.BoolPointer(true),       // Đánh dấu đã yêu cầu thương lượng
+			LastNegotiationAt:    util.TimePointer(time.Now()), // Thời gian gần nhất yêu cầu thương lượng
+			ID:                   arg.OfferID,
+		}
+		
+		updatedOffer, err := qTx.UpdateExchangeOffer(ctx, updateOfferParams)
+		if err != nil {
+			return err
+		}
+		
+		result.Offer = updatedOffer
+		
+		// 2. Tạo ghi chú thương lượng nếu có
+		if arg.Note != nil {
+			noteID, _ := uuid.NewV7()
+			note, err := qTx.CreateExchangeOfferNote(ctx, CreateExchangeOfferNoteParams{
+				ID:      noteID,
+				OfferID: arg.OfferID,
+				UserID:  arg.UserID,
+				Content: *arg.Note,
+			})
+			if err != nil {
+				return err
+			}
+			
+			result.Note = &note
+		}
 		
 		return nil
 	})

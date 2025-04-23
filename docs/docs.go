@@ -1925,6 +1925,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/exchange-posts/{postID}/offers/{offerID}/negotiate": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "As a post owner, request negotiation with an offerer.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Request negotiation for an exchange offer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exchange Offer ID",
+                        "name": "offerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Negotiation request",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.requestNegotiationForOfferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Negotiation request response",
+                        "schema": {
+                            "$ref": "#/definitions/db.RequestNegotiationForOfferTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}": {
             "get": {
                 "description": "Get detailed information about a specific user",
@@ -2741,6 +2793,18 @@ const docTemplate = `{
                 }
             }
         },
+        "api.requestNegotiationForOfferRequest": {
+            "type": "object",
+            "required": [
+                "note"
+            ],
+            "properties": {
+                "note": {
+                    "description": "Ghi chú từ người yêu cầu thương lượng, không bắt buộc",
+                    "type": "string"
+                }
+            }
+        },
         "api.updateAvatarResponse": {
             "type": "object",
             "required": [
@@ -3146,7 +3210,6 @@ const docTemplate = `{
                 "id",
                 "last_negotiation_at",
                 "max_negotiations",
-                "negotiation_expires_at",
                 "negotiation_requested",
                 "negotiations_count",
                 "offerer_id",
@@ -3169,9 +3232,6 @@ const docTemplate = `{
                 },
                 "max_negotiations": {
                     "type": "integer"
-                },
-                "negotiation_expires_at": {
-                    "type": "string"
                 },
                 "negotiation_requested": {
                     "type": "boolean"
@@ -3201,7 +3261,6 @@ const docTemplate = `{
                 "id",
                 "last_negotiation_at",
                 "max_negotiations",
-                "negotiation_expires_at",
                 "negotiation_requested",
                 "negotiations_count",
                 "notes",
@@ -3232,10 +3291,6 @@ const docTemplate = `{
                 "max_negotiations": {
                     "description": "Số lần thương lượng tối đa",
                     "type": "integer"
-                },
-                "negotiation_expires_at": {
-                    "description": "Thời gian hết hạn thương lượng",
-                    "type": "string"
                 },
                 "negotiation_requested": {
                     "description": "Đã yêu cầu thương lượng chưa",
@@ -4042,6 +4097,26 @@ const docTemplate = `{
                 "PaymentMethodCod",
                 "PaymentMethodWallet"
             ]
+        },
+        "db.RequestNegotiationForOfferTxResult": {
+            "type": "object",
+            "required": [
+                "note",
+                "offer"
+            ],
+            "properties": {
+                "note": {
+                    "description": "Có thể là nil nếu không có ghi chú",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeOfferNote"
+                        }
+                    ]
+                },
+                "offer": {
+                    "$ref": "#/definitions/db.ExchangeOffer"
+                }
+            }
         },
         "db.SalesOrderDetails": {
             "type": "object",

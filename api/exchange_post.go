@@ -261,7 +261,6 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 				MaxNegotiations:      offer.MaxNegotiations,
 				NegotiationRequested: offer.NegotiationRequested,
 				LastNegotiationAt:    offer.LastNegotiationAt,
-				NegotiationExpiresAt: offer.NegotiationExpiresAt,
 				CreatedAt:            offer.CreatedAt,
 				UpdatedAt:            offer.UpdatedAt,
 			}

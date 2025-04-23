@@ -399,18 +399,17 @@ CREATE TABLE "exchange_post_items"
 
 CREATE TABLE "exchange_offers"
 (
-    "id"                     uuid PRIMARY KEY,
-    "post_id"                uuid        NOT NULL,
-    "offerer_id"             text        NOT NULL,
-    "payer_id"               text,
-    "compensation_amount"    bigint,
-    "negotiations_count"     bigint      NOT NULL DEFAULT 0,
-    "max_negotiations"       bigint      NOT NULL DEFAULT 3,
-    "negotiation_requested"  bool        NOT NULL DEFAULT false,
-    "last_negotiation_at"    timestamptz,
-    "negotiation_expires_at" timestamptz,
-    "created_at"             timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"             timestamptz NOT NULL DEFAULT (now())
+    "id"                    uuid PRIMARY KEY,
+    "post_id"               uuid        NOT NULL,
+    "offerer_id"            text        NOT NULL,
+    "payer_id"              text,
+    "compensation_amount"   bigint,
+    "negotiations_count"    bigint      NOT NULL DEFAULT 0,
+    "max_negotiations"      bigint      NOT NULL DEFAULT 3,
+    "negotiation_requested" bool        NOT NULL DEFAULT false,
+    "last_negotiation_at"   timestamptz,
+    "created_at"            timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"            timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "exchange_offer_notes"

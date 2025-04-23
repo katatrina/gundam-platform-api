@@ -1180,7 +1180,6 @@ type ExchangeOffer struct {
 	MaxNegotiations      int64      `json:"max_negotiations"`
 	NegotiationRequested bool       `json:"negotiation_requested"`
 	LastNegotiationAt    *time.Time `json:"last_negotiation_at"`
-	NegotiationExpiresAt *time.Time `json:"negotiation_expires_at"`
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 }
