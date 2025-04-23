@@ -186,6 +186,9 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		return
 	}
 	
+	// TODO: Có thể kiểm tra Gundam đã tham gia các đề xuất khác chưa? Nếu có thì không cho phép tạo đề xuất mới.
+	// Nhưng mà chỉ cần kiểm tra trạng thái của Gundam là được rồi.
+	
 	// Tạo đề xuất trao đổi
 	result, err := server.dbStore.CreateExchangeOfferTx(c.Request.Context(), db.CreateExchangeOfferTxParams{
 		PostID:             postID,

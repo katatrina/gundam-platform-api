@@ -399,13 +399,27 @@ CREATE TABLE "exchange_post_items"
 
 CREATE TABLE "exchange_offers"
 (
-    "id"                  uuid PRIMARY KEY,
-    "post_id"             uuid        NOT NULL,
-    "offerer_id"          text        NOT NULL,
-    "payer_id"            text,
-    "compensation_amount" bigint,
-    "created_at"          timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"          timestamptz NOT NULL DEFAULT (now())
+    "id"                     uuid PRIMARY KEY,
+    "post_id"                uuid        NOT NULL,
+    "offerer_id"             text        NOT NULL,
+    "payer_id"               text,
+    "compensation_amount"    bigint,
+    "negotiations_count"     bigint      NOT NULL DEFAULT 0,
+    "max_negotiations"       bigint      NOT NULL DEFAULT 3,
+    "negotiation_requested"  bool        NOT NULL DEFAULT false,
+    "last_negotiation_at"    timestamptz,
+    "negotiation_expires_at" timestamptz,
+    "created_at"             timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"             timestamptz NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE "exchange_offer_notes"
+(
+    "id"         uuid PRIMARY KEY,
+    "offer_id"   uuid        NOT NULL,
+    "user_id"    text        NOT NULL,
+    "content"    text        NOT NULL,
+    "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "exchange_offer_items"
@@ -477,6 +491,12 @@ CREATE INDEX ON "exchange_offers" ("offerer_id");
 CREATE INDEX ON "exchange_offers" ("created_at");
 
 CREATE UNIQUE INDEX "unique_exchange_offer" ON "exchange_offers" ("post_id", "offerer_id");
+
+CREATE INDEX ON "exchange_offer_notes" ("offer_id");
+
+CREATE INDEX ON "exchange_offer_notes" ("user_id");
+
+CREATE INDEX ON "exchange_offer_notes" ("created_at");
 
 CREATE UNIQUE INDEX ON "exchange_offer_items" ("offer_id", "gundam_id");
 
@@ -583,6 +603,12 @@ ALTER TABLE "exchange_offers"
 
 ALTER TABLE "exchange_offers"
     ADD FOREIGN KEY ("payer_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "exchange_offer_notes"
+    ADD FOREIGN KEY ("offer_id") REFERENCES "exchange_offers" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "exchange_offer_notes"
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "exchange_offer_items"
     ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id");

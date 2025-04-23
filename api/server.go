@@ -133,9 +133,9 @@ func (server *Server) setupRouter() *gin.Engine {
 		// API cho bài đăng trao đổi của người dùng hiện tại (đã đăng nhập)
 		userExchangePostGroup := userGroup.Group("/me/exchange-posts")
 		{
-			// // Liệt kê các bài đăng trao đổi của người dùng hiện tại
-			userExchangePostGroup.GET("", server.listUserExchangePosts)
-			//
+			// Liệt kê thông tin chi tiết  của các bài đăng trao đổi
+			userExchangePostGroup.GET("", server.listUserExchangePosts) // ✅
+			
 			// Tạo bài đăng trao đổi mới
 			userExchangePostGroup.POST("", server.createExchangePost) // ✅
 			//
@@ -149,17 +149,20 @@ func (server *Server) setupRouter() *gin.Engine {
 			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost)
 			
 			// API cho đề xuất trao đổi của một bài đăng
-			// offerGroup := userExchangePostGroup.Group("/:id/offers")
-			// {
-			// 	// Liệt kê các đề xuất cho bài đăng trao đổi
-			// 	offerGroup.GET("", server.listExchangeOffers)
-			//
-			// 	// Chấp nhận đề xuất trao đổi
-			// 	offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
-			//
-			// 	// Từ chối đề xuất trao đổi
-			// 	offerGroup.PATCH("/:offerID/reject", server.rejectExchangeOffer)
-			// }
+			// offerGroup := userExchangePostGroup.Group("/:postID/offers")
+			{
+				// Liệt kê các đề xuất cho bài đăng trao đổi
+				// offerGroup.GET("", server.listExchangeOffers)
+				
+				// Thêm endpoint cho yêu cầu thương lượng
+				// offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiation)
+				
+				// Chấp nhận đề xuất trao đổi
+				// offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
+				
+				// Từ chối đề xuất trao đổi
+				// offerGroup.PATCH("/:offerID/reject", server.rejectExchangeOffer)
+			}
 		}
 		
 		// API cho đề xuất trao đổi của người dùng hiện tại (đã đăng nhập)

@@ -16,6 +16,13 @@ FROM "exchange_posts"
 WHERE status = coalesce(sqlc.narg('status'), status)
 ORDER BY created_at DESC, updated_at DESC;
 
+-- name: ListUserExchangePosts :many
+SELECT *
+FROM "exchange_posts"
+WHERE user_id = sqlc.arg('user_id')
+  AND status = coalesce(sqlc.narg('status'), status)
+ORDER BY created_at DESC, updated_at DESC;
+
 -- name: ListExchangePostItems :many
 SELECT *
 FROM "exchange_post_items"
@@ -31,3 +38,4 @@ WHERE id = $1;
 DELETE
 FROM "exchange_posts"
 WHERE id = $1 RETURNING *;
+

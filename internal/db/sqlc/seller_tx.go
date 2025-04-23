@@ -6,7 +6,6 @@ import (
 	"mime/multipart"
 	"time"
 	
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
@@ -151,10 +150,7 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 			EntryType:     WalletEntryTypeNonWithdrawable,
 			Amount:        updatedOrder.ItemsSubtotal,
 			Status:        WalletEntryStatusCompleted, // Completed vì đã cộng ngay
-			CompletedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
+			CompletedAt:   util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create non-withdrawable wallet entry: %w", err)
@@ -331,11 +327,8 @@ func (store *SQLStore) PackageOrderBySellerTx(ctx context.Context, arg PackageOr
 		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
 			ID:                   orderDelivery.ID,
 			DeliveryTrackingCode: &ghnResponse.Data.OrderCode,
-			ExpectedDeliveryTime: pgtype.Timestamptz{
-				Time:  ghnResponse.Data.ExpectedDeliveryTime,
-				Valid: true,
-			},
-			Status: util.StringPointer("ready_to_pick"), // Hardcode status vì GHN không trả về trong response sau khi tạo đơn hàng
+			ExpectedDeliveryTime: util.TimePointer(ghnResponse.Data.ExpectedDeliveryTime),
+			Status:               util.StringPointer("ready_to_pick"), // Hardcode status vì GHN không trả về trong response sau khi tạo đơn hàng
 			OverallStatus: NullDeliveryOverralStatus{
 				DeliveryOverralStatus: DeliveryOverralStatusPicking,
 				Valid:                 true,
@@ -412,10 +405,7 @@ func (store *SQLStore) CancelOrderBySellerTx(ctx context.Context, arg CancelOrde
 			EntryType:     WalletEntryTypeRefund,
 			Amount:        orderTrans.Amount, // Số dương (+) vì đây là bút toán hoàn tiền
 			Status:        WalletEntryStatusCompleted,
-			CompletedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
+			CompletedAt:   util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create refund wallet entry for buyer: %w", err)

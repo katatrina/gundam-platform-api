@@ -6,7 +6,6 @@ import (
 	"time"
 	
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -93,10 +92,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			EntryType:     WalletEntryTypePayment,
 			Amount:        -arg.TotalAmount, // Số âm (-) vì đây là bút toán trừ tiền
 			Status:        WalletEntryStatusCompleted,
-			CompletedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
+			CompletedAt:   util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create buyer wallet entry: %w", err)
@@ -254,10 +250,7 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 				WalletEntryStatus: WalletEntryStatusCompleted,
 				Valid:             true,
 			},
-			CompletedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
+			CompletedAt: util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update seller wallet entry status: %w", err)
@@ -380,10 +373,7 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 			EntryType:     WalletEntryTypeRefund,
 			Amount:        orderTrans.Amount, // Số dương (+) vì đây là bút toán hoàn tiền
 			Status:        WalletEntryStatusCompleted,
-			CompletedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
+			CompletedAt:   util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create refund wallet entry for buyer: %w", err)

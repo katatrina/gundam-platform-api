@@ -2,6 +2,8 @@ package db
 
 import (
 	"time"
+	
+	"github.com/google/uuid"
 )
 
 type GundamDetails struct {
@@ -85,11 +87,40 @@ type SellerInfo struct {
 }
 
 type OpenExchangePostInfo struct {
-	ExchangePost                 ExchangePost    `json:"exchange_post"`                   // Thông tin bài đăng
-	ExchangePostItems            []GundamDetails `json:"exchange_post_items"`             // Danh sách Gundam mà Người đăng bài cho phép trao đổi
-	Poster                       User            `json:"poster"`                          // Thông tin Người đăng bài
-	OfferCount                   int64           `json:"offer_count"`                     // Số lượng offer của bài đăng
-	AuthenticatedUserOffer       *ExchangeOffer  `json:"authenticated_user_offer"`        // Offer của người dùng đã đăng nhập (nếu có)
-	AuthenticatedUserOfferItems  []GundamDetails `json:"authenticated_user_offer_items"`  // Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)
-	AuthenticatedUserWantedItems []GundamDetails `json:"authenticated_user_wanted_items"` // Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)
+	ExchangePost      ExchangePost    `json:"exchange_post"`       // Thông tin bài đăng
+	ExchangePostItems []GundamDetails `json:"exchange_post_items"` // Danh sách Gundam mà Người đăng bài cho phép trao đổi
+	Poster            User            `json:"poster"`              // Thông tin Người đăng bài
+	OfferCount        int64           `json:"offer_count"`         // Số lượng offer của bài đăng
+	// AuthenticatedUserOffer       *ExchangeOffer  `json:"authenticated_user_offer"`        // Offer của người dùng đã đăng nhập (nếu có)
+	// AuthenticatedUserOfferItems  []GundamDetails `json:"authenticated_user_offer_items"`  // Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)
+	// AuthenticatedUserWantedItems []GundamDetails `json:"authenticated_user_wanted_items"` // Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)
+}
+
+type UserExchangePostDetails struct {
+	ExchangePost      ExchangePost        `json:"exchange_post"`       // Thông tin bài đăng
+	ExchangePostItems []GundamDetails     `json:"exchange_post_items"` // Danh sách Gundam mà Người đăng bài cho phép trao đổi
+	OfferCount        int64               `json:"offer_count"`         // Số lượng offer của bài đăng
+	Offers            []ExchangeOfferInfo `json:"offers"`              // Danh sách các offer của bài đăng
+}
+
+type ExchangeOfferInfo struct {
+	ID      uuid.UUID `json:"id"`      // ID của offer
+	PostID  uuid.UUID `json:"post_id"` // ID bài đăng trao đổi
+	Offerer User      `json:"offerer"` // Thông tin người đề xuất
+	
+	PayerID            *string `json:"payer_id"`            // ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
+	CompensationAmount *int64  `json:"compensation_amount"` // Số tiền bồi thường (có thể là nil nếu không có bù tiền)
+	
+	OffererExchangeItems []GundamDetails `json:"offerer_exchange_items"` // Danh sách Gundam của người đề xuất
+	PosterExchangeItems  []GundamDetails `json:"poster_exchange_items"`  // Danh sách Gundam của người đăng bài mà người đề xuất muốn trao đổi
+	
+	NegotiationsCount    int64               `json:"negotiations_count"`     // Số lần đã thương lượng
+	MaxNegotiations      int64               `json:"max_negotiations"`       // Số lần thương lượng tối đa
+	NegotiationRequested bool                `json:"negotiation_requested"`  // Đã yêu cầu thương lượng chưa
+	LastNegotiationAt    *time.Time          `json:"last_negotiation_at"`    // Thời gian thương lượng gần nhất
+	NegotiationExpiresAt *time.Time          `json:"negotiation_expires_at"` // Thời gian hết hạn thương lượng
+	Notes                []ExchangeOfferNote `json:"notes"`                  // Các ghi chú/tin nhắn thương lượng
+	
+	CreatedAt time.Time `json:"created_at"` // Thời gian tạo offer
+	UpdatedAt time.Time `json:"updated_at"` // Thời gian cập nhật offer
 }

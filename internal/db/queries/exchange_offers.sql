@@ -20,5 +20,8 @@ INSERT INTO exchange_offers (id,
                              post_id,
                              offerer_id,
                              payer_id,
-                             compensation_amount)
-VALUES ($1, $2, $3, $4, $5) RETURNING *;
+                             compensation_amount,
+                             negotiations_count,
+                             max_negotiations,
+                             negotiation_requested)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;

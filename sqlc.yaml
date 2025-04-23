@@ -20,6 +20,10 @@ sql:
           - db_type: "timestamptz"
             go_type:
               type: "time.Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "*time.Time"
           - db_type: "uuid"
             go_type:
               import: "github.com/google/uuid"

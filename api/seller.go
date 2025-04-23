@@ -200,8 +200,8 @@ func (server *Server) publishGundam(c *gin.Context) {
 	}
 	
 	// Kiểm tra nếu gói không phải Gói Dùng Thử và đã hết hạn
-	if userSubscription.EndDate.Valid &&
-		userSubscription.EndDate.Time.Before(time.Now()) &&
+	if userSubscription.EndDate != nil &&
+		userSubscription.EndDate.Before(time.Now()) &&
 		userSubscription.SubscriptionName != db.TrialSellerSubscriptionName {
 		c.JSON(http.StatusConflict, errorResponse(db.ErrSubscriptionExpired))
 		return

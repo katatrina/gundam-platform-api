@@ -608,6 +608,16 @@ definitions:
         type: string
       id:
         type: string
+      last_negotiation_at:
+        type: string
+      max_negotiations:
+        type: integer
+      negotiation_expires_at:
+        type: string
+      negotiation_requested:
+        type: boolean
+      negotiations_count:
+        type: integer
       offerer_id:
         type: string
       payer_id:
@@ -620,9 +630,87 @@ definitions:
     - compensation_amount
     - created_at
     - id
+    - last_negotiation_at
+    - max_negotiations
+    - negotiation_expires_at
+    - negotiation_requested
+    - negotiations_count
     - offerer_id
     - payer_id
     - post_id
+    - updated_at
+    type: object
+  db.ExchangeOfferInfo:
+    properties:
+      compensation_amount:
+        description: Số tiền bồi thường (có thể là nil nếu không có bù tiền)
+        type: integer
+      created_at:
+        description: Thời gian tạo offer
+        type: string
+      id:
+        description: ID của offer
+        type: string
+      last_negotiation_at:
+        description: Thời gian thương lượng gần nhất
+        type: string
+      max_negotiations:
+        description: Số lần thương lượng tối đa
+        type: integer
+      negotiation_expires_at:
+        description: Thời gian hết hạn thương lượng
+        type: string
+      negotiation_requested:
+        description: Đã yêu cầu thương lượng chưa
+        type: boolean
+      negotiations_count:
+        description: Số lần đã thương lượng
+        type: integer
+      notes:
+        description: Các ghi chú/tin nhắn thương lượng
+        items:
+          $ref: '#/definitions/db.ExchangeOfferNote'
+        type: array
+      offerer:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin người đề xuất
+      offerer_exchange_items:
+        description: Danh sách Gundam của người đề xuất
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      payer_id:
+        description: ID người bù tiền (có thể là người đề xuất hoặc người đăng bài,
+          nếu không có thì là nil)
+        type: string
+      post_id:
+        description: ID bài đăng trao đổi
+        type: string
+      poster_exchange_items:
+        description: Danh sách Gundam của người đăng bài mà người đề xuất muốn trao
+          đổi
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      updated_at:
+        description: Thời gian cập nhật offer
+        type: string
+    required:
+    - compensation_amount
+    - created_at
+    - id
+    - last_negotiation_at
+    - max_negotiations
+    - negotiation_expires_at
+    - negotiation_requested
+    - negotiations_count
+    - notes
+    - offerer
+    - offerer_exchange_items
+    - payer_id
+    - post_id
+    - poster_exchange_items
     - updated_at
     type: object
   db.ExchangeOfferItem:
@@ -643,6 +731,25 @@ definitions:
     - id
     - is_from_poster
     - offer_id
+    type: object
+  db.ExchangeOfferNote:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      offer_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - content
+    - created_at
+    - id
+    - offer_id
+    - user_id
     type: object
   db.ExchangePost:
     properties:
@@ -897,21 +1004,6 @@ definitions:
     type: object
   db.OpenExchangePostInfo:
     properties:
-      authenticated_user_offer:
-        allOf:
-        - $ref: '#/definitions/db.ExchangeOffer'
-        description: Offer của người dùng đã đăng nhập (nếu có)
-      authenticated_user_offer_items:
-        description: Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu
-          có)
-        items:
-          $ref: '#/definitions/db.GundamDetails'
-        type: array
-      authenticated_user_wanted_items:
-        description: Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)
-        items:
-          $ref: '#/definitions/db.GundamDetails'
-        type: array
       exchange_post:
         allOf:
         - $ref: '#/definitions/db.ExchangePost'
@@ -929,9 +1021,6 @@ definitions:
         - $ref: '#/definitions/db.User'
         description: Thông tin Người đăng bài
     required:
-    - authenticated_user_offer
-    - authenticated_user_offer_items
-    - authenticated_user_wanted_items
     - exchange_post
     - exchange_post_items
     - offer_count
@@ -1093,7 +1182,7 @@ definitions:
       buyer_entry_id:
         type: integer
       completed_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
       created_at:
         type: string
       id:
@@ -1255,7 +1344,7 @@ definitions:
       created_at:
         type: string
       deleted_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
       email:
         type: string
       email_verified:
@@ -1334,6 +1423,31 @@ definitions:
     - user_id
     - ward_name
     type: object
+  db.UserExchangePostDetails:
+    properties:
+      exchange_post:
+        allOf:
+        - $ref: '#/definitions/db.ExchangePost'
+        description: Thông tin bài đăng
+      exchange_post_items:
+        description: Danh sách Gundam mà Người đăng bài cho phép trao đổi
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      offer_count:
+        description: Số lượng offer của bài đăng
+        type: integer
+      offers:
+        description: Danh sách các offer của bài đăng
+        items:
+          $ref: '#/definitions/db.ExchangeOfferInfo'
+        type: array
+    required:
+    - exchange_post
+    - exchange_post_items
+    - offer_count
+    - offers
+    type: object
   db.UserRole:
     enum:
     - member
@@ -1373,7 +1487,7 @@ definitions:
       amount:
         type: integer
       completed_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
       created_at:
         type: string
       entry_type:
@@ -1466,25 +1580,6 @@ definitions:
         $ref: '#/definitions/textproto.MIMEHeader'
       size:
         type: integer
-    type: object
-  pgtype.InfinityModifier:
-    enum:
-    - 1
-    - 0
-    - -1
-    type: integer
-    x-enum-varnames:
-    - Infinity
-    - Finite
-    - NegativeInfinity
-  pgtype.Timestamptz:
-    properties:
-      infinity_modifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
-        type: string
-      valid:
-        type: boolean
     type: object
   textproto.MIMEHeader:
     additionalProperties:
@@ -2942,6 +3037,27 @@ paths:
       tags:
       - exchanges
   /users/me/exchange-posts:
+    get:
+      description: List all exchange posts created by the current authenticated user.
+      parameters:
+      - description: Filter by status (open, closed)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user's exchange posts
+          schema:
+            items:
+              $ref: '#/definitions/db.UserExchangePostDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user's exchange posts
+      tags:
+      - exchanges
     post:
       consumes:
       - multipart/form-data

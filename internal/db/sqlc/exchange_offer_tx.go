@@ -32,11 +32,14 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		}
 		
 		offer, err := qTx.CreateExchangeOffer(ctx, CreateExchangeOfferParams{
-			ID:                 offerID,
-			PostID:             arg.PostID,
-			OffererID:          arg.OffererID,
-			PayerID:            arg.PayerID,
-			CompensationAmount: arg.CompensationAmount,
+			ID:                   offerID,
+			PostID:               arg.PostID,
+			OffererID:            arg.OffererID,
+			PayerID:              arg.PayerID,
+			CompensationAmount:   arg.CompensationAmount,
+			NegotiationsCount:    0,
+			MaxNegotiations:      3,
+			NegotiationRequested: false,
 		})
 		if err != nil {
 			if pgErr := ErrorDescription(err); pgErr != nil {

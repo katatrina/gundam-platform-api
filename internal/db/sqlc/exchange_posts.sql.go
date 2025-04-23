@@ -155,6 +155,47 @@ func (q *Queries) ListExchangePosts(ctx context.Context, status NullExchangePost
 	return items, nil
 }
 
+const listUserExchangePosts = `-- name: ListUserExchangePosts :many
+SELECT id, user_id, content, post_image_urls, status, created_at, updated_at
+FROM "exchange_posts"
+WHERE user_id = $1
+  AND status = coalesce($2, status)
+ORDER BY created_at DESC, updated_at DESC
+`
+
+type ListUserExchangePostsParams struct {
+	UserID string                 `json:"user_id"`
+	Status NullExchangePostStatus `json:"status"`
+}
+
+func (q *Queries) ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error) {
+	rows, err := q.db.Query(ctx, listUserExchangePosts, arg.UserID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangePost{}
+	for rows.Next() {
+		var i ExchangePost
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.PostImageUrls,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateExchangePost = `-- name: UpdateExchangePost :one
 UPDATE "exchange_posts"
 SET "post_image_urls" = $2

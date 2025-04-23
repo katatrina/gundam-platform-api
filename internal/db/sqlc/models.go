@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type DeliveryOverralStatus string
@@ -1149,17 +1148,17 @@ type DeliveryInformation struct {
 }
 
 type Exchange struct {
-	ID                 uuid.UUID          `json:"id"`
-	PosterID           string             `json:"poster_id"`
-	OffererID          string             `json:"offerer_id"`
-	PosterOrderID      uuid.UUID          `json:"poster_order_id"`
-	OffererOrderID     uuid.UUID          `json:"offerer_order_id"`
-	PayerID            *string            `json:"payer_id"`
-	CompensationAmount *int64             `json:"compensation_amount"`
-	Status             ExchangeStatus     `json:"status"`
-	CreatedAt          time.Time          `json:"created_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	CompletedAt        pgtype.Timestamptz `json:"completed_at"`
+	ID                 uuid.UUID      `json:"id"`
+	PosterID           string         `json:"poster_id"`
+	OffererID          string         `json:"offerer_id"`
+	PosterOrderID      uuid.UUID      `json:"poster_order_id"`
+	OffererOrderID     uuid.UUID      `json:"offerer_order_id"`
+	PayerID            *string        `json:"payer_id"`
+	CompensationAmount *int64         `json:"compensation_amount"`
+	Status             ExchangeStatus `json:"status"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	CompletedAt        *time.Time     `json:"completed_at"`
 }
 
 type ExchangeItem struct {
@@ -1172,13 +1171,18 @@ type ExchangeItem struct {
 }
 
 type ExchangeOffer struct {
-	ID                 uuid.UUID `json:"id"`
-	PostID             uuid.UUID `json:"post_id"`
-	OffererID          string    `json:"offerer_id"`
-	PayerID            *string   `json:"payer_id"`
-	CompensationAmount *int64    `json:"compensation_amount"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                   uuid.UUID  `json:"id"`
+	PostID               uuid.UUID  `json:"post_id"`
+	OffererID            string     `json:"offerer_id"`
+	PayerID              *string    `json:"payer_id"`
+	CompensationAmount   *int64     `json:"compensation_amount"`
+	NegotiationsCount    int64      `json:"negotiations_count"`
+	MaxNegotiations      int64      `json:"max_negotiations"`
+	NegotiationRequested bool       `json:"negotiation_requested"`
+	LastNegotiationAt    *time.Time `json:"last_negotiation_at"`
+	NegotiationExpiresAt *time.Time `json:"negotiation_expires_at"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 type ExchangeOfferItem struct {
@@ -1187,6 +1191,14 @@ type ExchangeOfferItem struct {
 	GundamID     int64     `json:"gundam_id"`
 	IsFromPoster bool      `json:"is_from_poster"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+type ExchangeOfferNote struct {
+	ID        uuid.UUID `json:"id"`
+	OfferID   uuid.UUID `json:"offer_id"`
+	UserID    string    `json:"user_id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ExchangePost struct {
@@ -1311,7 +1323,7 @@ type OrderTransaction struct {
 	SellerEntryID *int64                 `json:"seller_entry_id"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`
-	CompletedAt   pgtype.Timestamptz     `json:"completed_at"`
+	CompletedAt   *time.Time             `json:"completed_at"`
 }
 
 type PaymentTransaction struct {
@@ -1335,16 +1347,16 @@ type SellerProfile struct {
 }
 
 type SellerSubscription struct {
-	ID               int64              `json:"id"`
-	SellerID         string             `json:"seller_id"`
-	PlanID           int64              `json:"plan_id"`
-	StartDate        time.Time          `json:"start_date"`
-	EndDate          pgtype.Timestamptz `json:"end_date"`
-	ListingsUsed     int64              `json:"listings_used"`
-	OpenAuctionsUsed int64              `json:"open_auctions_used"`
-	IsActive         bool               `json:"is_active"`
-	CreatedAt        time.Time          `json:"created_at"`
-	UpdatedAt        time.Time          `json:"updated_at"`
+	ID               int64      `json:"id"`
+	SellerID         string     `json:"seller_id"`
+	PlanID           int64      `json:"plan_id"`
+	StartDate        time.Time  `json:"start_date"`
+	EndDate          *time.Time `json:"end_date"`
+	ListingsUsed     int64      `json:"listings_used"`
+	OpenAuctionsUsed int64      `json:"open_auctions_used"`
+	IsActive         bool       `json:"is_active"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type SubscriptionPlan struct {
@@ -1359,19 +1371,19 @@ type SubscriptionPlan struct {
 }
 
 type User struct {
-	ID                  string             `json:"id"`
-	GoogleAccountID     *string            `json:"google_account_id"`
-	FullName            string             `json:"full_name"`
-	HashedPassword      *string            `json:"-"`
-	Email               string             `json:"email"`
-	EmailVerified       bool               `json:"email_verified"`
-	PhoneNumber         *string            `json:"phone_number"`
-	PhoneNumberVerified bool               `json:"phone_number_verified"`
-	Role                UserRole           `json:"role"`
-	AvatarURL           *string            `json:"avatar_url"`
-	CreatedAt           time.Time          `json:"created_at"`
-	UpdatedAt           time.Time          `json:"updated_at"`
-	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	ID                  string     `json:"id"`
+	GoogleAccountID     *string    `json:"google_account_id"`
+	FullName            string     `json:"full_name"`
+	HashedPassword      *string    `json:"-"`
+	Email               string     `json:"email"`
+	EmailVerified       bool       `json:"email_verified"`
+	PhoneNumber         *string    `json:"phone_number"`
+	PhoneNumberVerified bool       `json:"phone_number_verified"`
+	Role                UserRole   `json:"role"`
+	AvatarURL           *string    `json:"avatar_url"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+	DeletedAt           *time.Time `json:"deleted_at"`
 }
 
 type UserAddress struct {
@@ -1410,5 +1422,5 @@ type WalletEntry struct {
 	Status        WalletEntryStatus   `json:"status"`
 	CreatedAt     time.Time           `json:"created_at"`
 	UpdatedAt     time.Time           `json:"updated_at"`
-	CompletedAt   pgtype.Timestamptz  `json:"completed_at"`
+	CompletedAt   *time.Time          `json:"completed_at"`
 }

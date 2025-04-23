@@ -73,6 +73,7 @@ type Querier interface {
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error)
+	ListExchangeOfferNotes(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferNote, error)
 	ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]ExchangeOffer, error)
 	ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error)
 	ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error)
@@ -83,6 +84,7 @@ type Querier interface {
 	ListOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error)
 	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
+	ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOrderDelivery = `-- name: CreateOrderDelivery :one
@@ -175,7 +174,7 @@ WHERE id = $7 RETURNING id, order_id, delivery_tracking_code, expected_delivery_
 
 type UpdateOrderDeliveryParams struct {
 	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
-	ExpectedDeliveryTime pgtype.Timestamptz        `json:"expected_delivery_time"`
+	ExpectedDeliveryTime *time.Time                `json:"expected_delivery_time"`
 	Status               *string                   `json:"status"`
 	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
 	FromDeliveryID       *int64                    `json:"from_delivery_id"`

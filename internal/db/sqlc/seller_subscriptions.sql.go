@@ -8,8 +8,6 @@ package db
 import (
 	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTrialSubscriptionForSeller = `-- name: CreateTrialSubscriptionForSeller :exec
@@ -53,18 +51,18 @@ WHERE ss.seller_id = $1
 `
 
 type GetCurrentActiveSubscriptionDetailsForSellerRow struct {
-	ID               int64              `json:"id"`
-	PlanID           int64              `json:"plan_id"`
-	SubscriptionName string             `json:"subscription_name"`
-	SellerID         string             `json:"seller_id"`
-	MaxListings      *int64             `json:"max_listings"`
-	ListingsUsed     int64              `json:"listings_used"`
-	MaxOpenAuctions  *int64             `json:"max_open_auctions"`
-	OpenAuctionsUsed int64              `json:"open_auctions_used"`
-	IsActive         bool               `json:"is_active"`
-	IsUnlimited      bool               `json:"is_unlimited"`
-	StartDate        time.Time          `json:"start_date"`
-	EndDate          pgtype.Timestamptz `json:"end_date"`
+	ID               int64      `json:"id"`
+	PlanID           int64      `json:"plan_id"`
+	SubscriptionName string     `json:"subscription_name"`
+	SellerID         string     `json:"seller_id"`
+	MaxListings      *int64     `json:"max_listings"`
+	ListingsUsed     int64      `json:"listings_used"`
+	MaxOpenAuctions  *int64     `json:"max_open_auctions"`
+	OpenAuctionsUsed int64      `json:"open_auctions_used"`
+	IsActive         bool       `json:"is_active"`
+	IsUnlimited      bool       `json:"is_unlimited"`
+	StartDate        time.Time  `json:"start_date"`
+	EndDate          *time.Time `json:"end_date"`
 }
 
 func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error) {

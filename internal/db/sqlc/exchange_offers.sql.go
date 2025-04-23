@@ -29,16 +29,22 @@ INSERT INTO exchange_offers (id,
                              post_id,
                              offerer_id,
                              payer_id,
-                             compensation_amount)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
+                             compensation_amount,
+                             negotiations_count,
+                             max_negotiations,
+                             negotiation_requested)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
 `
 
 type CreateExchangeOfferParams struct {
-	ID                 uuid.UUID `json:"id"`
-	PostID             uuid.UUID `json:"post_id"`
-	OffererID          string    `json:"offerer_id"`
-	PayerID            *string   `json:"payer_id"`
-	CompensationAmount *int64    `json:"compensation_amount"`
+	ID                   uuid.UUID `json:"id"`
+	PostID               uuid.UUID `json:"post_id"`
+	OffererID            string    `json:"offerer_id"`
+	PayerID              *string   `json:"payer_id"`
+	CompensationAmount   *int64    `json:"compensation_amount"`
+	NegotiationsCount    int64     `json:"negotiations_count"`
+	MaxNegotiations      int64     `json:"max_negotiations"`
+	NegotiationRequested bool      `json:"negotiation_requested"`
 }
 
 func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOfferParams) (ExchangeOffer, error) {
@@ -48,6 +54,9 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 		arg.OffererID,
 		arg.PayerID,
 		arg.CompensationAmount,
+		arg.NegotiationsCount,
+		arg.MaxNegotiations,
+		arg.NegotiationRequested,
 	)
 	var i ExchangeOffer
 	err := row.Scan(
@@ -56,6 +65,11 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 		&i.OffererID,
 		&i.PayerID,
 		&i.CompensationAmount,
+		&i.NegotiationsCount,
+		&i.MaxNegotiations,
+		&i.NegotiationRequested,
+		&i.LastNegotiationAt,
+		&i.NegotiationExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,7 +77,7 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 }
 
 const getUserExchangeOfferForPost = `-- name: GetUserExchangeOfferForPost :one
-SELECT id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
 FROM exchange_offers
 WHERE post_id = $1
   AND offerer_id = $2 LIMIT 1
@@ -83,6 +97,11 @@ func (q *Queries) GetUserExchangeOfferForPost(ctx context.Context, arg GetUserEx
 		&i.OffererID,
 		&i.PayerID,
 		&i.CompensationAmount,
+		&i.NegotiationsCount,
+		&i.MaxNegotiations,
+		&i.NegotiationRequested,
+		&i.LastNegotiationAt,
+		&i.NegotiationExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -90,7 +109,7 @@ func (q *Queries) GetUserExchangeOfferForPost(ctx context.Context, arg GetUserEx
 }
 
 const listExchangeOffers = `-- name: ListExchangeOffers :many
-SELECT id, post_id, offerer_id, payer_id, compensation_amount, created_at, updated_at
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, negotiation_expires_at, created_at, updated_at
 FROM exchange_offers
 WHERE post_id = $1
 ORDER BY created_at DESC, updated_at DESC
@@ -111,6 +130,11 @@ func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]E
 			&i.OffererID,
 			&i.PayerID,
 			&i.CompensationAmount,
+			&i.NegotiationsCount,
+			&i.MaxNegotiations,
+			&i.NegotiationRequested,
+			&i.LastNegotiationAt,
+			&i.NegotiationExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

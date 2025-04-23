@@ -7,8 +7,7 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"time"
 )
 
 const createWalletEntry = `-- name: CreateWalletEntry :one
@@ -29,7 +28,7 @@ type CreateWalletEntryParams struct {
 	EntryType     WalletEntryType     `json:"entry_type"`
 	Amount        int64               `json:"amount"`
 	Status        WalletEntryStatus   `json:"status"`
-	CompletedAt   pgtype.Timestamptz  `json:"completed_at"`
+	CompletedAt   *time.Time          `json:"completed_at"`
 }
 
 func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error) {
@@ -102,7 +101,7 @@ type UpdateWalletEntryByIDParams struct {
 	EntryType     NullWalletEntryType     `json:"entry_type"`
 	Amount        *int64                  `json:"amount"`
 	Status        NullWalletEntryStatus   `json:"status"`
-	CompletedAt   pgtype.Timestamptz      `json:"completed_at"`
+	CompletedAt   *time.Time              `json:"completed_at"`
 	ID            int64                   `json:"id"`
 }
 

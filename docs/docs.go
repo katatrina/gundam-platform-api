@@ -1819,6 +1819,40 @@ const docTemplate = `{
             }
         },
         "/users/me/exchange-posts": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List all exchange posts created by the current authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "List user's exchange posts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by status (open, closed)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user's exchange posts",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.UserExchangePostDetails"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3110,6 +3144,11 @@ const docTemplate = `{
                 "compensation_amount",
                 "created_at",
                 "id",
+                "last_negotiation_at",
+                "max_negotiations",
+                "negotiation_expires_at",
+                "negotiation_requested",
+                "negotiations_count",
                 "offerer_id",
                 "payer_id",
                 "post_id",
@@ -3125,6 +3164,21 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "last_negotiation_at": {
+                    "type": "string"
+                },
+                "max_negotiations": {
+                    "type": "integer"
+                },
+                "negotiation_expires_at": {
+                    "type": "string"
+                },
+                "negotiation_requested": {
+                    "type": "boolean"
+                },
+                "negotiations_count": {
+                    "type": "integer"
+                },
                 "offerer_id": {
                     "type": "string"
                 },
@@ -3135,6 +3189,101 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.ExchangeOfferInfo": {
+            "type": "object",
+            "required": [
+                "compensation_amount",
+                "created_at",
+                "id",
+                "last_negotiation_at",
+                "max_negotiations",
+                "negotiation_expires_at",
+                "negotiation_requested",
+                "negotiations_count",
+                "notes",
+                "offerer",
+                "offerer_exchange_items",
+                "payer_id",
+                "post_id",
+                "poster_exchange_items",
+                "updated_at"
+            ],
+            "properties": {
+                "compensation_amount": {
+                    "description": "Số tiền bồi thường (có thể là nil nếu không có bù tiền)",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "description": "Thời gian tạo offer",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "ID của offer",
+                    "type": "string"
+                },
+                "last_negotiation_at": {
+                    "description": "Thời gian thương lượng gần nhất",
+                    "type": "string"
+                },
+                "max_negotiations": {
+                    "description": "Số lần thương lượng tối đa",
+                    "type": "integer"
+                },
+                "negotiation_expires_at": {
+                    "description": "Thời gian hết hạn thương lượng",
+                    "type": "string"
+                },
+                "negotiation_requested": {
+                    "description": "Đã yêu cầu thương lượng chưa",
+                    "type": "boolean"
+                },
+                "negotiations_count": {
+                    "description": "Số lần đã thương lượng",
+                    "type": "integer"
+                },
+                "notes": {
+                    "description": "Các ghi chú/tin nhắn thương lượng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeOfferNote"
+                    }
+                },
+                "offerer": {
+                    "description": "Thông tin người đề xuất",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
+                },
+                "offerer_exchange_items": {
+                    "description": "Danh sách Gundam của người đề xuất",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "payer_id": {
+                    "description": "ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)",
+                    "type": "string"
+                },
+                "post_id": {
+                    "description": "ID bài đăng trao đổi",
+                    "type": "string"
+                },
+                "poster_exchange_items": {
+                    "description": "Danh sách Gundam của người đăng bài mà người đề xuất muốn trao đổi",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "updated_at": {
+                    "description": "Thời gian cập nhật offer",
                     "type": "string"
                 }
             }
@@ -3162,6 +3311,33 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "offer_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.ExchangeOfferNote": {
+            "type": "object",
+            "required": [
+                "content",
+                "created_at",
+                "id",
+                "offer_id",
+                "user_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "offer_id": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -3534,37 +3710,12 @@ const docTemplate = `{
         "db.OpenExchangePostInfo": {
             "type": "object",
             "required": [
-                "authenticated_user_offer",
-                "authenticated_user_offer_items",
-                "authenticated_user_wanted_items",
                 "exchange_post",
                 "exchange_post_items",
                 "offer_count",
                 "poster"
             ],
             "properties": {
-                "authenticated_user_offer": {
-                    "description": "Offer của người dùng đã đăng nhập (nếu có)",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.ExchangeOffer"
-                        }
-                    ]
-                },
-                "authenticated_user_offer_items": {
-                    "description": "Danh sách Gundam trong offer của người dùng đã đăng nhập (nếu có)",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GundamDetails"
-                    }
-                },
-                "authenticated_user_wanted_items": {
-                    "description": "Danh sách Gundam mà người dùng đã đăng nhập muốn nhận (nếu có)",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.GundamDetails"
-                    }
-                },
                 "exchange_post": {
                     "description": "Thông tin bài đăng",
                     "allOf": [
@@ -3816,7 +3967,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "completed_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -4056,7 +4207,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "deleted_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 },
                 "email": {
                     "type": "string"
@@ -4150,6 +4301,43 @@ const docTemplate = `{
                 }
             }
         },
+        "db.UserExchangePostDetails": {
+            "type": "object",
+            "required": [
+                "exchange_post",
+                "exchange_post_items",
+                "offer_count",
+                "offers"
+            ],
+            "properties": {
+                "exchange_post": {
+                    "description": "Thông tin bài đăng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangePost"
+                        }
+                    ]
+                },
+                "exchange_post_items": {
+                    "description": "Danh sách Gundam mà Người đăng bài cho phép trao đổi",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "offer_count": {
+                    "description": "Số lượng offer của bài đăng",
+                    "type": "integer"
+                },
+                "offers": {
+                    "description": "Danh sách các offer của bài đăng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeOfferInfo"
+                    }
+                }
+            }
+        },
         "db.UserRole": {
             "type": "string",
             "enum": [
@@ -4215,7 +4403,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "completed_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -4319,33 +4507,6 @@ const docTemplate = `{
                 },
                 "size": {
                     "type": "integer"
-                }
-            }
-        },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "enum": [
-                1,
-                0,
-                -1
-            ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
-        },
-        "pgtype.Timestamptz": {
-            "type": "object",
-            "properties": {
-                "infinity_modifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
                 }
             }
         },

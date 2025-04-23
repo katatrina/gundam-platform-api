@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // FormatVND chuyển đổi số tiền từ int64 sang chuỗi định dạng VND.
@@ -41,4 +42,8 @@ func StringPointer(s string) *string {
 
 func Int64Pointer(i int64) *int64 {
 	return &i
+}
+
+func TimePointer(t time.Time) *time.Time {
+	return &t
 }
