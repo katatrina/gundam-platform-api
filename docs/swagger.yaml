@@ -70,7 +70,7 @@ definitions:
         description: Số điện thoại mới
         type: string
       user_id:
-        description: ID của user cần cập nhật số điện thoại
+        description: OfferID của user cần cập nhật số điện thoại
         type: string
     required:
     - otp_code
@@ -111,16 +111,16 @@ definitions:
         description: Số tiền bù (null nếu không có bù tiền)
         type: integer
       exchange_post_id:
-        description: ID bài đăng trao đổi
+        description: OfferID bài đăng trao đổi
         type: string
       offerer_gundam_id:
-        description: ID Gundam của người đề xuất
+        description: OfferID Gundam của người đề xuất
         type: integer
       payer_id:
-        description: ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
+        description: OfferID người bù tiền (poster_id hoặc offerer_id, hoặc null)
         type: string
       poster_gundam_id:
-        description: ID Gundam của người đăng bài
+        description: OfferID Gundam của người đăng bài
         type: integer
     required:
     - compensation_amount
@@ -142,7 +142,7 @@ definitions:
         minItems: 1
         type: array
       post_item_id:
-        description: ID của các Gundam mà chủ bài post cho phép trao đổi
+        description: OfferID của các Gundam mà chủ bài post cho phép trao đổi
         items:
           type: integer
         minItems: 1
@@ -156,7 +156,7 @@ definitions:
     properties:
       buyer_address_id:
         description: |-
-          ID of the buyer's chosen address
+          OfferID of the buyer's chosen address
           example: 42
         type: integer
       delivery_fee:
@@ -203,7 +203,7 @@ definitions:
         type: string
       seller_id:
         description: |-
-          ID of the seller
+          OfferID of the seller
           example: user123
         type: string
       total_amount:
@@ -340,6 +340,26 @@ definitions:
         type: string
     required:
     - avatar_url
+    type: object
+  api.updateExchangeOfferRequest:
+    properties:
+      compensation_amount:
+        description: Bắt buộc khi require_compensation=true
+        type: integer
+      note:
+        description: Ghi chú thương lượng, không bắt buộc
+        type: string
+      payer_id:
+        description: OfferID người trả tiền bù, bắt buộc khi require_compensation=true
+        type: string
+      require_compensation:
+        description: true = yêu cầu bù tiền, false = không yêu cầu bù tiền
+        type: boolean
+    required:
+    - compensation_amount
+    - note
+    - payer_id
+    - require_compensation
     type: object
   api.updateSellerProfileRequest:
     properties:
@@ -1350,6 +1370,18 @@ definitions:
     - shop_name
     - updated_at
     type: object
+  db.UpdateExchangeOfferTxResult:
+    properties:
+      note:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeOfferNote'
+        description: Có thể là nil nếu không có ghi chú
+      offer:
+        $ref: '#/definitions/db.ExchangeOffer'
+    required:
+    - note
+    - offer
+    type: object
   db.User:
     properties:
       avatar_url:
@@ -1639,10 +1671,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate a user using Google ID token. If the user doesn't
+      description: Authenticate a user using Google OfferID token. If the user doesn't
         exist, a new user will be created.
       parameters:
-      - description: Google ID Token
+      - description: Google OfferID Token
         in: body
         name: request
         required: true
@@ -1658,7 +1690,7 @@ paths:
         "400":
           description: Invalid request body
         "401":
-          description: Invalid Google ID token
+          description: Invalid Google OfferID token
         "500":
           description: Internal server error
       summary: Login or register a user with Google account
@@ -1738,7 +1770,7 @@ paths:
     delete:
       description: Removes a specific item from the user's shopping cart
       parameters:
-      - description: Cart Item ID to delete
+      - description: Cart Item OfferID to delete
         example: "1"
         in: path
         name: id
@@ -1936,12 +1968,12 @@ paths:
     patch:
       description: Package an order for the specified user.
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
         type: string
-      - description: Order ID
+      - description: Order OfferID
         in: path
         name: orderID
         required: true
@@ -1969,7 +2001,7 @@ paths:
       - application/json
       description: Get details of a specific order for a member
       parameters:
-      - description: Order ID
+      - description: Order OfferID
         example: 123e4567-e89b-12d3-a456-426614174000
         in: path
         name: orderID
@@ -1993,7 +2025,7 @@ paths:
       - application/json
       description: Cancel an order by the buyer
       parameters:
-      - description: Order ID
+      - description: Order OfferID
         example: 123e4567-e89b-12d3-a456-426614174000
         in: path
         name: orderID
@@ -2023,7 +2055,7 @@ paths:
       - application/json
       description: Confirm that the buyer has received the order
       parameters:
-      - description: Order ID
+      - description: Order OfferID
         example: 123e4567-e89b-12d3-a456-426614174000
         in: path
         name: orderID
@@ -2158,7 +2190,7 @@ paths:
       - application/json
       description: Get detailed information about a specific seller
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: query
         name: user_id
         required: true
@@ -2235,9 +2267,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all sales orders that belong to the specified seller ID
+      description: Get all sales orders that belong to the specified seller OfferID
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
@@ -2274,12 +2306,12 @@ paths:
       - application/json
       description: Get details of a specific sales order for the seller
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
         type: string
-      - description: Order ID
+      - description: Order OfferID
         in: path
         name: orderID
         required: true
@@ -2303,12 +2335,12 @@ paths:
       description: Confirm an order for the specified seller. This endpoint checks
         the order's status before proceeding.
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
         type: string
-      - description: Order ID
+      - description: Order OfferID
         in: path
         name: orderID
         required: true
@@ -2329,7 +2361,7 @@ paths:
     get:
       description: Get the current active subscription for the specified seller
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
@@ -2355,12 +2387,12 @@ paths:
       description: Publish a gundam for sale for the specified seller. This endpoint
         checks the gundam's status before proceeding.
       parameters:
-      - description: Gundam ID
+      - description: Gundam OfferID
         in: path
         name: gundamID
         required: true
         type: integer
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
@@ -2374,7 +2406,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid gundam ID
+          description: Invalid gundam OfferID
           schema:
             additionalProperties:
               type: string
@@ -2417,12 +2449,12 @@ paths:
       description: Unpublish a gundam for the specified seller. This endpoint checks
         the gundam's status before proceeding.
       parameters:
-      - description: Gundam ID
+      - description: Gundam OfferID
         in: path
         name: gundamID
         required: true
         type: integer
-      - description: Seller ID
+      - description: Seller OfferID
         in: path
         name: sellerID
         required: true
@@ -2436,7 +2468,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid gundam ID
+          description: Invalid gundam OfferID
           schema:
             additionalProperties:
               type: string
@@ -2476,13 +2508,13 @@ paths:
       - application/json
       description: Cancel a pending order by the seller
       parameters:
-      - description: Seller ID
+      - description: Seller OfferID
         example: s123e456-e789-45d0-9876-54321abcdef
         in: path
         name: sellerID
         required: true
         type: string
-      - description: Order ID
+      - description: Order OfferID
         example: 123e4567-e89b-12d3-a456-426614174000
         in: path
         name: orderID
@@ -2576,9 +2608,9 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all gundams that belong to the specified user ID
+      description: Get all gundams that belong to the specified user OfferID
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2606,7 +2638,7 @@ paths:
       - multipart/form-data
       description: Create a new Gundam model with images and accessories
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2616,7 +2648,7 @@ paths:
         name: name
         required: true
         type: string
-      - description: Gundam grade ID
+      - description: Gundam grade OfferID
         in: formData
         name: grade_id
         required: true
@@ -2715,7 +2747,7 @@ paths:
           description: Forbidden - User is not authorized to create Gundam for this
             user
         "404":
-          description: Not Found - User with specified ID does not exist
+          description: Not Found - User with specified OfferID does not exist
         "500":
           description: Internal Server Error - Failed to create Gundam
       security:
@@ -2729,7 +2761,7 @@ paths:
       - application/json
       description: Get user wallet information details
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2756,7 +2788,7 @@ paths:
     get:
       description: Get detailed information about a specific user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2772,15 +2804,15 @@ paths:
           description: User not found
         "500":
           description: Internal server error
-      summary: Retrieve a user by ID
+      summary: Retrieve a user by OfferID
       tags:
       - users
     put:
       consumes:
       - application/json
-      description: Update specific user details by user ID
+      description: Update specific user details by user OfferID
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2809,7 +2841,7 @@ paths:
     get:
       description: Get all addresses for a specific user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2833,7 +2865,7 @@ paths:
       - application/json
       description: Add a new address for a specific user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2863,12 +2895,12 @@ paths:
     delete:
       description: Delete an address of a user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
         type: string
-      - description: Address ID
+      - description: Address OfferID
         in: path
         name: address_id
         required: true
@@ -2892,12 +2924,12 @@ paths:
       - application/json
       description: Update an existing address information for a specific user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
         type: string
-      - description: Address ID
+      - description: Address OfferID
         in: path
         name: address_id
         required: true
@@ -2928,7 +2960,7 @@ paths:
     get:
       description: Get the pickup address of a specific user
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -2953,7 +2985,7 @@ paths:
       - multipart/form-data
       description: Upload and update a user's profile avatar
       parameters:
-      - description: User ID
+      - description: User OfferID
         in: path
         name: id
         required: true
@@ -3049,6 +3081,36 @@ paths:
       summary: Create an exchange offer
       tags:
       - exchanges
+  /users/me/exchange-offers/{offerID}:
+    patch:
+      consumes:
+      - application/json
+      description: As an offerer, update exchange offer details. Only allowed when
+        a negotiation is requested by the post owner.
+      parameters:
+      - description: Exchange Offer OfferID
+        in: path
+        name: offerID
+        required: true
+        type: string
+      - description: Update offer request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateExchangeOfferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated offer response
+          schema:
+            $ref: '#/definitions/db.UpdateExchangeOfferTxResult'
+      security:
+      - accessToken: []
+      summary: Update an exchange offer
+      tags:
+      - exchanges
   /users/me/exchange-posts:
     get:
       description: List all exchange posts created by the current authenticated user.
@@ -3099,7 +3161,7 @@ paths:
       description: Deletes an exchange post and resets the status of associated gundams.
         Only the post owner can delete it.
       parameters:
-      - description: Exchange Post ID
+      - description: Exchange Post OfferID
         in: path
         name: id
         required: true
@@ -3122,12 +3184,12 @@ paths:
       - application/json
       description: As a post owner, request negotiation with an offerer.
       parameters:
-      - description: Exchange Post ID
+      - description: Exchange Post OfferID
         in: path
         name: postID
         required: true
         type: string
-      - description: Exchange Offer ID
+      - description: Exchange Offer OfferID
         in: path
         name: offerID
         required: true

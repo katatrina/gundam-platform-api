@@ -19,7 +19,7 @@ import (
 type createExchangePostRequest struct {
 	Content     string                  `form:"content" binding:"required"`                 // Nội dung bài post
 	PostImages  []*multipart.FileHeader `form:"post_images" binding:"required,max=5,min=1"` // Ảnh bài post
-	PostItemIDs []int64                 `form:"post_item_id" binding:"required,min=1"`      // ID của các Gundam mà chủ bài post cho phép trao đổi
+	PostItemIDs []int64                 `form:"post_item_id" binding:"required,min=1"`      // OfferID của các Gundam mà chủ bài post cho phép trao đổi
 }
 
 //	@Summary		Create a new exchange post
@@ -38,7 +38,7 @@ func (server *Server) createExchangePost(c *gin.Context) {
 	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user ID %s not found", userID)
+			err = fmt.Errorf("user OfferID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -57,7 +57,7 @@ func (server *Server) createExchangePost(c *gin.Context) {
 		gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), itemID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("gundam ID %d not found", itemID)
+				err = fmt.Errorf("gundam OfferID %d not found", itemID)
 				c.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
@@ -68,14 +68,14 @@ func (server *Server) createExchangePost(c *gin.Context) {
 		
 		// Kiểm tra người dùng có phải là chủ sở hữu của Gundam không
 		if gundam.OwnerID != userID {
-			err = fmt.Errorf("user ID %s does not own gundam ID %d", userID, itemID)
+			err = fmt.Errorf("user OfferID %s does not own gundam OfferID %d", userID, itemID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		
 		// Kiểm tra trạng thái hiện tại của Gundam có được phép trao đổi không
 		if gundam.Status != db.GundamStatusInstore {
-			err = fmt.Errorf("gundam ID %d is not available for exchange", itemID)
+			err = fmt.Errorf("gundam OfferID %d is not available for exchange", itemID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
@@ -156,7 +156,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -169,7 +169,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
+					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -182,7 +182,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.ID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.ID)
+					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.ID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -269,7 +269,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 			offerer, err := server.dbStore.GetUserByID(c.Request.Context(), offer.OffererID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("offerer ID %s not found", offer.OffererID)
+					err = fmt.Errorf("offerer OfferID %s not found", offer.OffererID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -307,7 +307,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 				IsFromPoster: util.BoolPointer(true),
 			})
 			if err != nil {
-				log.Info().Err(err).Msgf("failed to get poster items for offer ID %s", offer.ID)
+				log.Info().Err(err).Msgf("failed to get poster items for offer OfferID %s", offer.ID)
 				continue
 			}
 			
@@ -399,7 +399,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -412,7 +412,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
+					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -425,7 +425,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.ID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.ID)
+					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.ID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -438,7 +438,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.ID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("secondary images of gundam ID %d not found", gundam.ID)
+					err = fmt.Errorf("secondary images of gundam OfferID %d not found", gundam.ID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -451,7 +451,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.ID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("accessories of gundam ID %d not found", gundam.ID)
+					err = fmt.Errorf("accessories of gundam OfferID %d not found", gundam.ID)
 					c.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
@@ -509,7 +509,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// Lấy offer của người dùng đã đăng nhập (nếu có)
 		// if userID != "" && userID != post.UserID { // Kiểm tra người dùng không phải là người đăng bài
 		// 	offer, err := server.dbStore.GetUserExchangeOfferForPost(c.Request.Context(), db.GetUserExchangeOfferForPostParams{
-		// 		PostID:    post.ID,
+		// 		PostID:    post.OfferID,
 		// 		OffererID: userID,
 		// 	})
 		// 	if err != nil {
@@ -523,7 +523,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		//
 		// 		// Lấy thông tin các Gundam trong offer (chỉ từ người đề xuất)
 		// 		offerItemsFromOfferer, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
-		// 			OfferID:      offer.ID,
+		// 			OfferID:      offer.OfferID,
 		// 			IsFromPoster: util.BoolPointer(false),
 		// 		})
 		// 		if err != nil {
@@ -537,7 +537,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+		// 					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -550,7 +550,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
+		// 					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -560,10 +560,10 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			}
 		//
 		// 			// Lấy ảnh chính của Gundam
-		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.ID)
+		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.ID)
+		// 					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -573,10 +573,10 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			}
 		//
 		// 			// Lấy ảnh phụ của Gundam
-		// 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.ID)
+		// 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("secondary images of gundam ID %d not found", gundam.ID)
+		// 					err = fmt.Errorf("secondary images of gundam OfferID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -586,10 +586,10 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			}
 		//
 		// 			// Lấy thông tin phụ kiện của Gundam
-		// 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.ID)
+		// 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("accessories of gundam ID %d not found", gundam.ID)
+		// 					err = fmt.Errorf("accessories of gundam OfferID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -606,7 +606,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		//
 		// 			// Tạo đối tượng GundamDetails
 		// 			detail := db.GundamDetails{
-		// 				ID:                   gundam.ID,
+		// 				OfferID:                   gundam.OfferID,
 		// 				OwnerID:              gundam.OwnerID,
 		// 				Name:                 gundam.Name,
 		// 				Slug:                 gundam.Slug,
@@ -638,7 +638,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		//
 		// 		// Lấy thông tin các Gundam từ người đăng mà người đề xuất muốn nhận
 		// 		offerItemsFromPoster, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
-		// 			OfferID:      offer.ID,
+		// 			OfferID:      offer.OfferID,
 		// 			IsFromPoster: util.BoolPointer(true),
 		// 		})
 		// 		if err != nil {
@@ -652,7 +652,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
+		// 					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -665,7 +665,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
+		// 					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -675,10 +675,10 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			}
 		//
 		// 			// Lấy ảnh chính của Gundam
-		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.ID)
+		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.ID)
+		// 					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -688,14 +688,14 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			}
 		//
 		// 			// Lấy ảnh phụ của Gundam
-		// 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.ID)
+		// 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				c.JSON(http.StatusInternalServerError, errorResponse(err))
 		// 				return
 		// 			}
 		//
 		// 			// Lấy thông tin phụ kiện của Gundam
-		// 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.ID)
+		// 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				c.JSON(http.StatusInternalServerError, errorResponse(err))
 		// 				return
@@ -709,7 +709,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		//
 		// 			// Tạo đối tượng GundamDetails
 		// 			detail := db.GundamDetails{
-		// 				ID:                   gundam.ID,
+		// 				OfferID:                   gundam.OfferID,
 		// 				OwnerID:              gundam.OwnerID,
 		// 				Name:                 gundam.Name,
 		// 				Slug:                 gundam.Slug,
@@ -752,7 +752,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 //	@Tags			exchanges
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			id	path		string							true	"Exchange Post ID"
+//	@Param			id	path		string							true	"Exchange Post OfferID"
 //	@Success		200	{object}	db.DeleteExchangePostTxResult	"Delete exchange post response"
 //	@Router			/users/me/exchange-posts/{id} [delete]
 func (server *Server) deleteExchangePost(c *gin.Context) {
@@ -760,11 +760,11 @@ func (server *Server) deleteExchangePost(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	// Lấy ID bài đăng từ URL
+	// Lấy OfferID bài đăng từ URL
 	postIDStr := c.Param("postID")
 	postID, err := uuid.Parse(postIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post ID format: %s", postIDStr)))
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post OfferID format: %s", postIDStr)))
 		return
 	}
 	
@@ -772,7 +772,7 @@ func (server *Server) deleteExchangePost(c *gin.Context) {
 	post, err := server.dbStore.GetExchangePost(c.Request.Context(), postID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange post ID %s not found", postIDStr)))
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange post OfferID %s not found", postIDStr)))
 			return
 		}
 		
@@ -782,7 +782,7 @@ func (server *Server) deleteExchangePost(c *gin.Context) {
 	
 	// Kiểm tra người dùng có quyền xóa bài đăng không
 	if post.UserID != userID {
-		err = fmt.Errorf("user ID %s is not the owner of exchange post ID %s", userID, post.ID)
+		err = fmt.Errorf("user OfferID %s is not the owner of exchange post OfferID %s", userID, post.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}

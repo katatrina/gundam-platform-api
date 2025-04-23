@@ -34,6 +34,7 @@ type Store interface {
 	DeleteExchangePostTx(ctx context.Context, arg DeleteExchangePostTxParams) (DeleteExchangePostTxResult, error)
 	CreateExchangeOfferTx(ctx context.Context, arg CreateExchangeOfferTxParams) (CreateExchangeOfferTxResult, error)
 	RequestNegotiationForOfferTx(ctx context.Context, arg RequestNegotiationForOfferTxParams) (RequestNegotiationForOfferTxResult, error)
+	UpdateExchangeOfferTx(ctx context.Context, arg UpdateExchangeOfferTxParams) (UpdateExchangeOfferTxResult, error)
 }
 
 type SQLStore struct {

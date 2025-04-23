@@ -29,7 +29,7 @@ type createUserAddressRequest struct {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string						true	"User ID"
+//	@Param			id		path		string						true	"User OfferID"
 //	@Param			request	body		createUserAddressRequest	false	"Address creation request"
 //	@Success		201		{object}	db.UserAddress				"Address created successfully"
 //	@Failure		400		"Invalid request body"
@@ -86,7 +86,7 @@ func (server *Server) createUserAddress(ctx *gin.Context) {
 //	@Description	Get all addresses for a specific user
 //	@Tags			users
 //	@Produce		json
-//	@Param			id	path	string			true	"User ID"
+//	@Param			id	path	string			true	"User OfferID"
 //	@Success		200	{array}	db.UserAddress	"Successfully retrieved user addresses"
 //	@Failure		500	"Internal server error"
 //	@Router			/users/{id}/addresses [get]
@@ -161,8 +161,8 @@ func (req *updateUserAddressRequest) validate() (arg db.UpdateUserAddressParams)
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id			path		string						true	"User ID"
-//	@Param			address_id	path		integer						true	"Address ID"
+//	@Param			id			path		string						true	"User OfferID"
+//	@Param			address_id	path		integer						true	"Address OfferID"
 //	@Param			request		body		updateUserAddressRequest	true	"Address information to update"
 //	@Success		200			{object}	db.UserAddress				"Address updated successfully"
 //	@Failure		400			"Invalid request parameters"
@@ -211,8 +211,8 @@ type deleteUserAddressPathParams struct {
 //	@Summary		Delete user address
 //	@Description	Delete an address of a user
 //	@Tags			users
-//	@Param			id			path	string	true	"User ID"
-//	@Param			address_id	path	integer	true	"Address ID"
+//	@Param			id			path	string	true	"User OfferID"
+//	@Param			address_id	path	integer	true	"Address OfferID"
 //	@Success		204			"Address deleted successfully"
 //	@Failure		400			"Invalid request"
 //	@Failure		404			"Address not found"
@@ -255,7 +255,7 @@ func (server *Server) deleteUserAddress(ctx *gin.Context) {
 //	@Description	Get the pickup address of a specific user
 //	@Tags			users
 //	@Produce		json
-//	@Param			id	path		string			true	"User ID"
+//	@Param			id	path		string			true	"User OfferID"
 //	@Success		200	{object}	db.UserAddress	"Successfully retrieved user pickup address"
 //	@Failure		404	"Pickup address not found"
 //	@Failure		500	"Internal server error"

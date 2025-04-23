@@ -105,7 +105,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			
 			grade, err := qTx.GetGradeByID(ctx, gundam.GradeID)
 			if err != nil {
-				return fmt.Errorf("failed to get grade by ID: %w", err)
+				return fmt.Errorf("failed to get grade by OfferID: %w", err)
 			}
 			
 			primaryImageURL, err := qTx.GetGundamPrimaryImageURL(ctx, gundam.ID)
@@ -288,7 +288,7 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 					return fmt.Errorf("failed to update gundam owner: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam ID %d not found in order item %d", item.GundamID, item.ID)
+				log.Warn().Msgf("Gundam OfferID %d not found in order item %d", item.GundamID, item.ID)
 			}
 		}
 		
@@ -408,7 +408,7 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 					return fmt.Errorf("failed to restore gundam status: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam ID %d not found in order item %d", item.GundamID, item.ID)
+				log.Warn().Msgf("Gundam OfferID %d not found in order item %d", item.GundamID, item.ID)
 			}
 			
 		}

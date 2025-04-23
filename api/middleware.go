@@ -105,7 +105,7 @@ func requiredSellerRole(dbStore db.Store) gin.HandlerFunc {
 		seller, err := dbStore.GetSellerByID(ctx, sellerID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("seller ID %s not found", sellerID)
+				err = fmt.Errorf("seller OfferID %s not found", sellerID)
 				ctx.AbortWithStatusJSON(http.StatusNotFound, errorResponse(err))
 				return
 			}

@@ -11,11 +11,11 @@ import (
 )
 
 type CreateExchangeOfferTxParams struct {
-	PostID             uuid.UUID // ID bài đăng trao đổi
-	OffererID          string    // ID người đề xuất
-	PosterGundamID     int64     // ID Gundam của người đăng bài
-	OffererGundamID    int64     // ID Gundam của người đề xuất
-	PayerID            *string   // ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
+	PostID             uuid.UUID // OfferID bài đăng trao đổi
+	OffererID          string    // OfferID người đề xuất
+	PosterGundamID     int64     // OfferID Gundam của người đăng bài
+	OffererGundamID    int64     // OfferID Gundam của người đề xuất
+	PayerID            *string   // OfferID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
 	CompensationAmount *int64    // Số tiền bồi thường (có thể là nil nếu không có bù tiền)
 }
 
@@ -30,7 +30,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 1. Tạo đề xuất trao đổi mới
 		offerID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate offer ID: %w", err)
+			return fmt.Errorf("failed to generate offer OfferID: %w", err)
 		}
 		
 		offer, err := qTx.CreateExchangeOffer(ctx, CreateExchangeOfferParams{
@@ -57,7 +57,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 2. Thêm Gundam của người đề xuất vào đề xuất
 		offererItemID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate offerer item ID: %w", err)
+			return fmt.Errorf("failed to generate offerer item OfferID: %w", err)
 		}
 		
 		offererItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
@@ -73,7 +73,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 3. Thêm Gundam của người đăng bài (mà người đề xuất muốn trao đổi) vào đề xuất
 		posterItemID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate poster item ID: %w", err)
+			return fmt.Errorf("failed to generate poster item OfferID: %w", err)
 		}
 		
 		posterItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
@@ -112,8 +112,8 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 }
 
 type RequestNegotiationForOfferTxParams struct {
-	OfferID uuid.UUID // ID đề xuất trao đổi
-	UserID  string    // ID người yêu cầu thương lượng
+	OfferID uuid.UUID // OfferID đề xuất trao đổi
+	UserID  string    // OfferID người yêu cầu thương lượng
 	Note    *string   // Ghi chú yêu cầu thương lượng
 }
 
@@ -134,6 +134,62 @@ func (store *SQLStore) RequestNegotiationForOfferTx(ctx context.Context, arg Req
 		}
 		
 		updatedOffer, err := qTx.UpdateExchangeOffer(ctx, updateOfferParams)
+		if err != nil {
+			return err
+		}
+		
+		result.Offer = updatedOffer
+		
+		// 2. Tạo ghi chú thương lượng nếu có
+		if arg.Note != nil {
+			noteID, _ := uuid.NewV7()
+			note, err := qTx.CreateExchangeOfferNote(ctx, CreateExchangeOfferNoteParams{
+				ID:      noteID,
+				OfferID: arg.OfferID,
+				UserID:  arg.UserID,
+				Content: *arg.Note,
+			})
+			if err != nil {
+				return err
+			}
+			
+			result.Note = &note
+		}
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type UpdateExchangeOfferTxParams struct {
+	OfferID              uuid.UUID
+	UserID               string
+	CompensationAmount   *int64
+	PayerID              *string
+	Note                 *string
+	NegotiationRequested *bool
+	NegotiationsCount    *int64
+}
+
+type UpdateExchangeOfferTxResult struct {
+	Offer ExchangeOffer      `json:"offer"`
+	Note  *ExchangeOfferNote `json:"note"` // Có thể là nil nếu không có ghi chú
+}
+
+func (store *SQLStore) UpdateExchangeOfferTx(ctx context.Context, arg UpdateExchangeOfferTxParams) (UpdateExchangeOfferTxResult, error) {
+	var result UpdateExchangeOfferTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Cập nhật thông tin đề xuất
+		updatedOffer, err := qTx.UpdateExchangeOffer(ctx, UpdateExchangeOfferParams{
+			CompensationAmount:   arg.CompensationAmount,
+			PayerID:              arg.PayerID,
+			NegotiationRequested: arg.NegotiationRequested,
+			NegotiationsCount:    arg.NegotiationsCount,
+			LastNegotiationAt:    util.TimePointer(time.Now()),
+			ID:                   arg.OfferID,
+		})
 		if err != nil {
 			return err
 		}

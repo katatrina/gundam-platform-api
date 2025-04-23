@@ -36,7 +36,7 @@ func (server *Server) becomeSeller(ctx *gin.Context) {
 	user, err := server.dbStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user ID %s not found", userID)
+			err = fmt.Errorf("user OfferID %s not found", userID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -70,7 +70,7 @@ type getSellerProfileQueryString struct {
 //	@Tags			seller profile
 //	@Accept			json
 //	@Produce		json
-//	@Param			user_id	query		string			true	"User ID"
+//	@Param			user_id	query		string			true	"User OfferID"
 //	@Success		200		{object}	db.SellerInfo	"Seller profile details"
 //	@Failure		404		"User not found"
 //	@Failure		500		"Internal server error"
@@ -86,7 +86,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 	row, err := server.dbStore.GetSellerDetailByID(c.Request.Context(), req.UserID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user ID %s not found", req.UserID)
+			err = fmt.Errorf("user OfferID %s not found", req.UserID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -114,7 +114,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 //	@Description	Get the current active subscription for the specified seller
 //	@Tags			sellers
 //	@Produce		json
-//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
 //	@Security		accessToken
 //	@Success		200	"Successfully retrieved current active subscription"
 //	@Failure		404	"Subscription not found"
@@ -143,11 +143,11 @@ func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			gundamID	path	int64	true	"Gundam ID"
-//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			gundamID	path	int64	true	"Gundam OfferID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
 //	@Security		accessToken
 //	@Success		200	{object}	map[string]interface{}	"Successfully published gundam"
-//	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
+//	@Failure		400	{object}	map[string]string		"Invalid gundam OfferID"
 //	@Failure		403	{object}	map[string]string		"Seller does not own this gundam"
 //	@Failure		404	{object}	map[string]string		"Seller not found<br/>Gundam not found<br/>No active subscription found"
 //	@Failure		409	{object}	map[string]string		"Subscription limit exceeded<br/>Subscription expired<br/>Gundam is not available for publishing"
@@ -158,14 +158,14 @@ func (server *Server) publishGundam(c *gin.Context) {
 	
 	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam OfferID"})
 		return
 	}
 	
 	gundam, err := server.dbStore.GetGundamByID(c, gundamID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			err = fmt.Errorf("gundam OfferID %d not found", gundamID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -177,12 +177,12 @@ func (server *Server) publishGundam(c *gin.Context) {
 	
 	// Kiểm tra quyền sở hữu và trạng thái Gundam
 	if gundam.OwnerID != seller.ID {
-		err = fmt.Errorf("gundam ID %d does not belong to seller ID %s", gundam.ID, seller.ID)
+		err = fmt.Errorf("gundam OfferID %d does not belong to seller OfferID %s", gundam.ID, seller.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	if gundam.Status != db.GundamStatusInstore {
-		err = fmt.Errorf("gundam ID %d is not in store", gundam.ID)
+		err = fmt.Errorf("gundam OfferID %d is not in store", gundam.ID)
 		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}
@@ -241,11 +241,11 @@ func (server *Server) publishGundam(c *gin.Context) {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			gundamID	path	int64	true	"Gundam ID"
-//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			gundamID	path	int64	true	"Gundam OfferID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
 //	@Security		accessToken
 //	@Success		200	{object}	map[string]interface{}	"Successfully unsold gundam with details"
-//	@Failure		400	{object}	map[string]string		"Invalid gundam ID"
+//	@Failure		400	{object}	map[string]string		"Invalid gundam OfferID"
 //	@Failure		403	{object}	map[string]string		"Seller does not own this gundam"
 //	@Failure		404	{object}	map[string]string		"Seller not found<br/>Gundam not found"
 //	@Failure		409	{object}	map[string]string		"Gundam is not currently listed for sale"
@@ -256,14 +256,14 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 	
 	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid gundam OfferID"})
 		return
 	}
 	
 	gundam, err := server.dbStore.GetGundamByID(c, gundamID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			err = fmt.Errorf("gundam OfferID %d not found", gundamID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -274,12 +274,12 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 	}
 	
 	if gundam.OwnerID != seller.ID {
-		err = fmt.Errorf("gundam ID %d does not belong to seller ID %s", gundam.ID, seller.ID)
+		err = fmt.Errorf("gundam OfferID %d does not belong to seller OfferID %s", gundam.ID, seller.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	if gundam.Status != db.GundamStatusPublished {
-		err = fmt.Errorf("gundam ID %d is not currently listed for sale", gundam.ID)
+		err = fmt.Errorf("gundam OfferID %d is not currently listed for sale", gundam.ID)
 		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}
@@ -301,12 +301,12 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 }
 
 //	@Summary		List all sales orders (excluding exchange orders) for a specific seller
-//	@Description	Get all sales orders that belong to the specified seller ID
+//	@Description	Get all sales orders that belong to the specified seller OfferID
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			sellerID	path	string				true	"Seller ID"
+//	@Param			sellerID	path	string				true	"Seller OfferID"
 //	@Param			status		query	string				false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
 //	@Success		200			array	db.SalesOrderInfo	"List of sales orders"
 //	@Router			/sellers/:sellerID/orders [get]
@@ -366,8 +366,8 @@ type confirmOrderRequestParams struct {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
+//	@Param			orderID		path	string	true	"Order OfferID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
 //	@Router			/sellers/:sellerID/orders/:orderID/confirm [patch]
@@ -376,7 +376,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse order ID")
+		log.Error().Err(err).Msg("Failed to parse order OfferID")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -387,7 +387,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order ID %s not found", orderID)
+			err = fmt.Errorf("order OfferID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -399,7 +399,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	
 	// Kiểm tra quyền sở hữu đơn hàng
 	if order.SellerID != user.ID {
-		err = fmt.Errorf("order %s does not belong to seller ID %s", order.Code, user.ID)
+		err = fmt.Errorf("order %s does not belong to seller OfferID %s", order.Code, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -472,8 +472,8 @@ type packageOrderRequestBody struct {
 //	@Description	Package an order for the specified user.
 //	@Tags			orders
 //	@Produce		json
-//	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
+//	@Param			orderID		path	string	true	"Order OfferID"
 //	@Security		accessToken
 //	@Param			package_images	formData	file					true	"Package images"
 //	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order"
@@ -503,7 +503,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order ID %s not found", orderID)
+			err = fmt.Errorf("order OfferID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -515,7 +515,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 	
 	// Kiểm tra quyền sở hữu đơn hàng
 	if order.SellerID != userID {
-		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
+		err = fmt.Errorf("order %s does not belong to user OfferID %s", order.Code, userID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -607,8 +607,8 @@ func (server *Server) updateSellerProfile(c *gin.Context) {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			sellerID	path	string	true	"Seller OfferID"
+//	@Param			orderID		path	string	true	"Order OfferID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.SalesOrderDetails	"Sales order details"
 //	@Router			/sellers/:sellerID/orders/:orderID [get]
@@ -617,7 +617,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse order ID")
+		log.Error().Err(err).Msg("Failed to parse order OfferID")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -630,7 +630,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order ID %s not found", orderID)
+			err = fmt.Errorf("order OfferID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -642,7 +642,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	
 	// Kiểm tra xem người dùng có quyền truy cập đơn hàng không
 	if user.ID != order.SellerID {
-		err = fmt.Errorf("order ID %s does not belong to user %s", order.ID, user.ID)
+		err = fmt.Errorf("order OfferID %s does not belong to user %s", order.ID, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -653,7 +653,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	buyer, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("buyer ID %s not found", order.BuyerID)
+			err = fmt.Errorf("buyer OfferID %s not found", order.BuyerID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -675,7 +675,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	orderDelivery, err := server.dbStore.GetOrderDelivery(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order delivery not found for order ID %s", order.ID)
+			err = fmt.Errorf("order delivery not found for order OfferID %s", order.ID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -690,7 +690,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			err = fmt.Errorf("delivery address OfferID %d not found", orderDelivery.ToDeliveryID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -704,7 +704,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order transaction not found for order ID %s", order.ID)
+			err = fmt.Errorf("order transaction not found for order OfferID %s", order.ID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -732,8 +732,8 @@ type cancelOrderRequestParams struct {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			sellerID	path		string							true	"Seller ID"	example(s123e456-e789-45d0-9876-54321abcdef)
-//	@Param			orderID		path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			sellerID	path		string							true	"Seller OfferID"	example(s123e456-e789-45d0-9876-54321abcdef)
+//	@Param			orderID		path		string							true	"Order OfferID"		example(123e4567-e89b-12d3-a456-426614174000)
 //	@Param			request		body		cancelOrderRequest				true	"Cancellation reason"
 //	@Success		200			{object}	db.CancelOrderBySellerTxResult	"Order canceled successfully"
 //	@Failure		400			"Bad request"
@@ -748,7 +748,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to parse order ID")
+		log.Error().Err(err).Msg("Failed to parse order OfferID")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -766,7 +766,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order ID %s not found", orderID)
+			err = fmt.Errorf("order OfferID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -777,13 +777,13 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	}
 	
 	if order.SellerID != user.ID {
-		err = fmt.Errorf("order ID %s does not belong to seller ID %s", order.ID, user.ID)
+		err = fmt.Errorf("order OfferID %s does not belong to seller OfferID %s", order.ID, user.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	
 	if order.Status != db.OrderStatusPending {
-		err = fmt.Errorf("order ID %s is not in pending status", order.ID)
+		err = fmt.Errorf("order OfferID %s is not in pending status", order.ID)
 		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}

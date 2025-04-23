@@ -123,10 +123,10 @@ func (server *Server) handleZalopayCallback(c *gin.Context) {
 		ReferenceID: transData.AppTransID,
 	}, opts...)
 	if err != nil {
-		log.Err(err).Msgf("failed to send notification to user ID %s", transData.AppUser)
+		log.Err(err).Msgf("failed to send notification to user OfferID %s", transData.AppUser)
 	}
 	
-	log.Info().Msgf("Successfully deposited %s into wallet for user ID %s", util.FormatVND(transData.Amount), transData.AppUser)
+	log.Info().Msgf("Successfully deposited %s into wallet for user OfferID %s", util.FormatVND(transData.Amount), transData.AppUser)
 	
 	// Trả về kết quả cho Zalopay server
 	c.JSON(http.StatusOK, result)

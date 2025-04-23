@@ -16,10 +16,10 @@ import (
 )
 
 type createExchangeOfferRequest struct {
-	ExchangePostID     string  `json:"exchange_post_id" binding:"required,uuid"` // ID bài đăng trao đổi
-	PosterGundamID     int64   `json:"poster_gundam_id" binding:"required"`      // ID Gundam của người đăng bài
-	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // ID Gundam của người đề xuất
-	PayerID            *string `json:"payer_id"`                                 // ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
+	ExchangePostID     string  `json:"exchange_post_id" binding:"required,uuid"` // OfferID bài đăng trao đổi
+	PosterGundamID     int64   `json:"poster_gundam_id" binding:"required"`      // OfferID Gundam của người đăng bài
+	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // OfferID Gundam của người đề xuất
+	PayerID            *string `json:"payer_id"`                                 // OfferID người bù tiền (poster_id hoặc offerer_id, hoặc null)
 	CompensationAmount *int64  `json:"compensation_amount"`                      // Số tiền bù (null nếu không có bù tiền)
 }
 
@@ -45,7 +45,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	
 	postID, err := uuid.Parse(req.ExchangePostID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post ID: %s", req.ExchangePostID)))
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post OfferID: %s", req.ExchangePostID)))
 		return
 	}
 	
@@ -53,7 +53,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	post, err := server.dbStore.GetExchangePost(c.Request.Context(), postID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("exchange post ID %s not found", req.ExchangePostID)
+			err = fmt.Errorf("exchange post OfferID %s not found", req.ExchangePostID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -63,7 +63,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	}
 	
 	if post.Status != db.ExchangePostStatusOpen {
-		err = fmt.Errorf("exchange post ID %s is not open for offers", req.ExchangePostID)
+		err = fmt.Errorf("exchange post OfferID %s is not open for offers", req.ExchangePostID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -102,7 +102,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		wallet, err := server.dbStore.GetWalletByUserID(c.Request.Context(), offererID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("wallet not found for user ID %s", offererID)
+				err = fmt.Errorf("wallet not found for user OfferID %s", offererID)
 				c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 				return
 			}
@@ -113,7 +113,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		
 		if wallet.Balance < *req.CompensationAmount {
 			err = fmt.Errorf("insufficient balance for compensation: needed %d, available %d", *req.CompensationAmount, wallet.Balance)
-			c.JSON(http.StatusForbidden, errorResponse(errors.New("insufficient balance for compensation")))
+			c.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
 	}
@@ -125,7 +125,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d is not part of the exchange post %s", req.PosterGundamID, postID)
+			err = fmt.Errorf("gundam OfferID %d is not part of the exchange post %s", req.PosterGundamID, postID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
@@ -138,7 +138,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	offererGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), req.OffererGundamID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d not found", req.OffererGundamID)
+			err = fmt.Errorf("gundam OfferID %d not found", req.OffererGundamID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -149,14 +149,14 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	
 	// Kiểm tra Gundam có thuộc về người đề xuất không
 	if offererGundam.OwnerID != offererID {
-		err = fmt.Errorf("user ID %s does not own gundam ID %d", offererID, req.OffererGundamID)
+		err = fmt.Errorf("user OfferID %s does not own gundam OfferID %d", offererID, req.OffererGundamID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 	
 	// Kiểm tra Gundam có được phép trao đổi không
 	if offererGundam.Status != db.GundamStatusInstore {
-		err = fmt.Errorf("gundam ID %d is not available for exchange, current status: %s", req.OffererGundamID, offererGundam.Status)
+		err = fmt.Errorf("gundam OfferID %d is not available for exchange, current status: %s", req.OffererGundamID, offererGundam.Status)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -165,7 +165,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	posterGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), req.PosterGundamID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("offererGundam ID %d not found", req.PosterGundamID)
+			err = fmt.Errorf("offererGundam OfferID %d not found", req.PosterGundamID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -176,13 +176,13 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	
 	// Kiểm tra Gundam có thuộc về người đăng bài không
 	if posterGundam.OwnerID != post.UserID {
-		err = fmt.Errorf("offererGundam ID %d does not belong to user ID %s", req.PosterGundamID, post.UserID)
+		err = fmt.Errorf("offererGundam OfferID %d does not belong to user OfferID %s", req.PosterGundamID, post.UserID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	
 	if posterGundam.Status != db.GundamStatusInstore {
-		err = fmt.Errorf("offererGundam ID %d is not available for exchange", req.PosterGundamID)
+		err = fmt.Errorf("offererGundam OfferID %d is not available for exchange", req.PosterGundamID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -201,7 +201,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrExchangeOfferUnique) {
-			err = fmt.Errorf("user ID %s already has an offer for exchange post ID %s", offererID, req.ExchangePostID)
+			err = fmt.Errorf("user OfferID %s already has an offer for exchange post OfferID %s", offererID, req.ExchangePostID)
 			c.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
@@ -224,7 +224,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		ReferenceID: result.Offer.ID.String(),
 	}, opts...)
 	if err != nil {
-		log.Err(err).Msgf("failed to send notification to user ID %s", post.UserID)
+		log.Err(err).Msgf("failed to send notification to user OfferID %s", post.UserID)
 	}
 	
 	c.JSON(http.StatusCreated, result)
@@ -247,8 +247,8 @@ type requestNegotiationForOfferRequest struct {
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			postID	path		string									true	"Exchange Post ID"
-//	@Param			offerID	path		string									true	"Exchange Offer ID"
+//	@Param			postID	path		string									true	"Exchange Post OfferID"
+//	@Param			offerID	path		string									true	"Exchange Offer OfferID"
 //	@Param			request	body		requestNegotiationForOfferRequest		false	"Negotiation request"
 //	@Success		200		{object}	db.RequestNegotiationForOfferTxResult	"Negotiation request response"
 //	@Router			/users/me/exchange-posts/{postID}/offers/{offerID}/negotiate [patch]
@@ -267,13 +267,13 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	// Parse UUID từ string
 	postID, err := uuid.Parse(uriParams.PostID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post ID: %s", uriParams.PostID)))
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid post OfferID: %s", uriParams.PostID)))
 		return
 	}
 	
 	offerID, err := uuid.Parse(uriParams.OfferID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer ID: %s", uriParams.OfferID)))
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer OfferID: %s", uriParams.OfferID)))
 		return
 	}
 	
@@ -292,7 +292,7 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	post, err := server.dbStore.GetExchangePost(c, postID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("exchange post ID %s not found", uriParams.PostID)
+			err = fmt.Errorf("exchange post OfferID %s not found", uriParams.PostID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -302,13 +302,13 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	}
 	
 	if post.UserID != userID {
-		err = fmt.Errorf("user ID %s is not the owner of exchange post ID %s", userID, uriParams.PostID)
+		err = fmt.Errorf("user OfferID %s is not the owner of exchange post OfferID %s", userID, uriParams.PostID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
 	
 	if post.Status != db.ExchangePostStatusOpen {
-		err = fmt.Errorf("exchange post ID %s is not open for negotiation", uriParams.PostID)
+		err = fmt.Errorf("exchange post OfferID %s is not open for negotiation", uriParams.PostID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -317,7 +317,7 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	offer, err := server.dbStore.GetExchangeOffer(c, offerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("exchange offer ID %s not found", uriParams.OfferID)
+			err = fmt.Errorf("exchange offer OfferID %s not found", uriParams.OfferID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -327,21 +327,21 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	}
 	
 	if offer.PostID != postID {
-		err = fmt.Errorf("exchange offer ID %s does not belong to exchange post ID %s", uriParams.OfferID, uriParams.PostID)
+		err = fmt.Errorf("exchange offer OfferID %s does not belong to exchange post OfferID %s", uriParams.OfferID, uriParams.PostID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 	
 	// 3. Kiểm tra số lần thương lượng đã sử dụng
 	if offer.NegotiationsCount >= offer.MaxNegotiations {
-		err = fmt.Errorf("maximum number of negotiations reached for exchange offer ID %s, current count: %d, max: %d", uriParams.OfferID, offer.NegotiationsCount, offer.MaxNegotiations)
+		err = fmt.Errorf("maximum number of negotiations reached for exchange offer OfferID %s, current count: %d, max: %d", uriParams.OfferID, offer.NegotiationsCount, offer.MaxNegotiations)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
 	
 	// 4. Kiểm tra xem hiện tại có đang yêu cầu thương lượng không
 	if offer.NegotiationRequested {
-		err = fmt.Errorf("negotiation already requested for exchange offer ID %s", uriParams.OfferID)
+		err = fmt.Errorf("negotiation already requested for exchange offer OfferID %s", uriParams.OfferID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -370,7 +370,7 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	// Tạo thông báo ngắn gọn nhưng đủ thông tin
 	notificationMessage := fmt.Sprintf(
 		"Chủ bài đăng '%s' đã yêu cầu thương lượng cho đề xuất trao đổi Gundam của bạn.",
-		util.TruncateContent(post.Content, 20), // Hàm rút gọn tiêu đề nếu quá dài
+		util.TruncateString(post.Content, 20), // Hàm rút gọn tiêu đề nếu quá dài
 	)
 	
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
@@ -384,7 +384,207 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 		log.Err(err).
 			Str("offerID", result.Offer.ID.String()).
 			Str("postID", post.ID.String()).
-			Msgf("failed to send notification to user ID %s", offer.OffererID)
+			Msgf("failed to send notification to user OfferID %s", offer.OffererID)
+	}
+	
+	// Trả về kết quả
+	c.JSON(http.StatusOK, result)
+}
+
+type updateExchangeOfferRequest struct {
+	RequireCompensation bool    `json:"require_compensation" binding:"required"` // true = yêu cầu bù tiền, false = không yêu cầu bù tiền
+	CompensationAmount  *int64  `json:"compensation_amount"`                     // Bắt buộc khi require_compensation=true
+	PayerID             *string `json:"payer_id"`                                // OfferID người trả tiền bù, bắt buộc khi require_compensation=true
+	Note                *string `json:"note"`                                    // Ghi chú thương lượng, không bắt buộc
+}
+
+//	@Summary		Update an exchange offer
+//	@Description	As an offerer, update exchange offer details. Only allowed when a negotiation is requested by the post owner.
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			offerID	path		string							true	"Exchange Offer OfferID"
+//	@Param			request	body		updateExchangeOfferRequest		true	"Update offer request"
+//	@Success		200		{object}	db.UpdateExchangeOfferTxResult	"Updated offer response"
+//	@Router			/users/me/exchange-offers/{offerID} [patch]
+func (server *Server) updateExchangeOffer(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Lấy OfferID của đề xuất từ URI
+	offerIDStr := c.Param("offerID")
+	offerID, err := uuid.Parse(offerIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer OfferID: %s", offerIDStr)))
+		return
+	}
+	
+	// Đọc request body
+	var req updateExchangeOfferRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra thông tin bù tiền khi yêu cầu bù tiền
+	if req.RequireCompensation {
+		if req.CompensationAmount == nil {
+			err = errors.New("compensation_amount is required when require_compensation is true")
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		
+		if req.PayerID == nil {
+			err = errors.New("payer_id is required when require_compensation is true")
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		
+		if *req.CompensationAmount <= 0 {
+			err = errors.New("compensation_amount must be positive when require_compensation is true")
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	// -------------------
+	// PHẦN 1: Kiểm tra business rules
+	// -------------------
+	
+	// 1. Kiểm tra đề xuất tồn tại và người dùng là người đề xuất
+	offer, err := server.dbStore.GetExchangeOffer(c, offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("exchange offer OfferID %s not found", offerIDStr)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if offer.OffererID != userID {
+		err = fmt.Errorf("user OfferID %s is not the offerer of exchange offer OfferID %s", userID, offerIDStr)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 2. Kiểm tra xem có yêu cầu thương lượng không
+	if !offer.NegotiationRequested {
+		err = fmt.Errorf("cannot update exchange offer OfferID %s as there is no negotiation requested", offerIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 3. Kiểm tra số lần thương lượng chưa vượt quá giới hạn
+	if offer.NegotiationsCount >= offer.MaxNegotiations {
+		err = fmt.Errorf("maximum number of negotiations reached for exchange offer OfferID %s, current count: %d, max: %d", offerIDStr, offer.NegotiationsCount, offer.MaxNegotiations)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin bài đăng (cần thiết cho nhiều phần)
+	post, err := server.dbStore.GetExchangePost(c, offer.PostID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 4. Kiểm tra PayerID hợp lệ
+	if req.RequireCompensation && req.PayerID != nil {
+		validPayerID := *req.PayerID == offer.OffererID || *req.PayerID == post.UserID
+		if !validPayerID {
+			err = errors.New("payer_id must be either the offerer or post owner OfferID")
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	// 5. Kiểm tra số dư của người đề xuất nếu họ là người bù tiền
+	if req.RequireCompensation && req.PayerID != nil && req.CompensationAmount != nil && *req.PayerID == userID {
+		// Lấy thông tin ví và kiểm tra số dư
+		wallet, err := server.dbStore.GetWalletByUserID(c, userID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("wallet not found for user OfferID %s", userID)
+				c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Kiểm tra số dư có đủ không
+		if wallet.Balance < *req.CompensationAmount {
+			err = fmt.Errorf("insufficient balance for compensation: needed %d, available %d", *req.CompensationAmount, wallet.Balance)
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+	}
+	
+	// -------------------
+	// PHẦN 2: Xử lý transaction để cập nhật dữ liệu
+	// -------------------
+	
+	arg := db.UpdateExchangeOfferTxParams{
+		OfferID:              offerID,
+		UserID:               userID,
+		Note:                 req.Note,
+		NegotiationRequested: util.BoolPointer(false),
+		NegotiationsCount:    util.Int64Pointer(offer.NegotiationsCount + 1),
+	}
+	
+	// Xử lý thông tin bù tiền
+	if req.RequireCompensation {
+		arg.CompensationAmount = req.CompensationAmount
+		arg.PayerID = req.PayerID
+	}
+	
+	// Thực hiện transaction
+	result, err := server.dbStore.UpdateExchangeOfferTx(c, arg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Gửi thông báo cho người đăng bài về việc đề xuất đã được cập nhật
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Lấy thông tin người đề xuất
+	user, err := server.dbStore.GetUserByID(c, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user OfferID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Tạo thông báo đơn giản hơn
+	notificationMessage := fmt.Sprintf(
+		"Người đề xuất %s đã cập nhật lại đề xuất của họ.",
+		user.FullName,
+	)
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: post.UserID,
+		Title:       "Cập nhật đề xuất trao đổi",
+		Message:     notificationMessage,
+		Type:        "exchange",
+		ReferenceID: result.Offer.ID.String(),
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msgf("failed to send notification to user ID %s", post.UserID)
 	}
 	
 	// Trả về kết quả

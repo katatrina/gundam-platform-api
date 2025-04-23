@@ -173,19 +173,33 @@ func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]E
 
 const updateExchangeOffer = `-- name: UpdateExchangeOffer :one
 UPDATE exchange_offers
-SET negotiation_requested  = COALESCE($1, negotiation_requested),
-    last_negotiation_at    = COALESCE($2, last_negotiation_at)
-WHERE id = $3 RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+SET compensation_amount   = COALESCE($1, compensation_amount),
+    payer_id              = COALESCE($2, payer_id),
+    negotiation_requested = COALESCE($3, negotiation_requested),
+    negotiations_count    = COALESCE($4, negotiations_count),
+    last_negotiation_at   = COALESCE($5, last_negotiation_at),
+    updated_at            = now()
+WHERE id = $6 RETURNING id, post_id, offerer_id, payer_id, compensation_amount, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
 `
 
 type UpdateExchangeOfferParams struct {
+	CompensationAmount   *int64     `json:"compensation_amount"`
+	PayerID              *string    `json:"payer_id"`
 	NegotiationRequested *bool      `json:"negotiation_requested"`
+	NegotiationsCount    *int64     `json:"negotiations_count"`
 	LastNegotiationAt    *time.Time `json:"last_negotiation_at"`
 	ID                   uuid.UUID  `json:"id"`
 }
 
 func (q *Queries) UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error) {
-	row := q.db.QueryRow(ctx, updateExchangeOffer, arg.NegotiationRequested, arg.LastNegotiationAt, arg.ID)
+	row := q.db.QueryRow(ctx, updateExchangeOffer,
+		arg.CompensationAmount,
+		arg.PayerID,
+		arg.NegotiationRequested,
+		arg.NegotiationsCount,
+		arg.LastNegotiationAt,
+		arg.ID,
+	)
 	var i ExchangeOffer
 	err := row.Scan(
 		&i.ID,

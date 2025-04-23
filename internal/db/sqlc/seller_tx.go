@@ -91,7 +91,7 @@ func (store *SQLStore) UnpublishGundamTx(ctx context.Context, arg UnpublishGunda
 // ConfirmOrderTxParams chứa các tham số cần thiết để xác nhận đơn hàng từ người bán
 type ConfirmOrderTxParams struct {
 	Order    *Order // Đơn hàng cần xác nhận
-	SellerID string // ID của người bán xác nhận đơn hàng
+	SellerID string // OfferID của người bán xác nhận đơn hàng
 }
 
 // ConfirmOrderTxResult chứa kết quả trả về sau khi xác nhận đơn hàng
@@ -440,7 +440,7 @@ func (store *SQLStore) CancelOrderBySellerTx(ctx context.Context, arg CancelOrde
 					return fmt.Errorf("failed to restore gundam status: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam ID not found in order item %d", item.ID)
+				log.Warn().Msgf("Gundam OfferID not found in order item %d", item.ID)
 			}
 		}
 		

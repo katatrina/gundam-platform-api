@@ -33,6 +33,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
 
 -- name: UpdateExchangeOffer :one
 UPDATE exchange_offers
-SET negotiation_requested  = COALESCE(sqlc.narg('negotiation_requested'), negotiation_requested),
-    last_negotiation_at    = COALESCE(sqlc.narg('last_negotiation_at'), last_negotiation_at)
+SET compensation_amount   = COALESCE(sqlc.narg('compensation_amount'), compensation_amount),
+    payer_id              = COALESCE(sqlc.narg('payer_id'), payer_id),
+    negotiation_requested = COALESCE(sqlc.narg('negotiation_requested'), negotiation_requested),
+    negotiations_count    = COALESCE(sqlc.narg('negotiations_count'), negotiations_count),
+    last_negotiation_at   = COALESCE(sqlc.narg('last_negotiation_at'), last_negotiation_at),
+    updated_at            = now()
 WHERE id = sqlc.arg(id) RETURNING *;
