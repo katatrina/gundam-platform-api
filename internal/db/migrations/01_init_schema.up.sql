@@ -449,9 +449,17 @@ CREATE TABLE "exchange_items"
 (
     "id"             uuid PRIMARY KEY,
     "exchange_id"    uuid        NOT NULL,
-    "gundam_id"      bigint      NOT NULL,
-    "owner_id"       text        NOT NULL,
-    "is_poster_item" boolean     NOT NULL,
+    "gundam_id"      bigint,
+    "name"           text        NOT NULL,
+    "slug"           text        NOT NULL,
+    "grade"          text        NOT NULL,
+    "scale"          text        NOT NULL,
+    "quantity"       bigint      NOT NULL DEFAULT 1,
+    "price"          bigint      NOT NULL,
+    "weight"         bigint      NOT NULL,
+    "image_url"      text        NOT NULL,
+    "owner_id"       text,
+    "is_from_poster" bool        NOT NULL DEFAULT false,
     "created_at"     timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -628,7 +636,7 @@ ALTER TABLE "exchange_items"
     ADD FOREIGN KEY ("exchange_id") REFERENCES "exchanges" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "exchange_items"
-    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE RESTRICT;
+    ADD FOREIGN KEY ("gundam_id") REFERENCES "gundams" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "exchange_items"
-    ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE RESTRICT;
+    ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE SET NULL;

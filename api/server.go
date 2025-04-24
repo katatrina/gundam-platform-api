@@ -158,7 +158,7 @@ func (server *Server) setupRouter() *gin.Engine {
 				offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiationForOffer)
 				
 				// Chấp nhận đề xuất trao đổi
-				// offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
+				offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
 				
 				// Từ chối đề xuất trao đổi
 				// offerGroup.PATCH("/:offerID/reject", server.rejectExchangeOffer)

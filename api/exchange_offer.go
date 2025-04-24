@@ -590,3 +590,179 @@ func (server *Server) updateExchangeOffer(c *gin.Context) {
 	// Trả về kết quả
 	c.JSON(http.StatusOK, result)
 }
+
+// type acceptExchangeOfferRequest struct {
+// 	Note *string `json:"note"` // Ghi chú tùy chọn khi chấp nhận đề xuất
+// }
+
+//	@Summary		Accept an exchange offer
+//	@Description	As a post owner, accept an exchange offer. This will create an exchange transaction and related orders.
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			postID	path		string					true	"Exchange Post ID"
+//	@Param			offerID	path		string					true	"Exchange Offer ID"
+//	@Param			request	body		acceptExchangeOfferRequest	false	"Accept offer request (optional)"
+//	@Success		200		{object}	db.AcceptExchangeOfferTxResult	"Accepted offer response"
+//	@Router			/users/me/exchange-posts/{postID}/offers/{offerID}/accept [patch]
+func (server *Server) acceptExchangeOffer(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	var uri PostOfferURIParams
+	if err := c.ShouldBindUri(&uri); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Parse UUID từ string
+	postID, err := uuid.Parse(uri.PostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid postID: %s", uri.PostID)))
+		return
+	}
+	
+	offerID, err := uuid.Parse(uri.OfferID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offerID: %s", uri.OfferID)))
+		return
+	}
+	
+	// Đọc request body (nếu có)
+	// var req acceptExchangeOfferRequest
+	// if err := c.ShouldBindJSON(&req); err != nil {
+	// 	c.JSON(http.StatusBadRequest, errorResponse(err))
+	// 	return
+	// }
+	
+	// -------------------
+	// PHẦN 1: Kiểm tra business rules
+	// -------------------
+	
+	// 1. Kiểm tra bài đăng tồn tại và người dùng là chủ bài đăng
+	post, err := server.dbStore.GetExchangePost(c, postID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("exchange post ID %s not found", postID.String())
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if post.UserID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of exchange post ID %s", userID, post.ID.String())
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 2. Kiểm tra trạng thái bài đăng
+	if post.Status != db.ExchangePostStatusOpen {
+		err = fmt.Errorf("exchange post ID %s is not open, current status: %s", post.ID.String(), post.Status)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 3. Kiểm tra đề xuất tồn tại và thuộc về bài đăng
+	offer, err := server.dbStore.GetExchangeOffer(c, offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("exchange offer ID %s not found", uri.OfferID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if offer.PostID != postID {
+		err = fmt.Errorf("exchange offer ID %s does not belong to post ID %s", offer.ID.String(), post.ID.String())
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// 4. Kiểm tra số dư của người trả tiền bù (nếu có)
+	if offer.PayerID != nil && offer.CompensationAmount != nil && *offer.CompensationAmount > 0 {
+		compensationAmount := *offer.CompensationAmount
+		payerID := *offer.PayerID
+		isPayerPoster := payerID == post.UserID
+		isPayerOfferer := payerID == offer.OffererID
+		
+		// Lấy thông tin ví và kiểm tra số dư
+		wallet, err := server.dbStore.GetWalletByUserID(c, payerID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("wallet not found for user ID %s", payerID)
+				c.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Kiểm tra số dư có đủ không
+		if wallet.Balance < compensationAmount {
+			switch {
+			case isPayerPoster:
+				err = fmt.Errorf("poster ID %s has insufficient balance for compensation: needed %d, available %d", payerID, compensationAmount, wallet.Balance)
+			case isPayerOfferer:
+				err = fmt.Errorf("offerer ID %s has insufficient balance for compensation: needed %d, available %d", payerID, compensationAmount, wallet.Balance)
+			default:
+				err = fmt.Errorf("payer ID %s has insufficient balance for compensation: needed %d, available %d", payerID, compensationAmount, wallet.Balance)
+			}
+			
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+	}
+	
+	// -------------------
+	// PHẦN 2: Xử lý transaction để chấp nhận đề xuất
+	// -------------------
+	
+	// Lấy các item trao đổi của người đăng bài từ đề xuất
+	// posterItems, err := server.dbStore.ListExchangeOfferItems(c, db.ListExchangeOfferItemsParams{
+	// 	OfferID:      offer.ID,
+	// 	IsFromPoster: util.BoolPointer(true),
+	// })
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, errorResponse(err))
+	// 	return
+	// }
+	//
+	// // Lấy các item trao đổi của người đề xuất từ đề xuất
+	// offererItems, err := server.dbStore.ListExchangeOfferItems(c, db.ListExchangeOfferItemsParams{
+	// 	OfferID:      offer.ID,
+	// 	IsFromPoster: util.BoolPointer(false),
+	// })
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, errorResponse(err))
+	// 	return
+	// }
+	
+	arg := db.AcceptExchangeOfferTxParams{
+		PostID:    postID,
+		OfferID:   offerID,
+		PosterID:  post.UserID,
+		OffererID: offer.OffererID,
+	}
+	
+	// Thêm thông tin bù tiền nếu có
+	if offer.PayerID != nil && offer.CompensationAmount != nil && *offer.CompensationAmount > 0 {
+		arg.CompensationAmount = offer.CompensationAmount
+		arg.PayerID = offer.PayerID
+	}
+	
+	// Thực hiện transaction
+	_, err = server.dbStore.AcceptExchangeOfferTx(c, arg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+}

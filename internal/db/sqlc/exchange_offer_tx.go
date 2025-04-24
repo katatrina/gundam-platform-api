@@ -217,3 +217,32 @@ func (store *SQLStore) UpdateExchangeOfferTx(ctx context.Context, arg UpdateExch
 	
 	return result, err
 }
+
+type AcceptExchangeOfferTxParams struct {
+	PostID             uuid.UUID // ID của bài đăng trao đổi
+	OfferID            uuid.UUID // ID của đề xuất trao đổi
+	PosterID           string    // ID của người đăng bài
+	OffererID          string    // ID của người đề xuất
+	PayerID            *string   // ID của người bù tiền (có thể là nil)
+	CompensationAmount *int64    // Số tiền bồi thường (có thể là nil)
+}
+
+type AcceptExchangeOfferTxResult struct{}
+
+func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExchangeOfferTxParams) (AcceptExchangeOfferTxResult, error) {
+	var result AcceptExchangeOfferTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Xóa bài đăng trao đổi (tự động xóa các đề xuất liên quan, cũng như các ghi chú)
+		_, err := qTx.DeleteExchangePost(ctx, arg.PostID)
+		if err != nil {
+			return fmt.Errorf("failed to delete exchange post: %w", err)
+		}
+		
+		// 2.
+		
+		return nil
+	})
+	
+	return result, err
+}
