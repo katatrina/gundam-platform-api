@@ -36,6 +36,7 @@ type Store interface {
 	RequestNegotiationForOfferTx(ctx context.Context, arg RequestNegotiationForOfferTxParams) (RequestNegotiationForOfferTxResult, error)
 	UpdateExchangeOfferTx(ctx context.Context, arg UpdateExchangeOfferTxParams) (UpdateExchangeOfferTxResult, error)
 	AcceptExchangeOfferTx(ctx context.Context, arg AcceptExchangeOfferTxParams) (AcceptExchangeOfferTxResult, error)
+	GetGundamDetailsByID(ctx context.Context, gundamID int64) (GundamDetails, error)
 }
 
 type SQLStore struct {

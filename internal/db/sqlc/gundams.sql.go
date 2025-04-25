@@ -10,6 +10,27 @@ import (
 	"time"
 )
 
+const bulkUpdateGundamsExchanging = `-- name: BulkUpdateGundamsExchanging :exec
+UPDATE gundams
+SET status     = 'exchanging',
+    updated_at = NOW() FROM
+    (SELECT unnest($2::bigint[]) as id) as data
+WHERE
+    gundams.id = data.id
+  AND gundams.status = 'for exchange'
+  AND gundams.owner_id = $1
+`
+
+type BulkUpdateGundamsExchangingParams struct {
+	OwnerID   string  `json:"owner_id"`
+	GundamIds []int64 `json:"gundam_ids"`
+}
+
+func (q *Queries) BulkUpdateGundamsExchanging(ctx context.Context, arg BulkUpdateGundamsExchangingParams) error {
+	_, err := q.db.Exec(ctx, bulkUpdateGundamsExchanging, arg.OwnerID, arg.GundamIds)
+	return err
+}
+
 const bulkUpdateGundamsForExchange = `-- name: BulkUpdateGundamsForExchange :exec
 UPDATE gundams
 SET status     = 'for exchange',

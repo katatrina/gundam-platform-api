@@ -28,8 +28,9 @@ INSERT INTO exchange_offers (id,
                              compensation_amount,
                              negotiations_count,
                              max_negotiations,
-                             negotiation_requested)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
+                             negotiation_requested,
+                             note)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;
 
 -- name: UpdateExchangeOffer :one
 UPDATE exchange_offers
@@ -40,3 +41,7 @@ SET compensation_amount   = COALESCE(sqlc.narg('compensation_amount'), compensat
     last_negotiation_at   = COALESCE(sqlc.narg('last_negotiation_at'), last_negotiation_at),
     updated_at            = now()
 WHERE id = sqlc.arg(id) RETURNING *;
+
+-- name: ListExchangeOffersByPostExcluding :many
+SELECT * FROM exchange_offers
+WHERE post_id = sqlc.arg(post_id) AND id != sqlc.arg(exclude_offer_id);

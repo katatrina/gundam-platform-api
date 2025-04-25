@@ -1971,6 +1971,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/exchange-posts/{postID}/offers/{offerID}/accept": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "As a post owner, accept an exchange offer. This will create an exchange transaction and related orders.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Accept an exchange offer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exchange Offer ID",
+                        "name": "offerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Accepted offer response",
+                        "schema": {
+                            "$ref": "#/definitions/db.AcceptExchangeOfferTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/exchange-posts/{postID}/offers/{offerID}/negotiate": {
             "patch": {
                 "security": [
@@ -2571,6 +2612,7 @@ const docTemplate = `{
             "required": [
                 "compensation_amount",
                 "exchange_post_id",
+                "note",
                 "offerer_gundam_id",
                 "payer_id",
                 "poster_gundam_id"
@@ -2582,6 +2624,10 @@ const docTemplate = `{
                 },
                 "exchange_post_id": {
                     "description": "OfferID bài đăng trao đổi",
+                    "type": "string"
+                },
+                "note": {
+                    "description": "Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)",
                     "type": "string"
                 },
                 "offerer_gundam_id": {
@@ -2973,6 +3019,17 @@ const docTemplate = `{
                 }
             }
         },
+        "db.AcceptExchangeOfferTxResult": {
+            "type": "object",
+            "required": [
+                "exchange_id"
+            ],
+            "properties": {
+                "exchange_id": {
+                    "type": "string"
+                }
+            }
+        },
         "db.AddCartItemRow": {
             "type": "object",
             "required": [
@@ -3285,6 +3342,7 @@ const docTemplate = `{
                 "max_negotiations",
                 "negotiation_requested",
                 "negotiations_count",
+                "note",
                 "offerer_id",
                 "payer_id",
                 "post_id",
@@ -3311,6 +3369,9 @@ const docTemplate = `{
                 },
                 "negotiations_count": {
                     "type": "integer"
+                },
+                "note": {
+                    "type": "string"
                 },
                 "offerer_id": {
                     "type": "string"
@@ -4650,18 +4711,16 @@ const docTemplate = `{
                 "auction",
                 "withdrawal request",
                 "deposit request",
-                "promotion",
-                "affiliate",
-                "zalopay"
+                "zalopay",
+                "exchange"
             ],
             "x-enum-varnames": [
                 "WalletReferenceTypeOrder",
                 "WalletReferenceTypeAuction",
                 "WalletReferenceTypeWithdrawalrequest",
                 "WalletReferenceTypeDepositrequest",
-                "WalletReferenceTypePromotion",
-                "WalletReferenceTypeAffiliate",
-                "WalletReferenceTypeZalopay"
+                "WalletReferenceTypeZalopay",
+                "WalletReferenceTypeExchange"
             ]
         },
         "multipart.FileHeader": {

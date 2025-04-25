@@ -141,6 +141,7 @@ type ExchangeStatus string
 
 const (
 	ExchangeStatusPending    ExchangeStatus = "pending"
+	ExchangeStatusPackaging  ExchangeStatus = "packaging"
 	ExchangeStatusDelivering ExchangeStatus = "delivering"
 	ExchangeStatusDelivered  ExchangeStatus = "delivered"
 	ExchangeStatusCompleted  ExchangeStatus = "completed"
@@ -186,6 +187,7 @@ func (ns NullExchangeStatus) Value() (driver.Value, error) {
 func (e ExchangeStatus) Valid() bool {
 	switch e {
 	case ExchangeStatusPending,
+		ExchangeStatusPackaging,
 		ExchangeStatusDelivering,
 		ExchangeStatusDelivered,
 		ExchangeStatusCompleted,
@@ -199,6 +201,7 @@ func (e ExchangeStatus) Valid() bool {
 func AllExchangeStatusValues() []ExchangeStatus {
 	return []ExchangeStatus{
 		ExchangeStatusPending,
+		ExchangeStatusPackaging,
 		ExchangeStatusDelivering,
 		ExchangeStatusDelivered,
 		ExchangeStatusCompleted,
@@ -1052,9 +1055,8 @@ const (
 	WalletReferenceTypeAuction           WalletReferenceType = "auction"
 	WalletReferenceTypeWithdrawalrequest WalletReferenceType = "withdrawal request"
 	WalletReferenceTypeDepositrequest    WalletReferenceType = "deposit request"
-	WalletReferenceTypePromotion         WalletReferenceType = "promotion"
-	WalletReferenceTypeAffiliate         WalletReferenceType = "affiliate"
 	WalletReferenceTypeZalopay           WalletReferenceType = "zalopay"
+	WalletReferenceTypeExchange          WalletReferenceType = "exchange"
 )
 
 func (e *WalletReferenceType) Scan(src interface{}) error {
@@ -1098,9 +1100,8 @@ func (e WalletReferenceType) Valid() bool {
 		WalletReferenceTypeAuction,
 		WalletReferenceTypeWithdrawalrequest,
 		WalletReferenceTypeDepositrequest,
-		WalletReferenceTypePromotion,
-		WalletReferenceTypeAffiliate,
-		WalletReferenceTypeZalopay:
+		WalletReferenceTypeZalopay,
+		WalletReferenceTypeExchange:
 		return true
 	}
 	return false
@@ -1112,9 +1113,8 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 		WalletReferenceTypeAuction,
 		WalletReferenceTypeWithdrawalrequest,
 		WalletReferenceTypeDepositrequest,
-		WalletReferenceTypePromotion,
-		WalletReferenceTypeAffiliate,
 		WalletReferenceTypeZalopay,
+		WalletReferenceTypeExchange,
 	}
 }
 
@@ -1148,25 +1148,41 @@ type DeliveryInformation struct {
 }
 
 type Exchange struct {
-	ID                 uuid.UUID      `json:"id"`
-	PosterID           string         `json:"poster_id"`
-	OffererID          string         `json:"offerer_id"`
-	PosterOrderID      uuid.UUID      `json:"poster_order_id"`
-	OffererOrderID     uuid.UUID      `json:"offerer_order_id"`
-	PayerID            *string        `json:"payer_id"`
-	CompensationAmount *int64         `json:"compensation_amount"`
-	Status             ExchangeStatus `json:"status"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at"`
-	CompletedAt        *time.Time     `json:"completed_at"`
+	ID                     uuid.UUID      `json:"id"`
+	PosterID               string         `json:"poster_id"`
+	OffererID              string         `json:"offerer_id"`
+	PosterOrderID          uuid.UUID      `json:"poster_order_id"`
+	OffererOrderID         uuid.UUID      `json:"offerer_order_id"`
+	PosterFromDeliveryID   *int64         `json:"poster_from_delivery_id"`
+	PosterToDeliveryID     *int64         `json:"poster_to_delivery_id"`
+	OffererFromDeliveryID  *int64         `json:"offerer_from_delivery_id"`
+	OffererToDeliveryID    *int64         `json:"offerer_to_delivery_id"`
+	PosterDeliveryFeePaid  bool           `json:"poster_delivery_fee_paid"`
+	OffererDeliveryFeePaid bool           `json:"offerer_delivery_fee_paid"`
+	PayerID                *string        `json:"payer_id"`
+	CompensationAmount     *int64         `json:"compensation_amount"`
+	Status                 ExchangeStatus `json:"status"`
+	CanceledBy             *string        `json:"canceled_by"`
+	CanceledReason         *string        `json:"canceled_reason"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	CompletedAt            *time.Time     `json:"completed_at"`
 }
 
 type ExchangeItem struct {
 	ID           uuid.UUID `json:"id"`
 	ExchangeID   uuid.UUID `json:"exchange_id"`
-	GundamID     int64     `json:"gundam_id"`
-	OwnerID      string    `json:"owner_id"`
-	IsPosterItem bool      `json:"is_poster_item"`
+	GundamID     *int64    `json:"gundam_id"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Grade        string    `json:"grade"`
+	Scale        string    `json:"scale"`
+	Quantity     int64     `json:"quantity"`
+	Price        int64     `json:"price"`
+	Weight       int64     `json:"weight"`
+	ImageURL     string    `json:"image_url"`
+	OwnerID      *string   `json:"owner_id"`
+	IsFromPoster bool      `json:"is_from_poster"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -1176,6 +1192,7 @@ type ExchangeOffer struct {
 	OffererID            string     `json:"offerer_id"`
 	PayerID              *string    `json:"payer_id"`
 	CompensationAmount   *int64     `json:"compensation_amount"`
+	Note                 *string    `json:"note"`
 	NegotiationsCount    int64      `json:"negotiations_count"`
 	MaxNegotiations      int64      `json:"max_negotiations"`
 	NegotiationRequested bool       `json:"negotiation_requested"`

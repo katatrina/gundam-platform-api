@@ -14,6 +14,7 @@ type Querier interface {
 	AddCartItem(ctx context.Context, arg AddCartItemParams) (AddCartItemRow, error)
 	AddWalletBalance(ctx context.Context, arg AddWalletBalanceParams) (Wallet, error)
 	AddWalletNonWithdrawableAmount(ctx context.Context, arg AddWalletNonWithdrawableAmountParams) error
+	BulkUpdateGundamsExchanging(ctx context.Context, arg BulkUpdateGundamsExchangingParams) error
 	BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error
 	BulkUpdateGundamsInStore(ctx context.Context, arg BulkUpdateGundamsInStoreParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
@@ -21,6 +22,8 @@ type Querier interface {
 	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
+	CreateExchange(ctx context.Context, arg CreateExchangeParams) (Exchange, error)
+	CreateExchangeItem(ctx context.Context, arg CreateExchangeItemParams) (ExchangeItem, error)
 	CreateExchangeOffer(ctx context.Context, arg CreateExchangeOfferParams) (ExchangeOffer, error)
 	CreateExchangeOfferItem(ctx context.Context, arg CreateExchangeOfferItemParams) (ExchangeOfferItem, error)
 	CreateExchangeOfferNote(ctx context.Context, arg CreateExchangeOfferNoteParams) (ExchangeOfferNote, error)
@@ -77,6 +80,7 @@ type Querier interface {
 	ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error)
 	ListExchangeOfferNotes(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferNote, error)
 	ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]ExchangeOffer, error)
+	ListExchangeOffersByPostExcluding(ctx context.Context, arg ListExchangeOffersByPostExcludingParams) ([]ExchangeOffer, error)
 	ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error)
 	ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error)
 	ListGundamGrades(ctx context.Context) ([]GundamGrade, error)

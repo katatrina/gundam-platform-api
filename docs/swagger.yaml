@@ -113,6 +113,9 @@ definitions:
       exchange_post_id:
         description: OfferID bài đăng trao đổi
         type: string
+      note:
+        description: Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)
+        type: string
       offerer_gundam_id:
         description: OfferID Gundam của người đề xuất
         type: integer
@@ -125,6 +128,7 @@ definitions:
     required:
     - compensation_amount
     - exchange_post_id
+    - note
     - offerer_gundam_id
     - payer_id
     - poster_gundam_id
@@ -419,6 +423,13 @@ definitions:
     required:
     - access_token
     type: object
+  db.AcceptExchangeOfferTxResult:
+    properties:
+      exchange_id:
+        type: string
+    required:
+    - exchange_id
+    type: object
   db.AddCartItemRow:
     properties:
       cart_item_id:
@@ -644,6 +655,8 @@ definitions:
         type: boolean
       negotiations_count:
         type: integer
+      note:
+        type: string
       offerer_id:
         type: string
       payer_id:
@@ -660,6 +673,7 @@ definitions:
     - max_negotiations
     - negotiation_requested
     - negotiations_count
+    - note
     - offerer_id
     - payer_id
     - post_id
@@ -1605,18 +1619,16 @@ definitions:
     - auction
     - withdrawal request
     - deposit request
-    - promotion
-    - affiliate
     - zalopay
+    - exchange
     type: string
     x-enum-varnames:
     - WalletReferenceTypeOrder
     - WalletReferenceTypeAuction
     - WalletReferenceTypeWithdrawalrequest
     - WalletReferenceTypeDepositrequest
-    - WalletReferenceTypePromotion
-    - WalletReferenceTypeAffiliate
     - WalletReferenceTypeZalopay
+    - WalletReferenceTypeExchange
   multipart.FileHeader:
     properties:
       filename:
@@ -3176,6 +3188,33 @@ paths:
       security:
       - accessToken: []
       summary: Delete an exchange post
+      tags:
+      - exchanges
+  /users/me/exchange-posts/{postID}/offers/{offerID}/accept:
+    patch:
+      description: As a post owner, accept an exchange offer. This will create an
+        exchange transaction and related orders.
+      parameters:
+      - description: Exchange Post ID
+        in: path
+        name: postID
+        required: true
+        type: string
+      - description: Exchange Offer ID
+        in: path
+        name: offerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Accepted offer response
+          schema:
+            $ref: '#/definitions/db.AcceptExchangeOfferTxResult'
+      security:
+      - accessToken: []
+      summary: Accept an exchange offer
       tags:
       - exchanges
   /users/me/exchange-posts/{postID}/offers/{offerID}/negotiate:

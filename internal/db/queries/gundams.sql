@@ -141,3 +141,13 @@ WHERE
     gundams.id = data.id
   AND gundams.status = 'for exchange'
   AND gundams.owner_id = sqlc.arg(owner_id);
+
+-- name: BulkUpdateGundamsExchanging :exec
+UPDATE gundams
+SET status     = 'exchanging',
+    updated_at = NOW() FROM
+    (SELECT unnest(sqlc.arg(gundam_ids)::bigint[]) as id) as data
+WHERE
+    gundams.id = data.id
+  AND gundams.status = 'for exchange'
+  AND gundams.owner_id = sqlc.arg(owner_id);

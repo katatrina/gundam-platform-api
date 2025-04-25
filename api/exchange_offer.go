@@ -21,6 +21,7 @@ type createExchangeOfferRequest struct {
 	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // OfferID Gundam của người đề xuất
 	PayerID            *string `json:"payer_id"`                                 // OfferID người bù tiền (poster_id hoặc offerer_id, hoặc null)
 	CompensationAmount *int64  `json:"compensation_amount"`                      // Số tiền bù (null nếu không có bù tiền)
+	Note               *string `json:"note"`                                     // Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)
 }
 
 //	@Summary		Create an exchange offer
@@ -188,7 +189,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	}
 	
 	// TODO: Có thể kiểm tra Gundam đã tham gia các đề xuất khác chưa? Nếu có thì không cho phép tạo đề xuất mới.
-	// Nhưng mà chỉ cần kiểm tra trạng thái của Gundam là được rồi.
+	// Nhưng hiện tại chỉ cần kiểm tra trạng thái của Gundam là được rồi.
 	
 	// Tạo đề xuất trao đổi
 	result, err := server.dbStore.CreateExchangeOfferTx(c.Request.Context(), db.CreateExchangeOfferTxParams{
@@ -198,6 +199,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		OffererGundamID:    req.OffererGundamID,
 		CompensationAmount: req.CompensationAmount,
 		PayerID:            req.PayerID,
+		Note:               req.Note,
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrExchangeOfferUnique) {
@@ -591,19 +593,13 @@ func (server *Server) updateExchangeOffer(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// type acceptExchangeOfferRequest struct {
-// 	Note *string `json:"note"` // Ghi chú tùy chọn khi chấp nhận đề xuất
-// }
-
 //	@Summary		Accept an exchange offer
 //	@Description	As a post owner, accept an exchange offer. This will create an exchange transaction and related orders.
 //	@Tags			exchanges
-//	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			postID	path		string					true	"Exchange Post ID"
-//	@Param			offerID	path		string					true	"Exchange Offer ID"
-//	@Param			request	body		acceptExchangeOfferRequest	false	"Accept offer request (optional)"
+//	@Param			postID	path		string							true	"Exchange Post ID"
+//	@Param			offerID	path		string							true	"Exchange Offer ID"
 //	@Success		200		{object}	db.AcceptExchangeOfferTxResult	"Accepted offer response"
 //	@Router			/users/me/exchange-posts/{postID}/offers/{offerID}/accept [patch]
 func (server *Server) acceptExchangeOffer(c *gin.Context) {
@@ -629,13 +625,6 @@ func (server *Server) acceptExchangeOffer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offerID: %s", uri.OfferID)))
 		return
 	}
-	
-	// Đọc request body (nếu có)
-	// var req acceptExchangeOfferRequest
-	// if err := c.ShouldBindJSON(&req); err != nil {
-	// 	c.JSON(http.StatusBadRequest, errorResponse(err))
-	// 	return
-	// }
 	
 	// -------------------
 	// PHẦN 1: Kiểm tra business rules
@@ -726,26 +715,6 @@ func (server *Server) acceptExchangeOffer(c *gin.Context) {
 	// PHẦN 2: Xử lý transaction để chấp nhận đề xuất
 	// -------------------
 	
-	// Lấy các item trao đổi của người đăng bài từ đề xuất
-	// posterItems, err := server.dbStore.ListExchangeOfferItems(c, db.ListExchangeOfferItemsParams{
-	// 	OfferID:      offer.ID,
-	// 	IsFromPoster: util.BoolPointer(true),
-	// })
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, errorResponse(err))
-	// 	return
-	// }
-	//
-	// // Lấy các item trao đổi của người đề xuất từ đề xuất
-	// offererItems, err := server.dbStore.ListExchangeOfferItems(c, db.ListExchangeOfferItemsParams{
-	// 	OfferID:      offer.ID,
-	// 	IsFromPoster: util.BoolPointer(false),
-	// })
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, errorResponse(err))
-	// 	return
-	// }
-	
 	arg := db.AcceptExchangeOfferTxParams{
 		PostID:    postID,
 		OfferID:   offerID,
@@ -760,9 +729,42 @@ func (server *Server) acceptExchangeOffer(c *gin.Context) {
 	}
 	
 	// Thực hiện transaction
-	_, err = server.dbStore.AcceptExchangeOfferTx(c, arg)
+	result, err := server.dbStore.AcceptExchangeOfferTx(c, arg)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Gửi thông báo cho người có đề xuất được chấp nhận.
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: offer.OffererID,
+		Title:       "Đề xuất trao đổi đã được chấp nhận",
+		Message:     fmt.Sprintf("Đề xuất trao đổi của bạn cho bài đăng \"%s\" đã được chấp nhận. Vui lòng cung cấp thêm thông tin vận chuyển để hệ thống tạo đơn hàng cho bạn.", util.TruncateString(post.Content, 20)),
+		Type:        "exchange",
+		ReferenceID: result.ExchangeID,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msgf("failed to send notification to user ID %s", offer.OffererID)
+	}
+	
+	// Gửi thông báo cho những người khác có đề xuất không được chấp nhận.
+	for _, rejectedOffer := range result.RejectedOffers {
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: rejectedOffer.OffererID,
+			Title:       "Đề xuất trao đổi không được chấp nhận",
+			Message:     fmt.Sprintf("Đề xuất trao đổi của bạn cho bài đăng \"%s\" đã không được chấp nhận.", util.TruncateString(post.Content, 20)),
+			Type:        "exchange",
+			ReferenceID: result.ExchangeID,
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msgf("failed to send notification to user ID %s", rejectedOffer.OffererID)
+		}
+	}
+	
+	c.JSON(http.StatusOK, result)
 }
