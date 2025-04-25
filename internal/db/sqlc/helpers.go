@@ -5,30 +5,37 @@ import (
 )
 
 // Helper function để lấy thông tin chi tiết Gundam
-func (store *SQLStore) GetGundamDetailsByID(ctx context.Context, gundamID int64) (GundamDetails, error) {
+func (store *SQLStore) GetGundamDetailsByID(ctx context.Context, q *Queries, gundamID int64) (GundamDetails, error) {
+	var qTx *Queries
+	if q == nil {
+		qTx = store.Queries
+	} else {
+		qTx = q
+	}
+	
 	var detail GundamDetails
 	
-	gundam, err := store.GetGundamByID(ctx, gundamID)
+	gundam, err := qTx.GetGundamByID(ctx, gundamID)
 	if err != nil {
 		return detail, err
 	}
 	
-	grade, err := store.GetGradeByID(ctx, gundam.GradeID)
+	grade, err := qTx.GetGradeByID(ctx, gundam.GradeID)
 	if err != nil {
 		return detail, err
 	}
 	
-	primaryImageURL, err := store.GetGundamPrimaryImageURL(ctx, gundam.ID)
+	primaryImageURL, err := qTx.GetGundamPrimaryImageURL(ctx, gundam.ID)
 	if err != nil {
 		return detail, err
 	}
 	
-	secondaryImageURLs, err := store.GetGundamSecondaryImageURLs(ctx, gundam.ID)
+	secondaryImageURLs, err := qTx.GetGundamSecondaryImageURLs(ctx, gundam.ID)
 	if err != nil {
 		return detail, err
 	}
 	
-	accessories, err := store.GetGundamAccessories(ctx, gundam.ID)
+	accessories, err := qTx.GetGundamAccessories(ctx, gundam.ID)
 	if err != nil {
 		return detail, err
 	}

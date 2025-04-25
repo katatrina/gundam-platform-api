@@ -130,23 +130,23 @@ func (server *Server) setupRouter() *gin.Engine {
 			userGundamGroup.GET("", server.listGundamsByUser)
 		}
 		
-		// API cho bài đăng trao đổi của người dùng hiện tại (đã đăng nhập)
+		// API cho bài đăng trao đổi của người dùng (đã đăng nhập)
 		userExchangePostGroup := userGroup.Group("/me/exchange-posts")
 		{
-			// Liệt kê thông tin chi tiết  của các bài đăng trao đổi
+			// Liệt kê thông tin chi tiết của các bài đăng trao đổi
 			userExchangePostGroup.GET("", server.listUserExchangePosts) // ✅
 			
 			// Tạo bài đăng trao đổi mới
 			userExchangePostGroup.POST("", server.createExchangePost) // ✅
-			//
-			// // Lấy chi tiết một bài đăng trao đổi cụ thể của người dùng hiện tại
-			// userExchangePostGroup.GET("/:id", server.getMyExchangePostDetails)
+			
+			// Lấy chi tiết một bài đăng trao đổi cụ thể của người dùng hiện tại
+			// userExchangePostGroup.GET("/:postID", server.getUserExchangePost)
 			//
 			// // Chỉnh sửa bài đăng trao đổi
 			// userExchangePostGroup.PUT("/:id", server.updateExchangePost)
 			//
 			// Xóa bài đăng trao đổi
-			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost)
+			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost) // ✅
 			
 			// API cho đề xuất trao đổi của một bài đăng
 			offerGroup := userExchangePostGroup.Group("/:postID/offers")
@@ -155,10 +155,10 @@ func (server *Server) setupRouter() *gin.Engine {
 				// offerGroup.GET("", server.listExchangeOffers)
 				
 				// Thêm endpoint cho yêu cầu thương lượng
-				offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiationForOffer)
+				offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiationForOffer) // ✅
 				
 				// Chấp nhận đề xuất trao đổi
-				offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer)
+				offerGroup.PATCH("/:offerID/accept", server.acceptExchangeOffer) // ✅
 				
 				// Từ chối đề xuất trao đổi
 				// offerGroup.PATCH("/:offerID/reject", server.rejectExchangeOffer)
@@ -172,10 +172,10 @@ func (server *Server) setupRouter() *gin.Engine {
 			// userOffersGroup.GET("", server.listMyExchangeOffers)
 			
 			// Tạo đề xuất trao đổi cho một bài đăng
-			userOffersGroup.POST("", server.createExchangeOffer)
+			userOffersGroup.POST("", server.createExchangeOffer) // ✅
 			
 			// Thêm endpoint cập nhật đề xuất (phản hồi thương lượng)
-			userOffersGroup.PATCH("/:offerID", server.updateExchangeOffer)
+			userOffersGroup.PATCH("/:offerID", server.updateExchangeOffer) // ✅
 			
 			// Hủy đề xuất trao đổi
 			// userOffersGroup.PATCH("/:offerID/cancel", server.cancelExchangeOffer)

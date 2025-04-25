@@ -407,7 +407,7 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 		// 10.1 Cho Gundam từ bài đăng được chọn
 		for _, gundamID := range selectedPosterGundamIDs {
 			// Lấy thông tin chi tiết của Gundam
-			gundam, err := store.GetGundamDetailsByID(ctx, gundamID)
+			gundam, err := store.GetGundamDetailsByID(ctx, qTx, gundamID)
 			if err != nil {
 				return fmt.Errorf("failed to get gundam details: %w", err)
 			}
@@ -440,7 +440,7 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 		// 10.2 Cho Gundam từ người đề xuất
 		for _, gundamID := range offererGundamIDs {
 			// Lấy thông tin chi tiết của Gundam
-			gundam, err := store.GetGundamDetailsByID(ctx, gundamID)
+			gundam, err := store.GetGundamDetailsByID(ctx, qTx, gundamID)
 			if err != nil {
 				return fmt.Errorf("failed to get gundam details: %w", err)
 			}
