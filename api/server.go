@@ -142,18 +142,16 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Lấy thông tin chi tiết của một bài đăng trao đổi
 			userExchangePostGroup.GET("/:postID", server.getUserExchangePost) // ✅
 			
-			// // Chỉnh sửa bài đăng trao đổi
+			// Chỉnh sửa bài đăng trao đổi (hiện tại chưa cho phép chỉnh sửa sau khi đã tạo bài đăng)
+			// Bỏ qua vì nhiều lí do
 			// userExchangePostGroup.PUT("/:id", server.updateExchangePost)
-			//
+			
 			// Xóa bài đăng trao đổi
 			userExchangePostGroup.DELETE(":postID", server.deleteExchangePost) // ✅
 			
 			// API cho đề xuất trao đổi của một bài đăng
 			offerGroup := userExchangePostGroup.Group("/:postID/offers")
 			{
-				// Liệt kê các đề xuất cho bài đăng trao đổi
-				// offerGroup.GET("", server.listExchangeOffers)
-				
 				// Thêm endpoint cho yêu cầu thương lượng
 				offerGroup.PATCH("/:offerID/negotiate", server.requestNegotiationForOffer) // ✅
 				
@@ -165,11 +163,11 @@ func (server *Server) setupRouter() *gin.Engine {
 			}
 		}
 		
-		// API cho đề xuất trao đổi của người dùng hiện tại (đã đăng nhập)
+		// API cho đề xuất trao đổi của người dùng đã đăng nhập
 		userOffersGroup := userGroup.Group("/me/exchange-offers")
 		{
-			// Liệt kê đề xuất trao đổi mà người dùng đã gửi
-			// userOffersGroup.GET("", server.listMyExchangeOffers)
+			// Liệt kê tất cả đề xuất trao đổi mà người dùng đã gửi
+			userOffersGroup.GET("", server.listUserExchangeOffers)
 			
 			// Tạo đề xuất trao đổi cho một bài đăng
 			userOffersGroup.POST("", server.createExchangeOffer) // ✅

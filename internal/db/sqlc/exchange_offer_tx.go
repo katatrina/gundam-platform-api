@@ -230,7 +230,7 @@ type AcceptExchangeOfferTxParams struct {
 }
 
 type AcceptExchangeOfferTxResult struct {
-	ExchangeID     string          `json:"exchange_id"`
+	Exchange       Exchange        `json:"exchange"`
 	RejectedOffers []ExchangeOffer `json:"-"` // Danh sách các đề xuất bị từ chối
 }
 
@@ -243,7 +243,6 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 		if err != nil {
 			return fmt.Errorf("failed to generate exchange ID: %w", err)
 		}
-		result.ExchangeID = exchangeID.String()
 		
 		exchange, err := qTx.CreateExchange(ctx, CreateExchangeParams{
 			ID:                 exchangeID,
@@ -256,6 +255,7 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 		if err != nil {
 			return fmt.Errorf("failed to create exchange: %w", err)
 		}
+		result.Exchange = exchange
 		
 		// 2. Xử lý thanh toán tiền bù (nếu có)
 		if arg.PayerID != nil && arg.CompensationAmount != nil && *arg.CompensationAmount > 0 {

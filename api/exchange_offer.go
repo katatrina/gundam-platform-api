@@ -740,13 +740,50 @@ func (server *Server) acceptExchangeOffer(c *gin.Context) {
 		asynq.Queue(worker.QueueCritical),
 	}
 	
+	// Gửi thông báo cho người bị trừ tiền bù (nếu có)
+	if result.Exchange.PayerID != nil && result.Exchange.CompensationAmount != nil && *result.Exchange.CompensationAmount > 0 {
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: *result.Exchange.PayerID,
+			Title:       "Thanh toán tiền bù cho giao dịch trao đổi",
+			Message:     fmt.Sprintf("Số tiền %s đã được trừ từ ví của bạn để bù tiền cho giao dịch trao đổi Gundam.", util.FormatVND(*result.Exchange.CompensationAmount)),
+			Type:        "exchange",
+			ReferenceID: result.Exchange.ID.String(),
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msgf("failed to send notification to user ID %s", *result.Exchange.PayerID)
+		}
+		
+	}
+	
+	// Gửi thông báo cho người được cộng tiền bù (nếu có)
+	if result.Exchange.PayerID != nil && result.Exchange.CompensationAmount != nil && *result.Exchange.CompensationAmount > 0 {
+		// Xác định người nhận tiền bù (người còn lại)
+		var compensationReceiverID string
+		if *result.Exchange.PayerID == result.Exchange.PosterID {
+			compensationReceiverID = result.Exchange.OffererID
+		} else {
+			compensationReceiverID = result.Exchange.PosterID
+		}
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: compensationReceiverID,
+			Title:       "Nhận tiền bù cho giao dịch trao đổi",
+			Message:     fmt.Sprintf("Bạn đã nhận được %s tiền bù cho giao dịch trao đổi Gundam. Số tiền này sẽ được cộng vào số dư tạm thời cho đến khi cuộc trao đổi hoàn tất.", util.FormatVND(*result.Exchange.CompensationAmount)),
+			Type:        "exchange",
+			ReferenceID: result.Exchange.ID.String(),
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msgf("failed to send notification to user ID %s", compensationReceiverID)
+		}
+	}
+	
 	// Gửi thông báo cho người có đề xuất được chấp nhận.
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: offer.OffererID,
 		Title:       "Đề xuất trao đổi đã được chấp nhận",
 		Message:     fmt.Sprintf("Đề xuất trao đổi của bạn cho bài đăng \"%s\" đã được chấp nhận. Vui lòng cung cấp thêm thông tin vận chuyển để hệ thống tạo đơn hàng cho bạn.", util.TruncateString(post.Content, 20)),
 		Type:        "exchange",
-		ReferenceID: result.ExchangeID,
+		ReferenceID: result.Exchange.ID.String(),
 	}, opts...)
 	if err != nil {
 		log.Err(err).Msgf("failed to send notification to user ID %s", offer.OffererID)
@@ -759,12 +796,12 @@ func (server *Server) acceptExchangeOffer(c *gin.Context) {
 			Title:       "Đề xuất trao đổi không được chấp nhận",
 			Message:     fmt.Sprintf("Đề xuất trao đổi của bạn cho bài đăng \"%s\" đã không được chấp nhận.", util.TruncateString(post.Content, 20)),
 			Type:        "exchange",
-			ReferenceID: result.ExchangeID,
+			ReferenceID: result.Exchange.ID.String(),
 		}, opts...)
 		if err != nil {
 			log.Err(err).Msgf("failed to send notification to user ID %s", rejectedOffer.OffererID)
 		}
 	}
 	
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result.Exchange)
 }
