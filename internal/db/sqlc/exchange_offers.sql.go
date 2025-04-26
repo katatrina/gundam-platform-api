@@ -178,9 +178,51 @@ func (q *Queries) ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]E
 	return items, nil
 }
 
+const listExchangeOffersByOfferer = `-- name: ListExchangeOffersByOfferer :many
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, note, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+FROM exchange_offers
+WHERE offerer_id = $1
+ORDER BY created_at DESC, updated_at DESC
+`
+
+func (q *Queries) ListExchangeOffersByOfferer(ctx context.Context, offererID string) ([]ExchangeOffer, error) {
+	rows, err := q.db.Query(ctx, listExchangeOffersByOfferer, offererID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangeOffer{}
+	for rows.Next() {
+		var i ExchangeOffer
+		if err := rows.Scan(
+			&i.ID,
+			&i.PostID,
+			&i.OffererID,
+			&i.PayerID,
+			&i.CompensationAmount,
+			&i.Note,
+			&i.NegotiationsCount,
+			&i.MaxNegotiations,
+			&i.NegotiationRequested,
+			&i.LastNegotiationAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listExchangeOffersByPostExcluding = `-- name: ListExchangeOffersByPostExcluding :many
-SELECT id, post_id, offerer_id, payer_id, compensation_amount, note, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at FROM exchange_offers
-WHERE post_id = $1 AND id != $2
+SELECT id, post_id, offerer_id, payer_id, compensation_amount, note, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+FROM exchange_offers
+WHERE post_id = $1
+  AND id != $2
 `
 
 type ListExchangeOffersByPostExcludingParams struct {

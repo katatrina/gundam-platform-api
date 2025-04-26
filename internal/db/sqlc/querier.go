@@ -81,6 +81,7 @@ type Querier interface {
 	ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error)
 	ListExchangeOfferNotes(ctx context.Context, offerID uuid.UUID) ([]ExchangeOfferNote, error)
 	ListExchangeOffers(ctx context.Context, postID uuid.UUID) ([]ExchangeOffer, error)
+	ListExchangeOffersByOfferer(ctx context.Context, offererID string) ([]ExchangeOffer, error)
 	ListExchangeOffersByPostExcluding(ctx context.Context, arg ListExchangeOffersByPostExcludingParams) ([]ExchangeOffer, error)
 	ListExchangePostItems(ctx context.Context, postID uuid.UUID) ([]ExchangePostItem, error)
 	ListExchangePosts(ctx context.Context, status NullExchangePostStatus) ([]ExchangePost, error)

@@ -167,7 +167,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		userOffersGroup := userGroup.Group("/me/exchange-offers")
 		{
 			// Liệt kê tất cả đề xuất trao đổi mà người dùng đã gửi
-			userOffersGroup.GET("", server.listUserExchangeOffers)
+			userOffersGroup.GET("", server.listUserExchangeOffers) // ✅
 			
 			// Tạo đề xuất trao đổi cho một bài đăng
 			userOffersGroup.POST("", server.createExchangeOffer) // ✅

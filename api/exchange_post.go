@@ -178,6 +178,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 				PostID:               post.ID,
 				PayerID:              offer.PayerID,
 				CompensationAmount:   offer.CompensationAmount,
+				Note:                 offer.Note,
 				NegotiationsCount:    offer.NegotiationsCount,
 				MaxNegotiations:      offer.MaxNegotiations,
 				NegotiationRequested: offer.NegotiationRequested,
@@ -251,7 +252,7 @@ func (server *Server) listUserExchangePosts(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, errorResponse(err))
 				return
 			}
-			offerInfo.Notes = notes
+			offerInfo.NegotiationNotes = notes
 			
 			offerInfos = append(offerInfos, offerInfo)
 		}
@@ -761,6 +762,7 @@ func (server *Server) getUserExchangePost(c *gin.Context) {
 			PostID:               post.ID,
 			PayerID:              offer.PayerID,
 			CompensationAmount:   offer.CompensationAmount,
+			Note:                 offer.Note,
 			NegotiationsCount:    offer.NegotiationsCount,
 			MaxNegotiations:      offer.MaxNegotiations,
 			NegotiationRequested: offer.NegotiationRequested,
@@ -832,7 +834,7 @@ func (server *Server) getUserExchangePost(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
-		offerInfo.Notes = notes
+		offerInfo.NegotiationNotes = notes
 		
 		offerInfos = append(offerInfos, offerInfo)
 	}

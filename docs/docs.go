@@ -1787,6 +1787,32 @@ const docTemplate = `{
             }
         },
         "/users/me/exchange-offers": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get a list of all exchange offers created by the authenticated user, including details about the exchange posts, items, and negotiation notes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "List user's exchange offers",
+                "responses": {
+                    "200": {
+                        "description": "List of user's exchange offers",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.UserExchangeOfferDetails"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3077,11 +3103,11 @@ const docTemplate = `{
         "db.AcceptExchangeOfferTxResult": {
             "type": "object",
             "required": [
-                "exchange_id"
+                "exchange"
             ],
             "properties": {
-                "exchange_id": {
-                    "type": "string"
+                "exchange": {
+                    "$ref": "#/definitions/db.Exchange"
                 }
             }
         },
@@ -3387,6 +3413,89 @@ const docTemplate = `{
                 "DeliveryOverralStatusReturn"
             ]
         },
+        "db.Exchange": {
+            "type": "object",
+            "required": [
+                "canceled_by",
+                "canceled_reason",
+                "compensation_amount",
+                "completed_at",
+                "created_at",
+                "id",
+                "offerer_delivery_fee_paid",
+                "offerer_from_delivery_id",
+                "offerer_id",
+                "offerer_order_id",
+                "offerer_to_delivery_id",
+                "payer_id",
+                "poster_delivery_fee_paid",
+                "poster_from_delivery_id",
+                "poster_id",
+                "poster_order_id",
+                "poster_to_delivery_id",
+                "status",
+                "updated_at"
+            ],
+            "properties": {
+                "canceled_by": {
+                    "type": "string"
+                },
+                "canceled_reason": {
+                    "type": "string"
+                },
+                "compensation_amount": {
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "offerer_delivery_fee_paid": {
+                    "type": "boolean"
+                },
+                "offerer_from_delivery_id": {
+                    "type": "integer"
+                },
+                "offerer_id": {
+                    "type": "string"
+                },
+                "offerer_order_id": {
+                    "type": "string"
+                },
+                "offerer_to_delivery_id": {
+                    "type": "integer"
+                },
+                "payer_id": {
+                    "type": "string"
+                },
+                "poster_delivery_fee_paid": {
+                    "type": "boolean"
+                },
+                "poster_from_delivery_id": {
+                    "type": "integer"
+                },
+                "poster_id": {
+                    "type": "string"
+                },
+                "poster_order_id": {
+                    "type": "string"
+                },
+                "poster_to_delivery_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.ExchangeStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "db.ExchangeOffer": {
             "type": "object",
             "required": [
@@ -3450,9 +3559,10 @@ const docTemplate = `{
                 "id",
                 "last_negotiation_at",
                 "max_negotiations",
+                "negotiation_notes",
                 "negotiation_requested",
                 "negotiations_count",
-                "notes",
+                "note",
                 "offerer",
                 "offerer_exchange_items",
                 "payer_id",
@@ -3462,15 +3572,15 @@ const docTemplate = `{
             ],
             "properties": {
                 "compensation_amount": {
-                    "description": "Số tiền bồi thường (có thể là nil nếu không có bù tiền)",
+                    "description": "Số tiền bù",
                     "type": "integer"
                 },
                 "created_at": {
-                    "description": "Thời gian tạo offer",
+                    "description": "Thời gian tạo đề xuất",
                     "type": "string"
                 },
                 "id": {
-                    "description": "ID của offer",
+                    "description": "ID đề xuất",
                     "type": "string"
                 },
                 "last_negotiation_at": {
@@ -3481,6 +3591,13 @@ const docTemplate = `{
                     "description": "Số lần thương lượng tối đa",
                     "type": "integer"
                 },
+                "negotiation_notes": {
+                    "description": "Các ghi chú/tin nhắn thương lượng",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeOfferNote"
+                    }
+                },
                 "negotiation_requested": {
                     "description": "Đã yêu cầu thương lượng chưa",
                     "type": "boolean"
@@ -3489,12 +3606,9 @@ const docTemplate = `{
                     "description": "Số lần đã thương lượng",
                     "type": "integer"
                 },
-                "notes": {
-                    "description": "Các ghi chú/tin nhắn thương lượng",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/db.ExchangeOfferNote"
-                    }
+                "note": {
+                    "description": "Ghi chú của đề xuất",
+                    "type": "string"
                 },
                 "offerer": {
                     "description": "Thông tin người đề xuất",
@@ -3512,7 +3626,7 @@ const docTemplate = `{
                     }
                 },
                 "payer_id": {
-                    "description": "ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)",
+                    "description": "ID người bù tiền",
                     "type": "string"
                 },
                 "post_id": {
@@ -3527,7 +3641,7 @@ const docTemplate = `{
                     }
                 },
                 "updated_at": {
-                    "description": "Thời gian cập nhật offer",
+                    "description": "Thời gian cập nhật đề xuất gần nhất",
                     "type": "string"
                 }
             }
@@ -3656,6 +3770,27 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "ExchangePostStatusOpen",
                 "ExchangePostStatusClosed"
+            ]
+        },
+        "db.ExchangeStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "packaging",
+                "delivering",
+                "delivered",
+                "completed",
+                "canceled",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "ExchangeStatusPending",
+                "ExchangeStatusPackaging",
+                "ExchangeStatusDelivering",
+                "ExchangeStatusDelivered",
+                "ExchangeStatusCompleted",
+                "ExchangeStatusCanceled",
+                "ExchangeStatusFailed"
             ]
         },
         "db.GundamAccessoryDTO": {
@@ -4582,6 +4717,48 @@ const docTemplate = `{
                 },
                 "ward_name": {
                     "type": "string"
+                }
+            }
+        },
+        "db.UserExchangeOfferDetails": {
+            "type": "object",
+            "required": [
+                "exchange_post",
+                "exchange_post_items",
+                "offer",
+                "poster"
+            ],
+            "properties": {
+                "exchange_post": {
+                    "description": "Thông tin bài đăng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangePost"
+                        }
+                    ]
+                },
+                "exchange_post_items": {
+                    "description": "Danh sách Gundam mà Người đăng bài cho phép trao đổi",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.GundamDetails"
+                    }
+                },
+                "offer": {
+                    "description": "Chi tiết đề xuất",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeOfferInfo"
+                        }
+                    ]
+                },
+                "poster": {
+                    "description": "Thông tin Người đăng bài",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
                 }
             }
         },

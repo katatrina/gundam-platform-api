@@ -425,10 +425,10 @@ definitions:
     type: object
   db.AcceptExchangeOfferTxResult:
     properties:
-      exchange_id:
-        type: string
+      exchange:
+        $ref: '#/definitions/db.Exchange'
     required:
-    - exchange_id
+    - exchange
     type: object
   db.AddCartItemRow:
     properties:
@@ -639,6 +639,67 @@ definitions:
     - DeliveryOverralStatusDelivered
     - DeliveryOverralStatusFailed
     - DeliveryOverralStatusReturn
+  db.Exchange:
+    properties:
+      canceled_by:
+        type: string
+      canceled_reason:
+        type: string
+      compensation_amount:
+        type: integer
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      offerer_delivery_fee_paid:
+        type: boolean
+      offerer_from_delivery_id:
+        type: integer
+      offerer_id:
+        type: string
+      offerer_order_id:
+        type: string
+      offerer_to_delivery_id:
+        type: integer
+      payer_id:
+        type: string
+      poster_delivery_fee_paid:
+        type: boolean
+      poster_from_delivery_id:
+        type: integer
+      poster_id:
+        type: string
+      poster_order_id:
+        type: string
+      poster_to_delivery_id:
+        type: integer
+      status:
+        $ref: '#/definitions/db.ExchangeStatus'
+      updated_at:
+        type: string
+    required:
+    - canceled_by
+    - canceled_reason
+    - compensation_amount
+    - completed_at
+    - created_at
+    - id
+    - offerer_delivery_fee_paid
+    - offerer_from_delivery_id
+    - offerer_id
+    - offerer_order_id
+    - offerer_to_delivery_id
+    - payer_id
+    - poster_delivery_fee_paid
+    - poster_from_delivery_id
+    - poster_id
+    - poster_order_id
+    - poster_to_delivery_id
+    - status
+    - updated_at
+    type: object
   db.ExchangeOffer:
     properties:
       compensation_amount:
@@ -682,13 +743,13 @@ definitions:
   db.ExchangeOfferInfo:
     properties:
       compensation_amount:
-        description: Số tiền bồi thường (có thể là nil nếu không có bù tiền)
+        description: Số tiền bù
         type: integer
       created_at:
-        description: Thời gian tạo offer
+        description: Thời gian tạo đề xuất
         type: string
       id:
-        description: ID của offer
+        description: ID đề xuất
         type: string
       last_negotiation_at:
         description: Thời gian thương lượng gần nhất
@@ -696,17 +757,20 @@ definitions:
       max_negotiations:
         description: Số lần thương lượng tối đa
         type: integer
+      negotiation_notes:
+        description: Các ghi chú/tin nhắn thương lượng
+        items:
+          $ref: '#/definitions/db.ExchangeOfferNote'
+        type: array
       negotiation_requested:
         description: Đã yêu cầu thương lượng chưa
         type: boolean
       negotiations_count:
         description: Số lần đã thương lượng
         type: integer
-      notes:
-        description: Các ghi chú/tin nhắn thương lượng
-        items:
-          $ref: '#/definitions/db.ExchangeOfferNote'
-        type: array
+      note:
+        description: Ghi chú của đề xuất
+        type: string
       offerer:
         allOf:
         - $ref: '#/definitions/db.User'
@@ -717,8 +781,7 @@ definitions:
           $ref: '#/definitions/db.GundamDetails'
         type: array
       payer_id:
-        description: ID người bù tiền (có thể là người đề xuất hoặc người đăng bài,
-          nếu không có thì là nil)
+        description: ID người bù tiền
         type: string
       post_id:
         description: ID bài đăng trao đổi
@@ -730,7 +793,7 @@ definitions:
           $ref: '#/definitions/db.GundamDetails'
         type: array
       updated_at:
-        description: Thời gian cập nhật offer
+        description: Thời gian cập nhật đề xuất gần nhất
         type: string
     required:
     - compensation_amount
@@ -738,9 +801,10 @@ definitions:
     - id
     - last_negotiation_at
     - max_negotiations
+    - negotiation_notes
     - negotiation_requested
     - negotiations_count
-    - notes
+    - note
     - offerer
     - offerer_exchange_items
     - payer_id
@@ -837,6 +901,24 @@ definitions:
     x-enum-varnames:
     - ExchangePostStatusOpen
     - ExchangePostStatusClosed
+  db.ExchangeStatus:
+    enum:
+    - pending
+    - packaging
+    - delivering
+    - delivered
+    - completed
+    - canceled
+    - failed
+    type: string
+    x-enum-varnames:
+    - ExchangeStatusPending
+    - ExchangeStatusPackaging
+    - ExchangeStatusDelivering
+    - ExchangeStatusDelivered
+    - ExchangeStatusCompleted
+    - ExchangeStatusCanceled
+    - ExchangeStatusFailed
   db.GundamAccessoryDTO:
     properties:
       name:
@@ -1481,6 +1563,31 @@ definitions:
     - updated_at
     - user_id
     - ward_name
+    type: object
+  db.UserExchangeOfferDetails:
+    properties:
+      exchange_post:
+        allOf:
+        - $ref: '#/definitions/db.ExchangePost'
+        description: Thông tin bài đăng
+      exchange_post_items:
+        description: Danh sách Gundam mà Người đăng bài cho phép trao đổi
+        items:
+          $ref: '#/definitions/db.GundamDetails'
+        type: array
+      offer:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeOfferInfo'
+        description: Chi tiết đề xuất
+      poster:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin Người đăng bài
+    required:
+    - exchange_post
+    - exchange_post_items
+    - offer
+    - poster
     type: object
   db.UserExchangePostDetails:
     properties:
@@ -3075,6 +3182,23 @@ paths:
       tags:
       - users
   /users/me/exchange-offers:
+    get:
+      description: Get a list of all exchange offers created by the authenticated
+        user, including details about the exchange posts, items, and negotiation notes.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user's exchange offers
+          schema:
+            items:
+              $ref: '#/definitions/db.UserExchangeOfferDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user's exchange offers
+      tags:
+      - exchanges
     post:
       consumes:
       - application/json

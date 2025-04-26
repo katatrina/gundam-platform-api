@@ -104,12 +104,13 @@ type UserExchangePostDetails struct {
 }
 
 type ExchangeOfferInfo struct {
-	ID      uuid.UUID `json:"id"`      // ID của offer
+	ID      uuid.UUID `json:"id"`      // ID đề xuất
 	PostID  uuid.UUID `json:"post_id"` // ID bài đăng trao đổi
 	Offerer User      `json:"offerer"` // Thông tin người đề xuất
 	
-	PayerID            *string `json:"payer_id"`            // ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
-	CompensationAmount *int64  `json:"compensation_amount"` // Số tiền bồi thường (có thể là nil nếu không có bù tiền)
+	PayerID            *string `json:"payer_id"`            // ID người bù tiền
+	CompensationAmount *int64  `json:"compensation_amount"` // Số tiền bù
+	Note               *string `json:"note"`                // Ghi chú của đề xuất
 	
 	OffererExchangeItems []GundamDetails `json:"offerer_exchange_items"` // Danh sách Gundam của người đề xuất
 	PosterExchangeItems  []GundamDetails `json:"poster_exchange_items"`  // Danh sách Gundam của người đăng bài mà người đề xuất muốn trao đổi
@@ -118,8 +119,15 @@ type ExchangeOfferInfo struct {
 	MaxNegotiations      int64               `json:"max_negotiations"`      // Số lần thương lượng tối đa
 	NegotiationRequested bool                `json:"negotiation_requested"` // Đã yêu cầu thương lượng chưa
 	LastNegotiationAt    *time.Time          `json:"last_negotiation_at"`   // Thời gian thương lượng gần nhất
-	Notes                []ExchangeOfferNote `json:"notes"`                 // Các ghi chú/tin nhắn thương lượng
+	NegotiationNotes     []ExchangeOfferNote `json:"negotiation_notes"`     // Các ghi chú/tin nhắn thương lượng
 	
-	CreatedAt time.Time `json:"created_at"` // Thời gian tạo offer
-	UpdatedAt time.Time `json:"updated_at"` // Thời gian cập nhật offer
+	CreatedAt time.Time `json:"created_at"` // Thời gian tạo đề xuất
+	UpdatedAt time.Time `json:"updated_at"` // Thời gian cập nhật đề xuất gần nhất
+}
+
+type UserExchangeOfferDetails struct {
+	ExchangePost      ExchangePost      `json:"exchange_post"`       // Thông tin bài đăng
+	Poster            User              `json:"poster"`              // Thông tin Người đăng bài
+	ExchangePostItems []GundamDetails   `json:"exchange_post_items"` // Danh sách Gundam mà Người đăng bài cho phép trao đổi
+	Offer             ExchangeOfferInfo `json:"offer"`               // Chi tiết đề xuất
 }

@@ -43,5 +43,13 @@ SET compensation_amount   = COALESCE(sqlc.narg('compensation_amount'), compensat
 WHERE id = sqlc.arg(id) RETURNING *;
 
 -- name: ListExchangeOffersByPostExcluding :many
-SELECT * FROM exchange_offers
-WHERE post_id = sqlc.arg(post_id) AND id != sqlc.arg(exclude_offer_id);
+SELECT *
+FROM exchange_offers
+WHERE post_id = sqlc.arg(post_id)
+  AND id != sqlc.arg(exclude_offer_id);
+
+-- name: ListExchangeOffersByOfferer :many
+SELECT *
+FROM exchange_offers
+WHERE offerer_id = $1
+ORDER BY created_at DESC, updated_at DESC;
