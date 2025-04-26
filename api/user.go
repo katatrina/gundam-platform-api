@@ -433,7 +433,7 @@ type updateAvatarResponse struct {
 //	@Success		200				{object}	db.User	"Successfully retrieved user"
 //	@Failure		404				"User not found"
 //	@Failure		500				"Internal server error"
-//	@Router			/users/by-phone_number [get]
+//	@Router			/users/by-phone [get]
 func (server *Server) getUserByPhoneNumber(ctx *gin.Context) {
 	phoneNumber := ctx.Query("phone_number")
 	

@@ -139,9 +139,9 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Tạo bài đăng trao đổi mới
 			userExchangePostGroup.POST("", server.createExchangePost) // ✅
 			
-			// Lấy chi tiết một bài đăng trao đổi cụ thể của người dùng hiện tại
-			// userExchangePostGroup.GET("/:postID", server.getUserExchangePost)
-			//
+			// Lấy thông tin chi tiết của một bài đăng trao đổi
+			userExchangePostGroup.GET("/:postID", server.getUserExchangePost) // ✅
+			
 			// // Chỉnh sửa bài đăng trao đổi
 			// userExchangePostGroup.PUT("/:id", server.updateExchangePost)
 			//

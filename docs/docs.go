@@ -297,6 +297,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "example": "YR-04 Fire Lord",
+                        "description": "Filter by Gundam name",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "example": "master-grade",
                         "description": "Filter by Gundam grade slug",
                         "name": "grade",
@@ -1744,7 +1751,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/by-phone_number": {
+        "/users/by-phone": {
             "get": {
                 "description": "Get user details using a phone_number number as a query parameter",
                 "produces": [
@@ -1967,6 +1974,54 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.DeleteExchangePostTxResult"
                         }
+                    }
+                }
+            }
+        },
+        "/users/me/exchange-posts/{postID}": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get detailed information about a specific exchange post owned by the authenticated user, including items and offers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Get user's exchange post details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Post ID",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (open, closed)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User exchange post details",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserExchangePostDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid post ID or status",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Post not found",
+                        "schema": {}
                     }
                 }
             }

@@ -88,6 +88,35 @@ func (q *Queries) GetExchangePost(ctx context.Context, id uuid.UUID) (ExchangePo
 	return i, err
 }
 
+const getUserExchangePost = `-- name: GetUserExchangePost :one
+SELECT id, user_id, content, post_image_urls, status, created_at, updated_at
+FROM "exchange_posts"
+WHERE id = $1
+  AND user_id = $2
+  AND status = coalesce($3, status) LIMIT 1
+`
+
+type GetUserExchangePostParams struct {
+	PostID uuid.UUID              `json:"post_id"`
+	UserID string                 `json:"user_id"`
+	Status NullExchangePostStatus `json:"status"`
+}
+
+func (q *Queries) GetUserExchangePost(ctx context.Context, arg GetUserExchangePostParams) (ExchangePost, error) {
+	row := q.db.QueryRow(ctx, getUserExchangePost, arg.PostID, arg.UserID, arg.Status)
+	var i ExchangePost
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.PostImageUrls,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listExchangePostItems = `-- name: ListExchangePostItems :many
 SELECT id, post_id, gundam_id, created_at
 FROM "exchange_post_items"

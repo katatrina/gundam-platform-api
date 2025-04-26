@@ -72,6 +72,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error)
 	GetUserExchangeOfferForPost(ctx context.Context, arg GetUserExchangeOfferForPostParams) (ExchangeOffer, error)
+	GetUserExchangePost(ctx context.Context, arg GetUserExchangePostParams) (ExchangePost, error)
 	GetUserPickupAddress(ctx context.Context, userID string) (UserAddress, error)
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)

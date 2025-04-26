@@ -1856,6 +1856,11 @@ paths:
     get:
       description: Retrieves a list of selling Gundams, optionally filtered by grade
       parameters:
+      - description: Filter by Gundam name
+        example: YR-04 Fire Lord
+        in: query
+        name: name
+        type: string
       - description: Filter by Gundam grade slug
         example: master-grade
         in: query
@@ -3046,7 +3051,7 @@ paths:
       summary: Become a seller
       tags:
       - users
-  /users/by-phone_number:
+  /users/by-phone:
     get:
       description: Get user details using a phone_number number as a query parameter
       parameters:
@@ -3188,6 +3193,38 @@ paths:
       security:
       - accessToken: []
       summary: Delete an exchange post
+      tags:
+      - exchanges
+  /users/me/exchange-posts/{postID}:
+    get:
+      description: Get detailed information about a specific exchange post owned by
+        the authenticated user, including items and offers.
+      parameters:
+      - description: Exchange Post ID
+        in: path
+        name: postID
+        required: true
+        type: string
+      - description: Filter by status (open, closed)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User exchange post details
+          schema:
+            $ref: '#/definitions/db.UserExchangePostDetails'
+        "400":
+          description: Invalid post ID or status
+          schema: {}
+        "404":
+          description: Post not found
+          schema: {}
+      security:
+      - accessToken: []
+      summary: Get user's exchange post details
       tags:
       - exchanges
   /users/me/exchange-posts/{postID}/offers/{offerID}/accept:

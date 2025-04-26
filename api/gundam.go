@@ -50,6 +50,7 @@ func (r *listGundamsRequest) validate() error {
 //	@Description	Retrieves a list of selling Gundams, optionally filtered by grade
 //	@Tags			gundams
 //	@Produce		json
+//	@Param			name	query	string				false	"Filter by Gundam name"			example(YR-04 Fire Lord)
 //	@Param			grade	query	string				false	"Filter by Gundam grade slug"	example(master-grade)
 //	@Param			status	query	string				false	"Filter by Gundam status"		Enums(in store, published, processing, pending auction approval, auctioning)
 //	@Success		200		array	db.GundamDetails	"Successfully retrieved list of Gundams"
@@ -287,7 +288,7 @@ type createGundamRequest struct {
 //	@Param			name					formData	string	true	"Gundam name"
 //	@Param			grade_id				formData	integer	true	"Gundam grade OfferID"
 //	@Param			series					formData	string	true	"Gundam series name"
-// @Param			parts_total				formData	integer	true	"Total number of parts"
+//	@Param			parts_total				formData	integer	true	"Total number of parts"
 //	@Param			material				formData	string	true	"Gundam material"
 //	@Param			version					formData	string	true	"Gundam version"
 //	@Param			condition				formData	string	true	"Condition of the Gundam"	Enums(new, open box, used)

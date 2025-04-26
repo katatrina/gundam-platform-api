@@ -23,6 +23,13 @@ WHERE user_id = sqlc.arg('user_id')
   AND status = coalesce(sqlc.narg('status'), status)
 ORDER BY created_at DESC, updated_at DESC;
 
+-- name: GetUserExchangePost :one
+SELECT *
+FROM "exchange_posts"
+WHERE id = sqlc.arg('post_id')
+  AND user_id = sqlc.arg('user_id')
+  AND status = coalesce(sqlc.narg('status'), status) LIMIT 1;
+
 -- name: ListExchangePostItems :many
 SELECT *
 FROM "exchange_post_items"

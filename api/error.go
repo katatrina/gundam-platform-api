@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrSellerIDMismatch = errors.New("seller OfferID in URL does not match authenticated user OfferID")
+	ErrSellerIDMismatch = errors.New("seller ID in URL does not match authenticated user ID")
 )
 
 type FailedValidationResponse struct {
