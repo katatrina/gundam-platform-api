@@ -982,3 +982,183 @@ func (server *Server) listUserExchangeOffers(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+// @Summary     Get user's exchange offer details
+// @Description Retrieves detailed information about a specific exchange offer created by the authenticated user.
+// @Tags        exchanges
+// @Produce     json
+// @Security    accessToken
+// @Param       offerID   path     string                   true   "Exchange Offer ID"
+// @Success     200       {object} db.UserExchangeOfferDetails
+// @Failure     400       {object} error                    "Invalid offer ID"
+// @Failure     404       {object} error                    "Offer not found"
+// @Failure     403       {object} error                    "Unauthorized access"
+// @Failure     500       {object} error                    "Internal server error"
+// @Router      /users/me/exchange-offers/{offerID} [get]
+func (server *Server) getUserExchangeOffer(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Lấy ID của đề xuất từ URL
+	offerIDStr := c.Param("offerID")
+	offerID, err := uuid.Parse(offerIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer ID: %s", offerIDStr)))
+		return
+	}
+	
+	// Lấy thông tin đề xuất
+	offer, err := server.dbStore.GetExchangeOffer(c.Request.Context(), offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange offer ID %s not found", offerIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền truy cập - chỉ chủ đề xuất mới có thể xem chi tiết
+	if offer.OffererID != userID {
+		err = fmt.Errorf("offer ID %v does not belong to user ID %v", offerID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	var offerDetails db.UserExchangeOfferDetails
+	
+	offerInfo := db.ExchangeOfferInfo{
+		ID:                   offer.ID,
+		PostID:               offer.PostID,
+		PayerID:              offer.PayerID,
+		CompensationAmount:   offer.CompensationAmount,
+		Note:                 offer.Note,
+		NegotiationsCount:    offer.NegotiationsCount,
+		MaxNegotiations:      offer.MaxNegotiations,
+		NegotiationRequested: offer.NegotiationRequested,
+		LastNegotiationAt:    offer.LastNegotiationAt,
+		CreatedAt:            offer.CreatedAt,
+		UpdatedAt:            offer.UpdatedAt,
+	}
+	
+	// Lấy thông tin bài đăng của offer
+	post, err := server.dbStore.GetExchangePost(c.Request.Context(), offer.PostID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange post ID %s not found", offer.PostID)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	offerDetails.ExchangePost = post
+	
+	// Lấy thông tin chủ bài đăng
+	poster, err := server.dbStore.GetUserByID(c.Request.Context(), post.UserID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("user ID %s not found", post.UserID)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	offerDetails.Poster = poster
+	
+	// Lấy thông tin các item của bài đăng
+	postItems, err := server.dbStore.ListExchangePostItems(c.Request.Context(), post.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin chi tiết của từng item
+	postGundams := make([]db.GundamDetails, 0, len(postItems))
+	for _, item := range postItems {
+		gundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, item.GundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("gundam ID %d not found", item.GundamID)))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		postGundams = append(postGundams, gundam)
+	}
+	offerDetails.ExchangePostItems = postGundams
+	
+	// Lấy các item từ bài đăng mà người đề xuất muốn trao đổi
+	posterItems, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
+		OfferID:      offer.ID,
+		IsFromPoster: util.BoolPointer(true),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin chi tiết của từng posterItems
+	posterGundams := make([]db.GundamDetails, 0, len(posterItems))
+	for _, item := range posterItems {
+		gundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, item.GundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("gundam ID %d not found", item.GundamID)))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		posterGundams = append(posterGundams, gundam)
+	}
+	offerInfo.PosterExchangeItems = posterGundams
+	
+	// Lấy các offer item từ người đề xuất
+	offererItems, err := server.dbStore.ListExchangeOfferItems(c.Request.Context(), db.ListExchangeOfferItemsParams{
+		OfferID:      offer.ID,
+		IsFromPoster: util.BoolPointer(false),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin chi tiết của từng offererItems
+	offererGundams := make([]db.GundamDetails, 0, len(offererItems))
+	for _, item := range offererItems {
+		gundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, item.GundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("gundam ID %d not found", item.GundamID)))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		offererGundams = append(offererGundams, gundam)
+	}
+	offerInfo.OffererExchangeItems = offererGundams
+	
+	// Lấy thông tin các ghi chú thương lượng (nếu có)
+	negotiationNotes, err := server.dbStore.ListExchangeOfferNotes(c.Request.Context(), offer.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	offerInfo.NegotiationNotes = negotiationNotes
+	
+	offerDetails.Offer = offerInfo
+	
+	c.JSON(http.StatusOK, offerDetails)
+}

@@ -169,6 +169,9 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Liệt kê tất cả đề xuất trao đổi mà người dùng đã gửi
 			userOffersGroup.GET("", server.listUserExchangeOffers) // ✅
 			
+			// Lấy thông tin chi tiết của một đề xuất
+			userOffersGroup.GET(":offerID", server.getUserExchangeOffer)
+			
 			// Tạo đề xuất trao đổi cho một bài đăng
 			userOffersGroup.POST("", server.createExchangeOffer) // ✅
 			
