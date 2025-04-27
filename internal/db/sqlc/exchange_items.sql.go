@@ -79,3 +79,51 @@ func (q *Queries) CreateExchangeItem(ctx context.Context, arg CreateExchangeItem
 	)
 	return i, err
 }
+
+const listExchangeItems = `-- name: ListExchangeItems :many
+SELECT id, exchange_id, gundam_id, name, slug, grade, scale, quantity, price, weight, image_url, owner_id, is_from_poster, created_at
+FROM exchange_items
+WHERE exchange_id = $1
+  AND ($2::boolean IS NULL OR is_from_poster = $2::boolean)
+ORDER BY created_at DESC
+`
+
+type ListExchangeItemsParams struct {
+	ExchangeID   uuid.UUID `json:"exchange_id"`
+	IsFromPoster *bool     `json:"is_from_poster"`
+}
+
+func (q *Queries) ListExchangeItems(ctx context.Context, arg ListExchangeItemsParams) ([]ExchangeItem, error) {
+	rows, err := q.db.Query(ctx, listExchangeItems, arg.ExchangeID, arg.IsFromPoster)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExchangeItem{}
+	for rows.Next() {
+		var i ExchangeItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExchangeID,
+			&i.GundamID,
+			&i.Name,
+			&i.Slug,
+			&i.Grade,
+			&i.Scale,
+			&i.Quantity,
+			&i.Price,
+			&i.Weight,
+			&i.ImageURL,
+			&i.OwnerID,
+			&i.IsFromPoster,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

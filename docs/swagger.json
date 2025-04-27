@@ -256,6 +256,40 @@
                 }
             }
         },
+        "/exchanges/{exchangeID}": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves detailed information about a specific exchange.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Get exchange details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange ID",
+                        "name": "exchangeID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exchange details",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserExchangeDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/grades": {
             "get": {
                 "description": "Retrieves a list of all available Gundam model grades",
@@ -1850,6 +1884,54 @@
             }
         },
         "/users/me/exchange-offers/{offerID}": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves detailed information about a specific exchange offer created by the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Get user's exchange offer details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Offer ID",
+                        "name": "offerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserExchangeOfferDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid offer ID",
+                        "schema": {}
+                    },
+                    "403": {
+                        "description": "Unauthorized access",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Offer not found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {}
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -3494,6 +3576,69 @@
                 }
             }
         },
+        "db.ExchangeItem": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "exchange_id",
+                "grade",
+                "gundam_id",
+                "id",
+                "image_url",
+                "is_from_poster",
+                "name",
+                "owner_id",
+                "price",
+                "quantity",
+                "scale",
+                "slug",
+                "weight"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "exchange_id": {
+                    "type": "string"
+                },
+                "grade": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "is_from_poster": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
         "db.ExchangeOffer": {
             "type": "object",
             "required": [
@@ -3790,6 +3935,68 @@
                 "ExchangeStatusCanceled",
                 "ExchangeStatusFailed"
             ]
+        },
+        "db.ExchangeUserInfo": {
+            "type": "object",
+            "required": [
+                "avatar_url",
+                "delivery_fee_paid",
+                "from_address",
+                "full_name",
+                "id",
+                "items",
+                "order",
+                "to_address"
+            ],
+            "properties": {
+                "avatar_url": {
+                    "description": "URL ảnh đại diện người dùng",
+                    "type": "string"
+                },
+                "delivery_fee_paid": {
+                    "description": "Đã thanh toán phí vận chuyển chưa",
+                    "type": "boolean"
+                },
+                "from_address": {
+                    "description": "Địa chỉ gửi hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.DeliveryInformation"
+                        }
+                    ]
+                },
+                "full_name": {
+                    "description": "Tên người dùng",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Thông tin cơ bản",
+                    "type": "string"
+                },
+                "items": {
+                    "description": "Danh sách Gundam",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.ExchangeItem"
+                    }
+                },
+                "order": {
+                    "description": "Thông tin đơn hàng và vận chuyển",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Order"
+                        }
+                    ]
+                },
+                "to_address": {
+                    "description": "Địa chỉ nhận hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.DeliveryInformation"
+                        }
+                    ]
+                }
+            }
         },
         "db.GundamAccessoryDTO": {
             "type": "object",
@@ -4714,6 +4921,86 @@
                     "type": "string"
                 },
                 "ward_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.UserExchangeDetails": {
+            "type": "object",
+            "required": [
+                "canceled_by",
+                "canceled_reason",
+                "compensation_amount",
+                "completed_at",
+                "created_at",
+                "current_user",
+                "id",
+                "offerer_id",
+                "partner",
+                "payer_id",
+                "poster_id",
+                "status",
+                "updated_at"
+            ],
+            "properties": {
+                "canceled_by": {
+                    "description": "Thông tin hủy (nếu có)",
+                    "type": "string"
+                },
+                "canceled_reason": {
+                    "description": "Lý do hủy",
+                    "type": "string"
+                },
+                "compensation_amount": {
+                    "description": "Số tiền bù (nếu có)",
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "description": "Thời gian hoàn thành",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "Thời gian tạo",
+                    "type": "string"
+                },
+                "current_user": {
+                    "description": "Thông tin về người tham gia",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeUserInfo"
+                        }
+                    ]
+                },
+                "id": {
+                    "description": "ID của bài đăng trao đổi",
+                    "type": "string"
+                },
+                "offerer_id": {
+                    "description": "ID người đề xuất",
+                    "type": "string"
+                },
+                "partner": {
+                    "description": "Thông tin người còn lại",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.ExchangeUserInfo"
+                        }
+                    ]
+                },
+                "payer_id": {
+                    "description": "Thông tin bù tiền",
+                    "type": "string"
+                },
+                "poster_id": {
+                    "description": "Thông tin gốc về cuộc trao đổi (Ai đăng, ai đề xuất)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Thông tin cơ bản về cuộc trao đổi",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Thời gian cập nhật",
                     "type": "string"
                 }
             }

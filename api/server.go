@@ -170,7 +170,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			userOffersGroup.GET("", server.listUserExchangeOffers) // ✅
 			
 			// Lấy thông tin chi tiết của một đề xuất
-			userOffersGroup.GET(":offerID", server.getUserExchangeOffer)
+			userOffersGroup.GET(":offerID", server.getUserExchangeOffer) // ✅
 			
 			// Tạo đề xuất trao đổi cho một bài đăng
 			userOffersGroup.POST("", server.createExchangeOffer) // ✅
@@ -181,6 +181,15 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Hủy đề xuất trao đổi
 			// userOffersGroup.PATCH("/:offerID/cancel", server.cancelExchangeOffer)
 		}
+	}
+	
+	exchangeGroup := v1.Group("/exchanges", authMiddleware(server.tokenMaker))
+	{
+		// exchangeGroup.GET("", server.listUserExchanges) // Liệt kê các giao dịch trao đổi của người dùng
+		exchangeGroup.GET(":exchangeID", server.getExchangeDetails) // ✅ Lấy chi tiết giao dịch trao đổi
+		// exchangeGroup.POST(":exchangeID/shipping-info", server.provideExchangeShippingInfo)  // Cung cấp thông tin vận chuyển
+		// exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)    // Thanh toán phí vận chuyển
+		// exchangeGroup.PATCH(":exchangeID/cancel", server.cancelExchange)   // Hủy giao dịch trao đổi
 	}
 	
 	// API public cho bài đăng trao đổi - không cần đăng nhập

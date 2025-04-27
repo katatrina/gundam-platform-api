@@ -700,6 +700,52 @@ definitions:
     - status
     - updated_at
     type: object
+  db.ExchangeItem:
+    properties:
+      created_at:
+        type: string
+      exchange_id:
+        type: string
+      grade:
+        type: string
+      gundam_id:
+        type: integer
+      id:
+        type: string
+      image_url:
+        type: string
+      is_from_poster:
+        type: boolean
+      name:
+        type: string
+      owner_id:
+        type: string
+      price:
+        type: integer
+      quantity:
+        type: integer
+      scale:
+        type: string
+      slug:
+        type: string
+      weight:
+        type: integer
+    required:
+    - created_at
+    - exchange_id
+    - grade
+    - gundam_id
+    - id
+    - image_url
+    - is_from_poster
+    - name
+    - owner_id
+    - price
+    - quantity
+    - scale
+    - slug
+    - weight
+    type: object
   db.ExchangeOffer:
     properties:
       compensation_amount:
@@ -919,6 +965,47 @@ definitions:
     - ExchangeStatusCompleted
     - ExchangeStatusCanceled
     - ExchangeStatusFailed
+  db.ExchangeUserInfo:
+    properties:
+      avatar_url:
+        description: URL ảnh đại diện người dùng
+        type: string
+      delivery_fee_paid:
+        description: Đã thanh toán phí vận chuyển chưa
+        type: boolean
+      from_address:
+        allOf:
+        - $ref: '#/definitions/db.DeliveryInformation'
+        description: Địa chỉ gửi hàng
+      full_name:
+        description: Tên người dùng
+        type: string
+      id:
+        description: Thông tin cơ bản
+        type: string
+      items:
+        description: Danh sách Gundam
+        items:
+          $ref: '#/definitions/db.ExchangeItem'
+        type: array
+      order:
+        allOf:
+        - $ref: '#/definitions/db.Order'
+        description: Thông tin đơn hàng và vận chuyển
+      to_address:
+        allOf:
+        - $ref: '#/definitions/db.DeliveryInformation'
+        description: Địa chỉ nhận hàng
+    required:
+    - avatar_url
+    - delivery_fee_paid
+    - from_address
+    - full_name
+    - id
+    - items
+    - order
+    - to_address
+    type: object
   db.GundamAccessoryDTO:
     properties:
       name:
@@ -1564,6 +1651,64 @@ definitions:
     - user_id
     - ward_name
     type: object
+  db.UserExchangeDetails:
+    properties:
+      canceled_by:
+        description: Thông tin hủy (nếu có)
+        type: string
+      canceled_reason:
+        description: Lý do hủy
+        type: string
+      compensation_amount:
+        description: Số tiền bù (nếu có)
+        type: integer
+      completed_at:
+        description: Thời gian hoàn thành
+        type: string
+      created_at:
+        description: Thời gian tạo
+        type: string
+      current_user:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeUserInfo'
+        description: Thông tin về người tham gia
+      id:
+        description: ID của bài đăng trao đổi
+        type: string
+      offerer_id:
+        description: ID người đề xuất
+        type: string
+      partner:
+        allOf:
+        - $ref: '#/definitions/db.ExchangeUserInfo'
+        description: Thông tin người còn lại
+      payer_id:
+        description: Thông tin bù tiền
+        type: string
+      poster_id:
+        description: Thông tin gốc về cuộc trao đổi (Ai đăng, ai đề xuất)
+        type: string
+      status:
+        description: Thông tin cơ bản về cuộc trao đổi
+        type: string
+      updated_at:
+        description: Thời gian cập nhật
+        type: string
+    required:
+    - canceled_by
+    - canceled_reason
+    - compensation_amount
+    - completed_at
+    - created_at
+    - current_user
+    - id
+    - offerer_id
+    - partner
+    - payer_id
+    - poster_id
+    - status
+    - updated_at
+    type: object
   db.UserExchangeOfferDetails:
     properties:
       exchange_post:
@@ -1940,6 +2085,27 @@ paths:
               $ref: '#/definitions/db.OpenExchangePostInfo'
             type: array
       summary: List all open exchange posts
+      tags:
+      - exchanges
+  /exchanges/{exchangeID}:
+    get:
+      description: Retrieves detailed information about a specific exchange.
+      parameters:
+      - description: Exchange ID
+        in: path
+        name: exchangeID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Exchange details
+          schema:
+            $ref: '#/definitions/db.UserExchangeDetails'
+      security:
+      - accessToken: []
+      summary: Get exchange details
       tags:
       - exchanges
   /grades:
@@ -3223,6 +3389,39 @@ paths:
       tags:
       - exchanges
   /users/me/exchange-offers/{offerID}:
+    get:
+      description: Retrieves detailed information about a specific exchange offer
+        created by the authenticated user.
+      parameters:
+      - description: Exchange Offer ID
+        in: path
+        name: offerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/db.UserExchangeOfferDetails'
+        "400":
+          description: Invalid offer ID
+          schema: {}
+        "403":
+          description: Unauthorized access
+          schema: {}
+        "404":
+          description: Offer not found
+          schema: {}
+        "500":
+          description: Internal server error
+          schema: {}
+      security:
+      - accessToken: []
+      summary: Get user's exchange offer details
+      tags:
+      - exchanges
     patch:
       consumes:
       - application/json

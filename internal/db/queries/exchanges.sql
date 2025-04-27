@@ -6,3 +6,8 @@ INSERT INTO exchanges (id,
                        compensation_amount,
                        status)
 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
+
+-- name: GetExchangeByID :one
+SELECT *
+FROM exchanges
+WHERE id = $1 LIMIT 1;

@@ -13,3 +13,10 @@ INSERT INTO exchange_items (id,
                             owner_id,
                             is_from_poster)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;
+
+-- name: ListExchangeItems :many
+SELECT *
+FROM exchange_items
+WHERE exchange_id = $1
+  AND (sqlc.narg('is_from_poster')::boolean IS NULL OR is_from_poster = sqlc.narg('is_from_poster')::boolean)
+ORDER BY created_at DESC;

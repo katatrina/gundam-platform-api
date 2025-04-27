@@ -131,3 +131,45 @@ type UserExchangeOfferDetails struct {
 	ExchangePostItems []GundamDetails   `json:"exchange_post_items"` // Danh sách Gundam mà Người đăng bài cho phép trao đổi
 	Offer             ExchangeOfferInfo `json:"offer"`               // Chi tiết đề xuất
 }
+
+type UserExchangeDetails struct {
+	ID uuid.UUID `json:"id"` // ID của bài đăng trao đổi
+	
+	// Thông tin gốc về cuộc trao đổi (Ai đăng, ai đề xuất)
+	PosterID  string `json:"poster_id"`  // ID người đăng bài
+	OffererID string `json:"offerer_id"` // ID người đề xuất
+	
+	// Thông tin bù tiền
+	PayerID            *string `json:"payer_id"`            // ID người trả tiền bù (nếu có)
+	CompensationAmount *int64  `json:"compensation_amount"` // Số tiền bù (nếu có)
+	
+	// Thông tin cơ bản về cuộc trao đổi
+	Status      string     `json:"status"`       // Trạng thái cuộc trao đổi
+	CreatedAt   time.Time  `json:"created_at"`   // Thời gian tạo
+	UpdatedAt   time.Time  `json:"updated_at"`   // Thời gian cập nhật
+	CompletedAt *time.Time `json:"completed_at"` // Thời gian hoàn thành
+	
+	// Thông tin hủy (nếu có)
+	CanceledBy     *string `json:"canceled_by"`     // ID người hủy
+	CanceledReason *string `json:"canceled_reason"` // Lý do hủy
+	
+	// Thông tin về người tham gia
+	CurrentUser ExchangeUserInfo `json:"current_user"` // Thông tin người dùng hiện tại
+	Partner     ExchangeUserInfo `json:"partner"`      // Thông tin người còn lại
+}
+
+// ExchangeUserInfo chứa thông tin một bên tham gia trao đổi
+type ExchangeUserInfo struct {
+	// Thông tin cơ bản
+	ID        string  `json:"id"`         // ID người dùng
+	FullName  string  `json:"full_name"`  // Tên người dùng
+	AvatarURL *string `json:"avatar_url"` // URL ảnh đại diện người dùng
+	
+	// Thông tin đơn hàng và vận chuyển
+	Order           *Order               `json:"order"`             // Thông tin đơn hàng (đơn hàng mà người này là người nhận)
+	FromDelivery    *DeliveryInformation `json:"from_address"`      // Địa chỉ gửi hàng
+	ToDelivery      *DeliveryInformation `json:"to_address"`        // Địa chỉ nhận hàng
+	DeliveryFeePaid bool                 `json:"delivery_fee_paid"` // Đã thanh toán phí vận chuyển chưa
+	
+	Items []ExchangeItem `json:"items"` // Danh sách Gundam
+}

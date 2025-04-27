@@ -983,18 +983,18 @@ func (server *Server) listUserExchangeOffers(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// @Summary     Get user's exchange offer details
-// @Description Retrieves detailed information about a specific exchange offer created by the authenticated user.
-// @Tags        exchanges
-// @Produce     json
-// @Security    accessToken
-// @Param       offerID   path     string                   true   "Exchange Offer ID"
-// @Success     200       {object} db.UserExchangeOfferDetails
-// @Failure     400       {object} error                    "Invalid offer ID"
-// @Failure     404       {object} error                    "Offer not found"
-// @Failure     403       {object} error                    "Unauthorized access"
-// @Failure     500       {object} error                    "Internal server error"
-// @Router      /users/me/exchange-offers/{offerID} [get]
+//	@Summary		Get user's exchange offer details
+//	@Description	Retrieves detailed information about a specific exchange offer created by the authenticated user.
+//	@Tags			exchanges
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			offerID	path		string	true	"Exchange Offer ID"
+//	@Success		200		{object}	db.UserExchangeOfferDetails
+//	@Failure		400		{object}	error	"Invalid offer ID"
+//	@Failure		404		{object}	error	"Offer not found"
+//	@Failure		403		{object}	error	"Unauthorized access"
+//	@Failure		500		{object}	error	"Internal server error"
+//	@Router			/users/me/exchange-offers/{offerID} [get]
 func (server *Server) getUserExchangeOffer(c *gin.Context) {
 	// Lấy thông tin người dùng đã đăng nhập
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
