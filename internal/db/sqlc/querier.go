@@ -95,6 +95,7 @@ type Querier interface {
 	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error)
+	ListUserExchanges(ctx context.Context, arg ListUserExchangesParams) ([]Exchange, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)

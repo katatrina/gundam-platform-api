@@ -78,3 +78,12 @@ func IsValidExchangePostStatus(status string) error {
 	
 	return nil
 }
+
+func IsValidExchangeStatus(status string) error {
+	if !ExchangeStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllExchangeStatusValues())
+		return err
+	}
+	
+	return nil
+}

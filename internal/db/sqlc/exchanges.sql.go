@@ -96,3 +96,56 @@ func (q *Queries) GetExchangeByID(ctx context.Context, id uuid.UUID) (Exchange, 
 	)
 	return i, err
 }
+
+const listUserExchanges = `-- name: ListUserExchanges :many
+SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+FROM exchanges
+WHERE (poster_id = $1 OR offerer_id = $1)
+  AND status = coalesce($2, status)
+ORDER BY created_at DESC
+`
+
+type ListUserExchangesParams struct {
+	UserID string             `json:"user_id"`
+	Status NullExchangeStatus `json:"status"`
+}
+
+func (q *Queries) ListUserExchanges(ctx context.Context, arg ListUserExchangesParams) ([]Exchange, error) {
+	rows, err := q.db.Query(ctx, listUserExchanges, arg.UserID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Exchange{}
+	for rows.Next() {
+		var i Exchange
+		if err := rows.Scan(
+			&i.ID,
+			&i.PosterID,
+			&i.OffererID,
+			&i.PosterOrderID,
+			&i.OffererOrderID,
+			&i.PosterFromDeliveryID,
+			&i.PosterToDeliveryID,
+			&i.OffererFromDeliveryID,
+			&i.OffererToDeliveryID,
+			&i.PosterDeliveryFeePaid,
+			&i.OffererDeliveryFeePaid,
+			&i.PayerID,
+			&i.CompensationAmount,
+			&i.Status,
+			&i.CanceledBy,
+			&i.CanceledReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

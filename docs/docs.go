@@ -258,6 +258,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/exchanges": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves a list of all exchanges that the authenticated user is participating in.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "List user's exchanges",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending, packaging, delivering, delivered, completed, canceled, failed)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user's exchanges",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.UserExchangeDetails"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/exchanges/{exchangeID}": {
             "get": {
                 "security": [

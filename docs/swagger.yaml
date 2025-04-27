@@ -2087,6 +2087,30 @@ paths:
       summary: List all open exchange posts
       tags:
       - exchanges
+  /exchanges:
+    get:
+      description: Retrieves a list of all exchanges that the authenticated user is
+        participating in.
+      parameters:
+      - description: Filter by status (pending, packaging, delivering, delivered,
+          completed, canceled, failed)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user's exchanges
+          schema:
+            items:
+              $ref: '#/definitions/db.UserExchangeDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user's exchanges
+      tags:
+      - exchanges
   /exchanges/{exchangeID}:
     get:
       description: Retrieves detailed information about a specific exchange.
