@@ -45,7 +45,7 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 	}
 	log.Info().Msg("Token maker created successfully ✅")
 	
-	// Create a new Google OfferID token validator
+	// Create a new Google ID token validator
 	googleIDTokenValidator, err := idtoken.NewValidator(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create google id token validator: %w", err)
@@ -188,7 +188,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		exchangeGroup.GET("", server.listUserExchanges)                                              // ✅ Liệt kê các giao dịch trao đổi của người dùng
 		exchangeGroup.GET(":exchangeID", server.getExchangeDetails)                                  // ✅ Lấy chi tiết giao dịch trao đổi
 		exchangeGroup.PUT(":exchangeID/delivery-addresses", server.provideExchangeDeliveryAddresses) // ✅ Cung cấp địa chỉ gửi và nhận hàng
-		// exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)               // Thanh toán phí vận chuyển
+		exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)            // Thanh toán phí vận chuyển
 		// exchangeGroup.PATCH(":exchangeID/cancel", server.cancelExchange)   // Hủy giao dịch trao đổi
 	}
 	

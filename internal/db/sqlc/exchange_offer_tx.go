@@ -11,11 +11,11 @@ import (
 )
 
 type CreateExchangeOfferTxParams struct {
-	PostID             uuid.UUID // OfferID bài đăng trao đổi
-	OffererID          string    // OfferID người đề xuất
-	PosterGundamID     int64     // OfferID Gundam của người đăng bài
-	OffererGundamID    int64     // OfferID Gundam của người đề xuất
-	PayerID            *string   // OfferID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
+	PostID             uuid.UUID // ID bài đăng trao đổi
+	OffererID          string    // ID người đề xuất
+	PosterGundamID     int64     // ID Gundam của người đăng bài
+	OffererGundamID    int64     // ID Gundam của người đề xuất
+	PayerID            *string   // ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
 	CompensationAmount *int64    // Số tiền bồi thường (có thể là nil nếu không có bù tiền)
 	Note               *string   // Ghi chú đề xuất
 }
@@ -31,7 +31,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 1. Tạo đề xuất trao đổi mới
 		offerID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate offer OfferID: %w", err)
+			return fmt.Errorf("failed to generate offer ID: %w", err)
 		}
 		
 		offer, err := qTx.CreateExchangeOffer(ctx, CreateExchangeOfferParams{
@@ -59,7 +59,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 2. Thêm Gundam của người đề xuất vào đề xuất
 		offererItemID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate offerer item OfferID: %w", err)
+			return fmt.Errorf("failed to generate offerer item ID: %w", err)
 		}
 		
 		offererItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
@@ -75,7 +75,7 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		// 3. Thêm Gundam của người đăng bài (mà người đề xuất muốn trao đổi) vào đề xuất
 		posterItemID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate poster item OfferID: %w", err)
+			return fmt.Errorf("failed to generate poster item ID: %w", err)
 		}
 		
 		posterItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
@@ -114,8 +114,8 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 }
 
 type RequestNegotiationForOfferTxParams struct {
-	OfferID uuid.UUID // OfferID đề xuất trao đổi
-	UserID  string    // OfferID người yêu cầu thương lượng
+	OfferID uuid.UUID // ID đề xuất trao đổi
+	UserID  string    // ID người yêu cầu thương lượng
 	Note    *string   // Ghi chú yêu cầu thương lượng
 }
 

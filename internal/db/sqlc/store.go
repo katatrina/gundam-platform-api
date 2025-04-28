@@ -26,7 +26,7 @@ type Store interface {
 	CreateOrderTx(ctx context.Context, arg CreateOrderTxParams) (CreateOrderTxResult, error)
 	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 	ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error)
-	PackageOrderBySellerTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
+	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
 	ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error)
 	CancelOrderByBuyerTx(ctx context.Context, arg CancelOrderByBuyerTxParams) (CancelOrderByBuyerTxResult, error)
 	CancelOrderBySellerTx(ctx context.Context, arg CancelOrderBySellerTxParams) (CancelOrderBySellerTxResult, error)
@@ -38,6 +38,7 @@ type Store interface {
 	AcceptExchangeOfferTx(ctx context.Context, arg AcceptExchangeOfferTxParams) (AcceptExchangeOfferTxResult, error)
 	GetGundamDetailsByID(ctx context.Context, q *Queries, gundamID int64) (GundamDetails, error)
 	ProvideDeliveryAddressesForExchangeTx(ctx context.Context, arg ProvideDeliveryAddressesForExchangeTxParams) (ProvideDeliveryAddressesForExchangeTxResult, error)
+	PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExchangeDeliveryFeeTxParams) (PayExchangeDeliveryFeeTxResult, error)
 }
 
 type SQLStore struct {

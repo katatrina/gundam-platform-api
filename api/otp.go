@@ -70,7 +70,7 @@ func (server *Server) generatePhoneNumberOTP(c *gin.Context) {
 }
 
 type VerifyPhoneOTPRequest struct {
-	UserID      string `json:"user_id" binding:"required"`        // OfferID của user cần cập nhật số điện thoại
+	UserID      string `json:"user_id" binding:"required"`        // ID của user cần cập nhật số điện thoại
 	PhoneNumber string `json:"phone_number" binding:"required"`   // Số điện thoại mới
 	OTPCode     string `json:"otp_code" binding:"required,len=6"` // Mã OTP
 }

@@ -284,9 +284,9 @@ type createGundamRequest struct {
 //	@Tags			users
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			id						path		string	true	"User OfferID"
+//	@Param			id						path		string	true	"User ID"
 //	@Param			name					formData	string	true	"Gundam name"
-//	@Param			grade_id				formData	integer	true	"Gundam grade OfferID"
+//	@Param			grade_id				formData	integer	true	"Gundam grade ID"
 //	@Param			series					formData	string	true	"Gundam series name"
 //	@Param			parts_total				formData	integer	true	"Total number of parts"
 //	@Param			material				formData	string	true	"Gundam material"
@@ -305,7 +305,7 @@ type createGundamRequest struct {
 //	@Security		accessToken
 //	@Success		201	{object}	db.GundamDetails	"Successfully created Gundam"
 //	@Failure		400	"Bad Request - Invalid input data"
-//	@Failure		404	"Not Found - User with specified OfferID does not exist"
+//	@Failure		404	"Not Found - User with specified ID does not exist"
 //	@Failure		403	"Forbidden - User is not authorized to create Gundam for this user"
 //	@Failure		500	"Internal Server Error - Failed to create Gundam"
 //	@Router			/users/:id/gundams [post]
@@ -317,18 +317,18 @@ func (server *Server) createGundam(ctx *gin.Context) {
 	_, err := server.dbStore.GetUserByID(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user OfferID %s not found", userID)
+			err = fmt.Errorf("user ID %s not found", userID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Error().Err(err).Msg("failed to get user by OfferID")
+		log.Error().Err(err).Msg("failed to get user by user ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
 	if authenticatedUserID != userID {
-		err = fmt.Errorf("authenticated user OfferID %s is not authorized to create gundam for user OfferID %s", authenticatedUserID, userID)
+		err = fmt.Errorf("authenticated user ID %s is not authorized to create gundam for user ID %s", authenticatedUserID, userID)
 		ctx.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -379,11 +379,11 @@ type listGundamsByUserRequest struct {
 }
 
 //	@Summary		List all gundams for a specific user
-//	@Description	Get all gundams that belong to the specified user OfferID
+//	@Description	Get all gundams that belong to the specified user ID
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path	string	true	"User OfferID"
+//	@Param			id		path	string	true	"User ID"
 //	@Param			name	query	string	false	"Gundam name to filter by"
 //	@Security		accessToken
 //	@Success		200	array	db.GundamDetails	"Successfully retrieved list of gundams"
@@ -396,18 +396,18 @@ func (server *Server) listGundamsByUser(ctx *gin.Context) {
 	_, err := server.dbStore.GetUserByID(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user OfferID %s not found", userID)
+			err = fmt.Errorf("user ID %s not found", userID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Error().Err(err).Msg("failed to get user by OfferID")
+		log.Error().Err(err).Msg("failed to get user by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
 	if authenticatedUserID != userID {
-		err = fmt.Errorf("authenticated user OfferID %s is not authorized to view gundams for user OfferID %s", authenticatedUserID, userID)
+		err = fmt.Errorf("authenticated user ID %s is not authorized to view gundams for user ID %s", authenticatedUserID, userID)
 		ctx.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -438,7 +438,7 @@ func (server *Server) listGundamsByUser(ctx *gin.Context) {
 		primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(ctx, gundam.ID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("gundam OfferID %d primary image not found", gundam.ID)
+				err = fmt.Errorf("gundam ID %d primary image not found", gundam.ID)
 				ctx.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}

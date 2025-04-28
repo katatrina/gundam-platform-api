@@ -18,7 +18,7 @@ import (
 
 // CreateOrderRequest contains the necessary information to create a new order
 type createOrderRequest struct {
-	// OfferID of the seller
+	// ID of the seller
 	// example: user123
 	SellerID string `json:"seller_id" binding:"required"`
 	
@@ -26,7 +26,7 @@ type createOrderRequest struct {
 	// example: [1, 2, 3]
 	GundamIDs []int64 `json:"gundam_ids" binding:"required,dive,min=1"`
 	
-	// OfferID of the buyer's chosen address
+	// ID of the buyer's chosen address
 	// example: 42
 	BuyerAddressID int64 `json:"buyer_address_id" binding:"required"`
 	
@@ -75,12 +75,12 @@ func (server *Server) createOrder(c *gin.Context) {
 	_, err := server.dbStore.GetUserByID(c, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user OfferID %s not found", userID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by OfferID")
+		log.Err(err).Msg("failed to get user by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -94,12 +94,12 @@ func (server *Server) createOrder(c *gin.Context) {
 	_, err = server.dbStore.GetUserByID(c, req.SellerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("seller OfferID %s not found", userID)
+			err = fmt.Errorf("seller ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get seller by OfferID")
+		log.Err(err).Msg("failed to get seller by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -114,33 +114,33 @@ func (server *Server) createOrder(c *gin.Context) {
 		gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("gundam OfferID %d not found", gundamID)
+				err = fmt.Errorf("gundam ID %d not found", gundamID)
 				c.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
-			log.Err(err).Msg("failed to get gundam by OfferID")
+			log.Err(err).Msg("failed to get gundam by ID")
 			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 		
 		// Kiểm tra người sở hữu
 		if gundam.OwnerID != req.SellerID {
-			err = fmt.Errorf("gundam OfferID %d does not belong to seller OfferID %s", gundamID, req.SellerID)
+			err = fmt.Errorf("gundam ID %d does not belong to seller ID %s", gundamID, req.SellerID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		
 		// Kiểm tra trạng thái gundam
 		if gundam.Status != db.GundamStatusPublished {
-			err = fmt.Errorf("gundam OfferID %d is not in published status", gundamID)
+			err = fmt.Errorf("gundam ID %d is not in published status", gundamID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		
 		// Tránh seller mua sản phẩm của chính mình
 		if gundam.OwnerID == userID {
-			err = fmt.Errorf("seller OfferID %s cannot buy their own gundam OfferID %d", userID, gundamID)
+			err = fmt.Errorf("seller ID %s cannot buy their own gundam ID %d", userID, gundamID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
@@ -171,12 +171,12 @@ func (server *Server) createOrder(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("cannot find user address with OfferID %d for buyer with OfferID %s", req.BuyerAddressID, userID)
+			err = fmt.Errorf("cannot find user address with ID %d for buyer with ID %s", req.BuyerAddressID, userID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user address by OfferID")
+		log.Err(err).Msg("failed to get user address by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -185,7 +185,7 @@ func (server *Server) createOrder(c *gin.Context) {
 	sellerAddress, err := server.dbStore.GetUserPickupAddress(c, req.SellerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("seller pickup address not found for seller OfferID %s", req.SellerID)
+			err = fmt.Errorf("seller pickup address not found for seller ID %s", req.SellerID)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
@@ -291,12 +291,12 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 	_, err := server.dbStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user OfferID %s not found", userID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by OfferID")
+		log.Err(err).Msg("failed to get user by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -351,7 +351,7 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string							true	"Order OfferID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Success		200		{object}	db.ConfirmOrderReceivedTxResult	"Order received successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/received [patch]
@@ -362,12 +362,12 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	_, err := server.dbStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user OfferID %s not found", userID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by OfferID")
+		log.Err(err).Msg("failed to get user by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -383,12 +383,12 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	order, err := server.dbStore.GetOrderByID(ctx, orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order OfferID %s not found", orderID)
+			err = fmt.Errorf("order ID %s not found", orderID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get order by OfferID")
+		log.Err(err).Msg("failed to get order by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -411,12 +411,12 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("transaction for order OfferID %s not found", orderID)
+			err = fmt.Errorf("transaction for order ID %s not found", orderID)
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get order transaction by order OfferID")
+		log.Err(err).Msg("failed to get order transaction by order ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -437,7 +437,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 			return
 		}
 		
-		log.Err(err).Msg("failed to get wallet entry by OfferID")
+		log.Err(err).Msg("failed to get wallet entry by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -477,18 +477,18 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
+					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
 					ctx.JSON(http.StatusNotFound, errorResponse(err))
 					return
 				}
 				
-				log.Err(err).Msg("failed to get gundam by OfferID")
+				log.Err(err).Msg("failed to get gundam by ID")
 				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 				return
 			}
 			
 			if gundam.Status != db.GundamStatusProcessing {
-				err = fmt.Errorf("gundam OfferID %d is not in processing status", item.GundamID)
+				err = fmt.Errorf("gundam ID %d is not in processing status", item.GundamID)
 				ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 				return
 			}
@@ -497,7 +497,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 			continue
 		}
 		
-		log.Warn().Msgf("gundam OfferID %d not found in order items", item.GundamID)
+		log.Warn().Msgf("gundam ID %d not found in order items", item.GundamID)
 	}
 	
 	// Thực hiện transaction xác nhận đơn hàng đã nhận
@@ -553,7 +553,7 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string					true	"Order OfferID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			orderID	path		string					true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Success		200		{object}	db.MemberOrderDetails	"Order details"
 //	@Security		accessToken
 //	@Router			/orders/{orderID} [get]
@@ -564,12 +564,12 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user OfferID %s not found", userID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by OfferID")
+		log.Err(err).Msg("failed to get user by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -583,19 +583,19 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order OfferID %s not found", orderID)
+			err = fmt.Errorf("order ID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get order by OfferID")
+		log.Err(err).Msg("failed to get order by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
 	// Kiểm tra quyền truy cập
 	if order.BuyerID != userID && order.SellerID != userID {
-		err = fmt.Errorf("order %s does not belong to user OfferID %s", order.Code, userID)
+		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -614,7 +614,7 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	orderDelivery, err := server.dbStore.GetOrderDelivery(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order delivery not found for order OfferID %s", order.ID)
+			err = fmt.Errorf("order delivery not found for order ID %s", order.ID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -629,7 +629,7 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("delivery address OfferID %d not found", orderDelivery.ToDeliveryID)
+			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -643,7 +643,7 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order transaction not found for order OfferID %s", order.ID)
+			err = fmt.Errorf("order transaction not found for order ID %s", order.ID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -664,12 +664,12 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 		buyer, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("buyer OfferID %s not found", order.BuyerID)
+				err = fmt.Errorf("buyer ID %s not found", order.BuyerID)
 				c.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
-			log.Err(err).Msg("failed to get buyer by OfferID")
+			log.Err(err).Msg("failed to get buyer by ID")
 			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
@@ -682,12 +682,12 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 		seller, err := server.dbStore.GetSellerDetailByID(c.Request.Context(), order.SellerID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("seller OfferID %s not found", order.SellerID)
+				err = fmt.Errorf("seller ID %s not found", order.SellerID)
 				c.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
-			log.Err(err).Msg("failed to get seller by OfferID")
+			log.Err(err).Msg("failed to get seller by ID")
 			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
@@ -715,7 +715,7 @@ type cancelOrderByBuyerRequest struct {
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string							true	"Order OfferID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Param			request	body		cancelOrderByBuyerRequest		true	"Cancellation reason"
 //	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"Order canceled successfully"
 //	@Security		accessToken
@@ -727,12 +727,12 @@ func (server *Server) cancelOrderByBuyer(c *gin.Context) {
 	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user OfferID %s not found", userID)
+			err = fmt.Errorf("authenticated user ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get user by OfferID")
+		log.Err(err).Msg("failed to get user by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -753,19 +753,19 @@ func (server *Server) cancelOrderByBuyer(c *gin.Context) {
 	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order OfferID %s not found", orderID)
+			err = fmt.Errorf("order ID %s not found", orderID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get order by OfferID")
+		log.Err(err).Msg("failed to get order by ID")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
 	// Kiểm tra xem người mua có quyền hủy đơn hàng không
 	if order.BuyerID != userID {
-		err = fmt.Errorf("order %s does not belong to user OfferID %s", order.Code, userID)
+		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}

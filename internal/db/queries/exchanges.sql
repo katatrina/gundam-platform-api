@@ -21,9 +21,27 @@ ORDER BY created_at DESC;
 
 -- name: UpdateExchange :one
 UPDATE exchanges
-SET poster_from_delivery_id  = COALESCE(sqlc.narg('poster_from_delivery_id'), poster_from_delivery_id),
-    poster_to_delivery_id    = COALESCE(sqlc.narg('poster_to_delivery_id'), poster_to_delivery_id),
-    offerer_from_delivery_id = COALESCE(sqlc.narg('offerer_from_delivery_id'), offerer_from_delivery_id),
-    offerer_to_delivery_id   = COALESCE(sqlc.narg('offerer_to_delivery_id'), offerer_to_delivery_id),
-    updated_at               = now()
+SET poster_order_id                      = COALESCE(sqlc.narg('poster_order_id'), poster_order_id),
+    offerer_order_id                     = COALESCE(sqlc.narg('offerer_order_id'), offerer_order_id),
+    status                               = COALESCE(sqlc.narg('status'), status),
+
+    poster_from_delivery_id              = COALESCE(sqlc.narg('poster_from_delivery_id'), poster_from_delivery_id),
+    poster_to_delivery_id                = COALESCE(sqlc.narg('poster_to_delivery_id'), poster_to_delivery_id),
+    offerer_from_delivery_id             = COALESCE(sqlc.narg('offerer_from_delivery_id'), offerer_from_delivery_id),
+    offerer_to_delivery_id               = COALESCE(sqlc.narg('offerer_to_delivery_id'), offerer_to_delivery_id),
+
+    poster_delivery_fee                  = COALESCE(sqlc.narg('poster_delivery_fee'), poster_delivery_fee),
+    offerer_delivery_fee                 = COALESCE(sqlc.narg('offerer_delivery_fee'), offerer_delivery_fee),
+
+    poster_delivery_fee_paid             = COALESCE(sqlc.narg('poster_delivery_fee_paid'), poster_delivery_fee_paid),
+    offerer_delivery_fee_paid            = COALESCE(sqlc.narg('offerer_delivery_fee_paid'), offerer_delivery_fee_paid),
+
+    poster_order_expected_delivery_time  = COALESCE(sqlc.narg('poster_order_expected_delivery_time'),
+                                                    poster_order_expected_delivery_time),
+    offerer_order_expected_delivery_time = COALESCE(sqlc.narg('offerer_order_expected_delivery_time'),
+                                                    offerer_order_expected_delivery_time),
+
+    poster_order_note                    = COALESCE(sqlc.narg('poster_order_note'), poster_order_note),
+    offerer_order_note                   = COALESCE(sqlc.narg('offerer_order_note'), offerer_order_note),
+    updated_at                           = now()
 WHERE id = $1 RETURNING *;

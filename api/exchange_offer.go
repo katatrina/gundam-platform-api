@@ -16,10 +16,10 @@ import (
 )
 
 type createExchangeOfferRequest struct {
-	ExchangePostID     string  `json:"exchange_post_id" binding:"required,uuid"` // OfferID bài đăng trao đổi
-	PosterGundamID     int64   `json:"poster_gundam_id" binding:"required"`      // OfferID Gundam của người đăng bài
-	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // OfferID Gundam của người đề xuất
-	PayerID            *string `json:"payer_id"`                                 // OfferID người bù tiền (poster_id hoặc offerer_id, hoặc null)
+	ExchangePostID     string  `json:"exchange_post_id" binding:"required,uuid"` // ID bài đăng trao đổi
+	PosterGundamID     int64   `json:"poster_gundam_id" binding:"required"`      // ID Gundam của người đăng bài
+	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // ID Gundam của người đề xuất
+	PayerID            *string `json:"payer_id"`                                 // ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
 	CompensationAmount *int64  `json:"compensation_amount"`                      // Số tiền bù (null nếu không có bù tiền)
 	Note               *string `json:"note"`                                     // Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)
 }
@@ -182,7 +182,7 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		return
 	}
 	
-	if posterGundam.Status != db.GundamStatusInstore {
+	if posterGundam.Status != db.GundamStatusForexchange {
 		err = fmt.Errorf("poster gundam ID %d is not available for exchange", req.PosterGundamID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
@@ -249,8 +249,8 @@ type requestNegotiationForOfferRequest struct {
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			postID	path		string									true	"Exchange Post OfferID"
-//	@Param			offerID	path		string									true	"Exchange Offer OfferID"
+//	@Param			postID	path		string									true	"Exchange Post ID"
+//	@Param			offerID	path		string									true	"Exchange Offer ID"
 //	@Param			request	body		requestNegotiationForOfferRequest		false	"Negotiation request"
 //	@Success		200		{object}	db.RequestNegotiationForOfferTxResult	"Negotiation request response"
 //	@Router			/users/me/exchange-posts/{postID}/offers/{offerID}/negotiate [patch]
@@ -329,7 +329,7 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 	}
 	
 	if offer.PostID != postID {
-		err = fmt.Errorf("exchange offer OfferID %s does not belong to exchange post ID %s", uriParams.OfferID, uriParams.PostID)
+		err = fmt.Errorf("exchange offer ID %s does not belong to exchange post ID %s", uriParams.OfferID, uriParams.PostID)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -396,7 +396,7 @@ func (server *Server) requestNegotiationForOffer(c *gin.Context) {
 type updateExchangeOfferRequest struct {
 	RequireCompensation bool    `json:"require_compensation" binding:"required"` // true = yêu cầu bù tiền, false = không yêu cầu bù tiền
 	CompensationAmount  *int64  `json:"compensation_amount"`                     // Bắt buộc khi require_compensation=true
-	PayerID             *string `json:"payer_id"`                                // OfferID người trả tiền bù, bắt buộc khi require_compensation=true
+	PayerID             *string `json:"payer_id"`                                // ID người trả tiền bù, bắt buộc khi require_compensation=true
 	Note                *string `json:"note"`                                    // Ghi chú thương lượng, không bắt buộc
 }
 

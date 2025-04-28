@@ -19,7 +19,7 @@ import (
 type createExchangePostRequest struct {
 	Content     string                  `form:"content" binding:"required"`                 // Nội dung bài post
 	PostImages  []*multipart.FileHeader `form:"post_images" binding:"required,max=5,min=1"` // Ảnh bài post
-	PostItemIDs []int64                 `form:"post_item_id" binding:"required,min=1"`      // OfferID của các Gundam mà chủ bài post cho phép trao đổi
+	PostItemIDs []int64                 `form:"post_item_id" binding:"required,min=1"`      // ID của các Gundam mà chủ bài post cho phép trao đổi
 }
 
 //	@Summary		Create a new exchange post
@@ -368,7 +368,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
+		// 					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -381,7 +381,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
+		// 					err = fmt.Errorf("grade IDf %d not found", gundam.GradeID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -394,7 +394,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.OfferID)
+		// 					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -407,7 +407,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			secondaryImageURLs, err := server.dbStore.GetGundamSecondaryImageURLs(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("secondary images of gundam OfferID %d not found", gundam.OfferID)
+		// 					err = fmt.Errorf("secondary images of gundam ID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -420,7 +420,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			accessories, err := server.dbStore.GetGundamAccessories(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("accessories of gundam OfferID %d not found", gundam.OfferID)
+		// 					err = fmt.Errorf("accessories of gundam ID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -483,7 +483,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), item.GundamID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("gundam OfferID %d not found", item.GundamID)
+		// 					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -496,7 +496,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			grade, err := server.dbStore.GetGradeByID(c.Request.Context(), gundam.GradeID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("grade OfferID %d not found", gundam.GradeID)
+		// 					err = fmt.Errorf("grade ID %d not found", gundam.GradeID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -509,7 +509,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		// 			primaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundam.OfferID)
 		// 			if err != nil {
 		// 				if errors.Is(err, db.ErrRecordNotFound) {
-		// 					err = fmt.Errorf("primary image of gundam OfferID %d not found", gundam.OfferID)
+		// 					err = fmt.Errorf("primary image of gundam ID %d not found", gundam.OfferID)
 		// 					c.JSON(http.StatusNotFound, errorResponse(err))
 		// 					return
 		// 				}
@@ -583,7 +583,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 //	@Tags			exchanges
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			id	path		string							true	"Exchange Post OfferID"
+//	@Param			id	path		string							true	"Exchange Post ID"
 //	@Success		200	{object}	db.DeleteExchangePostTxResult	"Delete exchange post response"
 //	@Router			/users/me/exchange-posts/{id} [delete]
 func (server *Server) deleteExchangePost(c *gin.Context) {

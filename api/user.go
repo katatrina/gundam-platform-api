@@ -175,14 +175,14 @@ type loginUserWithGoogleRequest struct {
 }
 
 //	@Summary		Login or register a user with Google account
-//	@Description	Authenticate a user using Google OfferID token. If the user doesn't exist, a new user will be created.
+//	@Description	Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.
 //	@Tags			authentication
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		loginUserWithGoogleRequest	true	"Google OfferID Token"
+//	@Param			request	body		loginUserWithGoogleRequest	true	"Google ID Token"
 //	@Success		200		{object}	loginUserResponse			"Successfully logged in"
 //	@Failure		400		"Invalid request body"
-//	@Failure		401		"Invalid Google OfferID token"
+//	@Failure		401		"Invalid Google ID token"
 //	@Failure		500		"Internal server error"
 //	@Router			/auth/google-login [post]
 func (server *Server) loginUserWithGoogle(ctx *gin.Context) {
@@ -258,11 +258,11 @@ func (server *Server) getOrCreateGoogleUser(ctx *gin.Context, payload *idtoken.P
 	return &newUser, nil
 }
 
-//	@Summary		Retrieve a user by OfferID
+//	@Summary		Retrieve a user by ID
 //	@Description	Get detailed information about a specific user
 //	@Tags			users
 //	@Produce		json
-//	@Param			id	path		string	true	"User OfferID"
+//	@Param			id	path		string	true	"User ID"
 //	@Success		200	{object}	db.User	"Successfully retrieved user"
 //	@Failure		404	"User not found"
 //	@Failure		500	"Internal server error"
@@ -292,11 +292,11 @@ type updateUserRequest struct {
 }
 
 //	@Summary		Update a user's information
-//	@Description	Update specific user details by user OfferID
+//	@Description	Update specific user details by user ID
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string				true	"User OfferID"
+//	@Param			id		path		string				true	"User ID"
 //	@Param			request	body		updateUserRequest	true	"User update request"
 //	@Success		200		{object}	db.User				"Successfully updated user"
 //	@Failure		400		"Invalid request body"
@@ -337,7 +337,7 @@ type updateAvatarRequest struct {
 //	@Tags			users
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			id		path		string					true	"User OfferID"
+//	@Param			id		path		string					true	"User ID"
 //	@Param			avatar	formData	file					true	"Avatar image file"
 //	@Success		200		{object}	updateAvatarResponse	"Successfully updated avatar"
 //	@Failure		400		"Invalid request"

@@ -15,7 +15,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			id	path		string		true	"User OfferID"
+//	@Param			id	path		string		true	"User ID"
 //	@Success		200	{object}	db.Wallet	"User wallet information"
 //	@Failure		400	"Bad request"
 //	@Failure		404	"User not found"
@@ -31,7 +31,7 @@ func (server *Server) getUserWallet(c *gin.Context) {
 	wallet, err := server.dbStore.GetWalletByUserID(c, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user OfferID %s not found", userID)
+			err = fmt.Errorf("user ID %s not found", userID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}

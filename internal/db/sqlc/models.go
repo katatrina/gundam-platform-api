@@ -1148,25 +1148,31 @@ type DeliveryInformation struct {
 }
 
 type Exchange struct {
-	ID                     uuid.UUID      `json:"id"`
-	PosterID               string         `json:"poster_id"`
-	OffererID              string         `json:"offerer_id"`
-	PosterOrderID          uuid.UUID      `json:"poster_order_id"`
-	OffererOrderID         uuid.UUID      `json:"offerer_order_id"`
-	PosterFromDeliveryID   *int64         `json:"poster_from_delivery_id"`
-	PosterToDeliveryID     *int64         `json:"poster_to_delivery_id"`
-	OffererFromDeliveryID  *int64         `json:"offerer_from_delivery_id"`
-	OffererToDeliveryID    *int64         `json:"offerer_to_delivery_id"`
-	PosterDeliveryFeePaid  bool           `json:"poster_delivery_fee_paid"`
-	OffererDeliveryFeePaid bool           `json:"offerer_delivery_fee_paid"`
-	PayerID                *string        `json:"payer_id"`
-	CompensationAmount     *int64         `json:"compensation_amount"`
-	Status                 ExchangeStatus `json:"status"`
-	CanceledBy             *string        `json:"canceled_by"`
-	CanceledReason         *string        `json:"canceled_reason"`
-	CreatedAt              time.Time      `json:"created_at"`
-	UpdatedAt              time.Time      `json:"updated_at"`
-	CompletedAt            *time.Time     `json:"completed_at"`
+	ID                               uuid.UUID      `json:"id"`
+	PosterID                         string         `json:"poster_id"`
+	OffererID                        string         `json:"offerer_id"`
+	PosterOrderID                    *uuid.UUID     `json:"poster_order_id"`
+	OffererOrderID                   *uuid.UUID     `json:"offerer_order_id"`
+	PosterFromDeliveryID             *int64         `json:"poster_from_delivery_id"`
+	PosterToDeliveryID               *int64         `json:"poster_to_delivery_id"`
+	OffererFromDeliveryID            *int64         `json:"offerer_from_delivery_id"`
+	OffererToDeliveryID              *int64         `json:"offerer_to_delivery_id"`
+	PosterDeliveryFee                *int64         `json:"poster_delivery_fee"`
+	OffererDeliveryFee               *int64         `json:"offerer_delivery_fee"`
+	PosterDeliveryFeePaid            bool           `json:"poster_delivery_fee_paid"`
+	OffererDeliveryFeePaid           bool           `json:"offerer_delivery_fee_paid"`
+	PosterOrderExpectedDeliveryTime  *time.Time     `json:"poster_order_expected_delivery_time"`
+	OffererOrderExpectedDeliveryTime *time.Time     `json:"offerer_order_expected_delivery_time"`
+	PosterOrderNote                  *string        `json:"poster_order_note"`
+	OffererOrderNote                 *string        `json:"offerer_order_note"`
+	PayerID                          *string        `json:"payer_id"`
+	CompensationAmount               *int64         `json:"compensation_amount"`
+	Status                           ExchangeStatus `json:"status"`
+	CanceledBy                       *string        `json:"canceled_by"`
+	CanceledReason                   *string        `json:"canceled_reason"`
+	CreatedAt                        time.Time      `json:"created_at"`
+	UpdatedAt                        time.Time      `json:"updated_at"`
+	CompletedAt                      *time.Time     `json:"completed_at"`
 }
 
 type ExchangeItem struct {

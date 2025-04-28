@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,7 +19,7 @@ INSERT INTO exchanges (id,
                        payer_id,
                        compensation_amount,
                        status)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
 
 type CreateExchangeParams struct {
@@ -50,8 +51,14 @@ func (q *Queries) CreateExchange(ctx context.Context, arg CreateExchangeParams) 
 		&i.PosterToDeliveryID,
 		&i.OffererFromDeliveryID,
 		&i.OffererToDeliveryID,
+		&i.PosterDeliveryFee,
+		&i.OffererDeliveryFee,
 		&i.PosterDeliveryFeePaid,
 		&i.OffererDeliveryFeePaid,
+		&i.PosterOrderExpectedDeliveryTime,
+		&i.OffererOrderExpectedDeliveryTime,
+		&i.PosterOrderNote,
+		&i.OffererOrderNote,
 		&i.PayerID,
 		&i.CompensationAmount,
 		&i.Status,
@@ -65,7 +72,7 @@ func (q *Queries) CreateExchange(ctx context.Context, arg CreateExchangeParams) 
 }
 
 const getExchangeByID = `-- name: GetExchangeByID :one
-SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM exchanges
 WHERE id = $1 LIMIT 1
 `
@@ -83,8 +90,14 @@ func (q *Queries) GetExchangeByID(ctx context.Context, id uuid.UUID) (Exchange, 
 		&i.PosterToDeliveryID,
 		&i.OffererFromDeliveryID,
 		&i.OffererToDeliveryID,
+		&i.PosterDeliveryFee,
+		&i.OffererDeliveryFee,
 		&i.PosterDeliveryFeePaid,
 		&i.OffererDeliveryFeePaid,
+		&i.PosterOrderExpectedDeliveryTime,
+		&i.OffererOrderExpectedDeliveryTime,
+		&i.PosterOrderNote,
+		&i.OffererOrderNote,
 		&i.PayerID,
 		&i.CompensationAmount,
 		&i.Status,
@@ -98,7 +111,7 @@ func (q *Queries) GetExchangeByID(ctx context.Context, id uuid.UUID) (Exchange, 
 }
 
 const listUserExchanges = `-- name: ListUserExchanges :many
-SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM exchanges
 WHERE (poster_id = $1 OR offerer_id = $1)
   AND status = coalesce($2, status)
@@ -129,8 +142,14 @@ func (q *Queries) ListUserExchanges(ctx context.Context, arg ListUserExchangesPa
 			&i.PosterToDeliveryID,
 			&i.OffererFromDeliveryID,
 			&i.OffererToDeliveryID,
+			&i.PosterDeliveryFee,
+			&i.OffererDeliveryFee,
 			&i.PosterDeliveryFeePaid,
 			&i.OffererDeliveryFeePaid,
+			&i.PosterOrderExpectedDeliveryTime,
+			&i.OffererOrderExpectedDeliveryTime,
+			&i.PosterOrderNote,
+			&i.OffererOrderNote,
 			&i.PayerID,
 			&i.CompensationAmount,
 			&i.Status,
@@ -152,29 +171,69 @@ func (q *Queries) ListUserExchanges(ctx context.Context, arg ListUserExchangesPa
 
 const updateExchange = `-- name: UpdateExchange :one
 UPDATE exchanges
-SET poster_from_delivery_id  = COALESCE($2, poster_from_delivery_id),
-    poster_to_delivery_id    = COALESCE($3, poster_to_delivery_id),
-    offerer_from_delivery_id = COALESCE($4, offerer_from_delivery_id),
-    offerer_to_delivery_id   = COALESCE($5, offerer_to_delivery_id),
-    updated_at               = now()
-WHERE id = $1 RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+SET poster_order_id                      = COALESCE($2, poster_order_id),
+    offerer_order_id                     = COALESCE($3, offerer_order_id),
+    status                               = COALESCE($4, status),
+
+    poster_from_delivery_id              = COALESCE($5, poster_from_delivery_id),
+    poster_to_delivery_id                = COALESCE($6, poster_to_delivery_id),
+    offerer_from_delivery_id             = COALESCE($7, offerer_from_delivery_id),
+    offerer_to_delivery_id               = COALESCE($8, offerer_to_delivery_id),
+
+    poster_delivery_fee                  = COALESCE($9, poster_delivery_fee),
+    offerer_delivery_fee                 = COALESCE($10, offerer_delivery_fee),
+
+    poster_delivery_fee_paid             = COALESCE($11, poster_delivery_fee_paid),
+    offerer_delivery_fee_paid            = COALESCE($12, offerer_delivery_fee_paid),
+
+    poster_order_expected_delivery_time  = COALESCE($13,
+                                                    poster_order_expected_delivery_time),
+    offerer_order_expected_delivery_time = COALESCE($14,
+                                                    offerer_order_expected_delivery_time),
+
+    poster_order_note                    = COALESCE($15, poster_order_note),
+    offerer_order_note                   = COALESCE($16, offerer_order_note),
+    updated_at                           = now()
+WHERE id = $1 RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
 
 type UpdateExchangeParams struct {
-	ID                    uuid.UUID `json:"id"`
-	PosterFromDeliveryID  *int64    `json:"poster_from_delivery_id"`
-	PosterToDeliveryID    *int64    `json:"poster_to_delivery_id"`
-	OffererFromDeliveryID *int64    `json:"offerer_from_delivery_id"`
-	OffererToDeliveryID   *int64    `json:"offerer_to_delivery_id"`
+	ID                               uuid.UUID          `json:"id"`
+	PosterOrderID                    *uuid.UUID         `json:"poster_order_id"`
+	OffererOrderID                   *uuid.UUID         `json:"offerer_order_id"`
+	Status                           NullExchangeStatus `json:"status"`
+	PosterFromDeliveryID             *int64             `json:"poster_from_delivery_id"`
+	PosterToDeliveryID               *int64             `json:"poster_to_delivery_id"`
+	OffererFromDeliveryID            *int64             `json:"offerer_from_delivery_id"`
+	OffererToDeliveryID              *int64             `json:"offerer_to_delivery_id"`
+	PosterDeliveryFee                *int64             `json:"poster_delivery_fee"`
+	OffererDeliveryFee               *int64             `json:"offerer_delivery_fee"`
+	PosterDeliveryFeePaid            *bool              `json:"poster_delivery_fee_paid"`
+	OffererDeliveryFeePaid           *bool              `json:"offerer_delivery_fee_paid"`
+	PosterOrderExpectedDeliveryTime  *time.Time         `json:"poster_order_expected_delivery_time"`
+	OffererOrderExpectedDeliveryTime *time.Time         `json:"offerer_order_expected_delivery_time"`
+	PosterOrderNote                  *string            `json:"poster_order_note"`
+	OffererOrderNote                 *string            `json:"offerer_order_note"`
 }
 
 func (q *Queries) UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error) {
 	row := q.db.QueryRow(ctx, updateExchange,
 		arg.ID,
+		arg.PosterOrderID,
+		arg.OffererOrderID,
+		arg.Status,
 		arg.PosterFromDeliveryID,
 		arg.PosterToDeliveryID,
 		arg.OffererFromDeliveryID,
 		arg.OffererToDeliveryID,
+		arg.PosterDeliveryFee,
+		arg.OffererDeliveryFee,
+		arg.PosterDeliveryFeePaid,
+		arg.OffererDeliveryFeePaid,
+		arg.PosterOrderExpectedDeliveryTime,
+		arg.OffererOrderExpectedDeliveryTime,
+		arg.PosterOrderNote,
+		arg.OffererOrderNote,
 	)
 	var i Exchange
 	err := row.Scan(
@@ -187,8 +246,14 @@ func (q *Queries) UpdateExchange(ctx context.Context, arg UpdateExchangeParams) 
 		&i.PosterToDeliveryID,
 		&i.OffererFromDeliveryID,
 		&i.OffererToDeliveryID,
+		&i.PosterDeliveryFee,
+		&i.OffererDeliveryFee,
 		&i.PosterDeliveryFeePaid,
 		&i.OffererDeliveryFeePaid,
+		&i.PosterOrderExpectedDeliveryTime,
+		&i.OffererOrderExpectedDeliveryTime,
+		&i.PosterOrderNote,
+		&i.OffererOrderNote,
 		&i.PayerID,
 		&i.CompensationAmount,
 		&i.Status,

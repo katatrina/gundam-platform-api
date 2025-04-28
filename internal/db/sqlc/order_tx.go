@@ -3,9 +3,11 @@ package db
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
 	"time"
 	
 	"github.com/google/uuid"
+	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -105,7 +107,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			
 			grade, err := qTx.GetGradeByID(ctx, gundam.GradeID)
 			if err != nil {
-				return fmt.Errorf("failed to get grade by OfferID: %w", err)
+				return fmt.Errorf("failed to get grade by ID: %w", err)
 			}
 			
 			primaryImageURL, err := qTx.GetGundamPrimaryImageURL(ctx, gundam.ID)
@@ -176,6 +178,104 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			return fmt.Errorf("failed to create order transaction: %w", err)
 		}
 		result.OrderTransaction = orderTrans
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type PackageOrderTxParams struct {
+	Order               *Order
+	PackageImages       []*multipart.FileHeader
+	UploadImagesFunc    func(key string, value string, folder string, files ...*multipart.FileHeader) ([]string, error)
+	CreateDeliveryOrder func(ctx context.Context, request delivery.CreateOrderRequest) (*delivery.CreateOrderResponse, error)
+}
+
+type PackageOrderTxResult struct {
+	Order         Order         `json:"order"`
+	OrderDelivery OrderDelivery `json:"order_delivery"`
+}
+
+func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error) {
+	var result PackageOrderTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Upload packaging images and store the URLs
+		packagingImageURLs, err := arg.UploadImagesFunc("packaging_image", arg.Order.Code, util.FolderOrders, arg.PackageImages...)
+		if err != nil {
+			return err
+		}
+		
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			IsPackaged:         util.BoolPointer(true),
+			PackagingImageURLs: packagingImageURLs,
+			OrderID:            arg.Order.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order: %w", err)
+		}
+		result.Order = updatedOrder
+		
+		// 2. Lấy thông tin các mặt hàng trong đơn hàng
+		orderItems, err := qTx.ListOrderItems(ctx, updatedOrder.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get order items: %w", err)
+		}
+		
+		// 3. Lấy thông tin giao hàng
+		orderDelivery, err := qTx.GetOrderDelivery(ctx, updatedOrder.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get order delivery: %w", err)
+		}
+		
+		// 4. Lấy địa chỉ người gửi
+		senderAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.FromDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get sender address: %w", err)
+		}
+		
+		// 5. Lấy địa chỉ người nhận
+		receiverAddress, err := qTx.GetDeliveryInformation(ctx, orderDelivery.ToDeliveryID)
+		if err != nil {
+			return fmt.Errorf("failed to get receiver address: %w", err)
+		}
+		
+		// Chuyển đổi dữ liệu từ db sang ghn
+		createOrderRequest := ConvertToDeliveryCreateOrderRequest(updatedOrder, orderItems, senderAddress, receiverAddress)
+		
+		// 5. Gọi hàm tạo đơn hàng GHN
+		ghnResponse, err := arg.CreateDeliveryOrder(ctx, createOrderRequest)
+		if err != nil {
+			return fmt.Errorf("failed to create GHN order: %w", err)
+		}
+		
+		// So sánh phí vận chuyển từ GHN với phí đã thanh toán
+		if updatedOrder.DeliveryFee != ghnResponse.Data.TotalFee {
+			log.Warn().Msgf("Delivery fee mismatch: %d != %d", updatedOrder.DeliveryFee, ghnResponse.Data.TotalFee)
+		}
+		// So sánh thời gian giao hàng dự kiến với giá trị đã lưu
+		if orderDelivery.ExpectedDeliveryTime != ghnResponse.Data.ExpectedDeliveryTime {
+			log.Warn().Msgf("Expected delivery time mismatch: %v != %v", orderDelivery.ExpectedDeliveryTime, ghnResponse.Data.ExpectedDeliveryTime)
+		}
+		
+		// 6. Cập nhật thông tin giao hàng với mã đơn GHN
+		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
+			ID:                   orderDelivery.ID,
+			DeliveryTrackingCode: &ghnResponse.Data.OrderCode,
+			ExpectedDeliveryTime: util.TimePointer(ghnResponse.Data.ExpectedDeliveryTime),
+			Status:               util.StringPointer("ready_to_pick"), // Hardcode status vì GHN không trả về trong response sau khi tạo đơn hàng
+			OverallStatus: NullDeliveryOverralStatus{
+				DeliveryOverralStatus: DeliveryOverralStatusPicking,
+				Valid:                 true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order delivery: %w", err)
+		}
+		result.OrderDelivery = updatedDelivery
+		
+		// TODO: Cần xử lý thêm nếu đơn hàng là đơn trao đổi hoặc đấu giá.
 		
 		return nil
 	})
@@ -288,7 +388,7 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 					return fmt.Errorf("failed to update gundam owner: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam OfferID %d not found in order item %d", item.GundamID, item.ID)
+				log.Warn().Msgf("Gundam ID %d not found in order item %d", item.GundamID, item.ID)
 			}
 		}
 		
@@ -408,7 +508,7 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 					return fmt.Errorf("failed to restore gundam status: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam OfferID %d not found in order item %d", item.GundamID, item.ID)
+				log.Warn().Msgf("Gundam ID %d not found in order item %d", item.GundamID, item.ID)
 			}
 			
 		}

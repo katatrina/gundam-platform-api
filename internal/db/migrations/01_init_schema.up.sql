@@ -433,25 +433,31 @@ CREATE TABLE "exchange_offer_items"
 
 CREATE TABLE "exchanges"
 (
-    "id"                        uuid PRIMARY KEY,
-    "poster_id"                 text            NOT NULL,
-    "offerer_id"                text            NOT NULL,
-    "poster_order_id"           uuid            NOT NULL,
-    "offerer_order_id"          uuid            NOT NULL,
-    "poster_from_delivery_id"   bigint,
-    "poster_to_delivery_id"     bigint,
-    "offerer_from_delivery_id"  bigint,
-    "offerer_to_delivery_id"    bigint,
-    "poster_delivery_fee_paid"  bool            NOT NULL DEFAULT false,
-    "offerer_delivery_fee_paid" bool            NOT NULL DEFAULT false,
-    "payer_id"                  text,
-    "compensation_amount"       bigint,
-    "status"                    exchange_status NOT NULL DEFAULT 'pending',
-    "canceled_by"               text,
-    "canceled_reason"           text,
-    "created_at"                timestamptz     NOT NULL DEFAULT (now()),
-    "updated_at"                timestamptz     NOT NULL DEFAULT (now()),
-    "completed_at"              timestamptz
+    "id"                                   uuid PRIMARY KEY,
+    "poster_id"                            text            NOT NULL,
+    "offerer_id"                           text            NOT NULL,
+    "poster_order_id"                      uuid,
+    "offerer_order_id"                     uuid,
+    "poster_from_delivery_id"              bigint,
+    "poster_to_delivery_id"                bigint,
+    "offerer_from_delivery_id"             bigint,
+    "offerer_to_delivery_id"               bigint,
+    "poster_delivery_fee"                  bigint,
+    "offerer_delivery_fee"                 bigint,
+    "poster_delivery_fee_paid"             bool            NOT NULL DEFAULT false,
+    "offerer_delivery_fee_paid"            bool            NOT NULL DEFAULT false,
+    "poster_order_expected_delivery_time"  timestamptz,
+    "offerer_order_expected_delivery_time" timestamptz,
+    "poster_order_note"                    text,
+    "offerer_order_note"                   text,
+    "payer_id"                             text,
+    "compensation_amount"                  bigint,
+    "status"                               exchange_status NOT NULL DEFAULT 'pending',
+    "canceled_by"                          text,
+    "canceled_reason"                      text,
+    "created_at"                           timestamptz     NOT NULL DEFAULT (now()),
+    "updated_at"                           timestamptz     NOT NULL DEFAULT (now()),
+    "completed_at"                         timestamptz
 );
 
 CREATE TABLE "exchange_items"
@@ -633,12 +639,6 @@ ALTER TABLE "exchange_offer_items"
     ADD FOREIGN KEY ("offer_id") REFERENCES "exchange_offers" ("id") ON DELETE CASCADE;
 
 ALTER TABLE "exchanges"
-    ADD FOREIGN KEY ("poster_order_id") REFERENCES "orders" ("id");
-
-ALTER TABLE "exchanges"
-    ADD FOREIGN KEY ("offerer_order_id") REFERENCES "orders" ("id");
-
-ALTER TABLE "exchanges"
     ADD FOREIGN KEY ("poster_from_delivery_id") REFERENCES "delivery_information" ("id");
 
 ALTER TABLE "exchanges"
@@ -655,6 +655,12 @@ ALTER TABLE "exchanges"
 
 ALTER TABLE "exchanges"
     ADD FOREIGN KEY ("canceled_by") REFERENCES "users" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "exchanges"
+    ADD FOREIGN KEY ("poster_order_id") REFERENCES "orders" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "exchanges"
+    ADD FOREIGN KEY ("offerer_order_id") REFERENCES "orders" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "exchange_items"
     ADD FOREIGN KEY ("exchange_id") REFERENCES "exchanges" ("id") ON DELETE CASCADE;

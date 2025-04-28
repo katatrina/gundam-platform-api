@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/google-login": {
             "post": {
-                "description": "Authenticate a user using Google OfferID token. If the user doesn't exist, a new user will be created.",
+                "description": "Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.",
                 "consumes": [
                     "application/json"
                 ],
@@ -30,7 +30,7 @@ const docTemplate = `{
                 "summary": "Login or register a user with Google account",
                 "parameters": [
                     {
-                        "description": "Google OfferID Token",
+                        "description": "Google ID Token",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -50,7 +50,7 @@ const docTemplate = `{
                         "description": "Invalid request body"
                     },
                     "401": {
-                        "description": "Invalid Google OfferID token"
+                        "description": "Invalid Google ID token"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -185,7 +185,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "1",
-                        "description": "Cart Item OfferID to delete",
+                        "description": "Cart Item ID to delete",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -369,6 +369,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/db.ProvideDeliveryAddressesForExchangeTxResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/exchanges/{exchangeID}/pay-delivery-fee": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Pays the delivery fee for an exchange transaction. When both parties have paid, the system creates two orders.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Pay delivery fee for exchange",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange ID",
+                        "name": "exchangeID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Delivery fee information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.PayExchangeDeliveryFeeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.PayExchangeDeliveryFeeTxResult"
                         }
                     }
                 }
@@ -610,14 +656,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -662,7 +708,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -700,7 +746,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -747,7 +793,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -945,7 +991,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "user_id",
                         "in": "query",
                         "required": true
@@ -1056,7 +1102,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Get all sales orders that belong to the specified seller OfferID",
+                "description": "Get all sales orders that belong to the specified seller ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -1070,7 +1116,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
@@ -1125,14 +1171,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1169,14 +1215,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1210,7 +1256,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
@@ -1250,14 +1296,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Gundam OfferID",
+                        "description": "Gundam ID",
                         "name": "gundamID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
@@ -1269,51 +1315,6 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid gundam OfferID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Seller does not own this gundam",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Seller not found\u003cbr/\u003eGundam not found\u003cbr/\u003eNo active subscription found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Subscription limit exceeded\u003cbr/\u003eSubscription expired\u003cbr/\u003eGundam is not available for publishing",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     }
                 }
@@ -1340,14 +1341,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Gundam OfferID",
+                        "description": "Gundam ID",
                         "name": "gundamID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
@@ -1362,7 +1363,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid gundam OfferID",
+                        "description": "Invalid gundam ID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1431,7 +1432,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "s123e456-e789-45d0-9876-54321abcdef",
-                        "description": "Seller OfferID",
+                        "description": "Seller ID",
                         "name": "sellerID",
                         "in": "path",
                         "required": true
@@ -1439,7 +1440,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order OfferID",
+                        "description": "Order ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1572,7 +1573,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Get all gundams that belong to the specified user OfferID",
+                "description": "Get all gundams that belong to the specified user ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -1586,7 +1587,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1630,7 +1631,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -1644,7 +1645,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Gundam grade OfferID",
+                        "description": "Gundam grade ID",
                         "name": "grade_id",
                         "in": "formData",
                         "required": true
@@ -1776,7 +1777,7 @@ const docTemplate = `{
                         "description": "Forbidden - User is not authorized to create Gundam for this user"
                     },
                     "404": {
-                        "description": "Not Found - User with specified OfferID does not exist"
+                        "description": "Not Found - User with specified ID does not exist"
                     },
                     "500": {
                         "description": "Internal Server Error - Failed to create Gundam"
@@ -1805,7 +1806,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2152,7 +2153,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Exchange Post OfferID",
+                        "description": "Exchange Post ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2278,14 +2279,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Exchange Post OfferID",
+                        "description": "Exchange Post ID",
                         "name": "postID",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Exchange Offer OfferID",
+                        "description": "Exchange Offer ID",
                         "name": "offerID",
                         "in": "path",
                         "required": true
@@ -2318,11 +2319,11 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Retrieve a user by OfferID",
+                "summary": "Retrieve a user by ID",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2344,7 +2345,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Update specific user details by user OfferID",
+                "description": "Update specific user details by user ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -2358,7 +2359,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2402,7 +2403,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2438,7 +2439,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2484,7 +2485,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2522,14 +2523,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
-                        "description": "Address OfferID",
+                        "description": "Address ID",
                         "name": "address_id",
                         "in": "path",
                         "required": true
@@ -2550,15 +2551,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.UserAddress"
                         }
-                    },
-                    "400": {
-                        "description": "Invalid request parameters"
-                    },
-                    "404": {
-                        "description": "Address not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             },
@@ -2571,14 +2563,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
-                        "description": "Address OfferID",
+                        "description": "Address ID",
                         "name": "address_id",
                         "in": "path",
                         "required": true
@@ -2619,7 +2611,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User OfferID",
+                        "description": "User ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2771,6 +2763,26 @@ const docTemplate = `{
                 }
             }
         },
+        "api.PayExchangeDeliveryFeeRequest": {
+            "type": "object",
+            "required": [
+                "delivery_fee",
+                "expected_delivery_time",
+                "note"
+            ],
+            "properties": {
+                "delivery_fee": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "expected_delivery_time": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
         "api.VerifyEmailOTPRequest": {
             "type": "object",
             "required": [
@@ -2803,7 +2815,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
-                    "description": "OfferID của user cần cập nhật số điện thoại",
+                    "description": "ID của user cần cập nhật số điện thoại",
                     "type": "string"
                 }
             }
@@ -2868,7 +2880,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "exchange_post_id": {
-                    "description": "OfferID bài đăng trao đổi",
+                    "description": "ID bài đăng trao đổi",
                     "type": "string"
                 },
                 "note": {
@@ -2876,15 +2888,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "offerer_gundam_id": {
-                    "description": "OfferID Gundam của người đề xuất",
+                    "description": "ID Gundam của người đề xuất",
                     "type": "integer"
                 },
                 "payer_id": {
-                    "description": "OfferID người bù tiền (poster_id hoặc offerer_id, hoặc null)",
+                    "description": "ID người bù tiền (poster_id hoặc offerer_id, hoặc null)",
                     "type": "string"
                 },
                 "poster_gundam_id": {
-                    "description": "OfferID Gundam của người đăng bài",
+                    "description": "ID Gundam của người đăng bài",
                     "type": "integer"
                 }
             }
@@ -2911,7 +2923,7 @@ const docTemplate = `{
                     }
                 },
                 "post_item_id": {
-                    "description": "OfferID của các Gundam mà chủ bài post cho phép trao đổi",
+                    "description": "ID của các Gundam mà chủ bài post cho phép trao đổi",
                     "type": "array",
                     "minItems": 1,
                     "items": {
@@ -2935,7 +2947,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "buyer_address_id": {
-                    "description": "OfferID of the buyer's chosen address\nexample: 42",
+                    "description": "ID of the buyer's chosen address\nexample: 42",
                     "type": "integer"
                 },
                 "delivery_fee": {
@@ -2973,7 +2985,7 @@ const docTemplate = `{
                     ]
                 },
                 "seller_id": {
-                    "description": "OfferID of the seller\nexample: user123",
+                    "description": "ID of the seller\nexample: user123",
                     "type": "string"
                 },
                 "total_amount": {
@@ -3188,7 +3200,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payer_id": {
-                    "description": "OfferID người trả tiền bù, bắt buộc khi require_compensation=true",
+                    "description": "ID người trả tiền bù, bắt buộc khi require_compensation=true",
                     "type": "string"
                 },
                 "require_compensation": {
@@ -3603,16 +3615,22 @@ const docTemplate = `{
                 "completed_at",
                 "created_at",
                 "id",
+                "offerer_delivery_fee",
                 "offerer_delivery_fee_paid",
                 "offerer_from_delivery_id",
                 "offerer_id",
+                "offerer_order_expected_delivery_time",
                 "offerer_order_id",
+                "offerer_order_note",
                 "offerer_to_delivery_id",
                 "payer_id",
+                "poster_delivery_fee",
                 "poster_delivery_fee_paid",
                 "poster_from_delivery_id",
                 "poster_id",
+                "poster_order_expected_delivery_time",
                 "poster_order_id",
+                "poster_order_note",
                 "poster_to_delivery_id",
                 "status",
                 "updated_at"
@@ -3636,6 +3654,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "offerer_delivery_fee": {
+                    "type": "integer"
+                },
                 "offerer_delivery_fee_paid": {
                     "type": "boolean"
                 },
@@ -3645,7 +3666,13 @@ const docTemplate = `{
                 "offerer_id": {
                     "type": "string"
                 },
+                "offerer_order_expected_delivery_time": {
+                    "type": "string"
+                },
                 "offerer_order_id": {
+                    "type": "string"
+                },
+                "offerer_order_note": {
                     "type": "string"
                 },
                 "offerer_to_delivery_id": {
@@ -3653,6 +3680,9 @@ const docTemplate = `{
                 },
                 "payer_id": {
                     "type": "string"
+                },
+                "poster_delivery_fee": {
+                    "type": "integer"
                 },
                 "poster_delivery_fee_paid": {
                     "type": "boolean"
@@ -3663,7 +3693,13 @@ const docTemplate = `{
                 "poster_id": {
                     "type": "string"
                 },
+                "poster_order_expected_delivery_time": {
+                    "type": "string"
+                },
                 "poster_order_id": {
+                    "type": "string"
+                },
+                "poster_order_note": {
                     "type": "string"
                 },
                 "poster_to_delivery_id": {
@@ -4041,11 +4077,14 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "avatar_url",
+                "delivery_fee",
                 "delivery_fee_paid",
+                "expected_delivery_time",
                 "from_address",
                 "full_name",
                 "id",
                 "items",
+                "note",
                 "order",
                 "to_address"
             ],
@@ -4054,9 +4093,17 @@ const docTemplate = `{
                     "description": "URL ảnh đại diện người dùng",
                     "type": "string"
                 },
+                "delivery_fee": {
+                    "description": "Phí vận chuyển",
+                    "type": "integer"
+                },
                 "delivery_fee_paid": {
                     "description": "Đã thanh toán phí vận chuyển chưa",
                     "type": "boolean"
+                },
+                "expected_delivery_time": {
+                    "description": "Thời gian giao hàng dự kiến",
+                    "type": "string"
                 },
                 "from_address": {
                     "description": "Địa chỉ gửi hàng",
@@ -4080,6 +4127,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.ExchangeItem"
                     }
+                },
+                "note": {
+                    "description": "Ghi chú của người dùng",
+                    "type": "string"
                 },
                 "order": {
                     "description": "Thông tin đơn hàng và vận chuyển",
@@ -4714,6 +4765,33 @@ const docTemplate = `{
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
+                }
+            }
+        },
+        "db.PayExchangeDeliveryFeeTxResult": {
+            "type": "object",
+            "required": [
+                "both_parties_paid",
+                "exchange",
+                "offerer_order_id",
+                "partner_has_paid",
+                "poster_order_id"
+            ],
+            "properties": {
+                "both_parties_paid": {
+                    "type": "boolean"
+                },
+                "exchange": {
+                    "$ref": "#/definitions/db.Exchange"
+                },
+                "offerer_order_id": {
+                    "type": "string"
+                },
+                "partner_has_paid": {
+                    "type": "boolean"
+                },
+                "poster_order_id": {
+                    "type": "string"
                 }
             }
         },

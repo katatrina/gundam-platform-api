@@ -76,35 +76,58 @@ func (server *Server) getExchangeDetails(c *gin.Context) {
 	
 	// Xây dựng thông tin người dùng hiện tại và đối tác
 	var currentUserID, partnerID string
-	var currentUserOrderID, partnerOrderID uuid.UUID
+	var currentUserOrderID, partnerOrderID *uuid.UUID
 	var currentUserFromDeliveryID, currentUserToDeliveryID, partnerFromDeliveryID, partnerToDeliveryID *int64
+	var currentUserDeliveryFee, partnerDeliveryFee *int64
 	var currentUserDeliveryFeePaid, partnerDeliveryFeePaid bool
+	var currentUserOrderNote, partnerOrderNote *string
+	var currentUserOrderExpectedDeliveryTime, partnerOrderExpectedDeliveryTime *time.Time
 	var isCurrentUserItemFromPoster, isPartnerItemFromPoster bool
 	
 	if isCurrentUserPoster {
 		currentUserID = exchange.PosterID
 		partnerID = exchange.OffererID
-		currentUserOrderID = exchange.PosterOrderID
-		partnerOrderID = exchange.OffererOrderID
+		if exchange.PosterOrderID != nil {
+			currentUserOrderID = exchange.PosterOrderID
+		}
+		if exchange.OffererOrderID != nil {
+			partnerOrderID = exchange.OffererOrderID
+		}
 		currentUserFromDeliveryID = exchange.PosterFromDeliveryID
 		currentUserToDeliveryID = exchange.PosterToDeliveryID
 		partnerFromDeliveryID = exchange.OffererFromDeliveryID
 		partnerToDeliveryID = exchange.OffererToDeliveryID
+		currentUserDeliveryFee = exchange.PosterDeliveryFee
+		partnerDeliveryFee = exchange.OffererDeliveryFee
 		currentUserDeliveryFeePaid = exchange.PosterDeliveryFeePaid
 		partnerDeliveryFeePaid = exchange.OffererDeliveryFeePaid
+		currentUserOrderNote = exchange.PosterOrderNote
+		partnerOrderNote = exchange.OffererOrderNote
+		currentUserOrderExpectedDeliveryTime = exchange.PosterOrderExpectedDeliveryTime
+		partnerOrderExpectedDeliveryTime = exchange.OffererOrderExpectedDeliveryTime
 		isCurrentUserItemFromPoster = true
 		isPartnerItemFromPoster = false
 	} else {
 		currentUserID = exchange.OffererID
 		partnerID = exchange.PosterID
-		currentUserOrderID = exchange.OffererOrderID
-		partnerOrderID = exchange.PosterOrderID
+		if exchange.OffererOrderID != nil {
+			currentUserOrderID = exchange.OffererOrderID
+		}
+		if exchange.PosterOrderID != nil {
+			partnerOrderID = exchange.PosterOrderID
+		}
 		currentUserFromDeliveryID = exchange.OffererFromDeliveryID
 		currentUserToDeliveryID = exchange.OffererToDeliveryID
 		partnerFromDeliveryID = exchange.PosterFromDeliveryID
 		partnerToDeliveryID = exchange.PosterToDeliveryID
+		currentUserDeliveryFee = exchange.OffererDeliveryFee
+		partnerDeliveryFee = exchange.PosterDeliveryFee
 		currentUserDeliveryFeePaid = exchange.OffererDeliveryFeePaid
 		partnerDeliveryFeePaid = exchange.PosterDeliveryFeePaid
+		currentUserOrderNote = exchange.OffererOrderNote
+		partnerOrderNote = exchange.PosterOrderNote
+		currentUserOrderExpectedDeliveryTime = exchange.OffererOrderExpectedDeliveryTime
+		partnerOrderExpectedDeliveryTime = exchange.PosterOrderExpectedDeliveryTime
 		isCurrentUserItemFromPoster = false
 		isPartnerItemFromPoster = true
 	}
@@ -112,29 +135,55 @@ func (server *Server) getExchangeDetails(c *gin.Context) {
 	// Xây dựng thông tin người dùng hiện tại
 	currentUser, err := server.dbStore.GetUserByID(c.Request.Context(), currentUserID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", currentUserID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user info: %w", err)))
 		return
 	}
 	
 	// Xây dựng thông tin đơn hàng của người dùng hiện tại
-	currentUserOrder, err := server.dbStore.GetOrderByID(c.Request.Context(), currentUserOrderID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user order: %w", err)))
-		return
+	var currentUserOrder *db.Order
+	if currentUserOrderID != nil {
+		order, err := server.dbStore.GetOrderByID(c.Request.Context(), *currentUserOrderID)
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user order: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
+			currentUserOrder = &order
+		}
 	}
 	
 	// Xây dựng thông tin địa chỉ của người dùng hiện tại
 	var currentUserFromDelivery, currentUserToDelivery *db.DeliveryInformation
 	if currentUserFromDeliveryID != nil {
 		fromDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *currentUserFromDeliveryID)
-		if err == nil {
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user from delivery: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
 			currentUserFromDelivery = &fromDelivery
 		}
 	}
 	
 	if currentUserToDeliveryID != nil {
 		toDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *currentUserToDeliveryID)
-		if err == nil {
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user to delivery: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
 			currentUserToDelivery = &toDelivery
 		}
 	}
@@ -148,32 +197,59 @@ func (server *Server) getExchangeDetails(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to list current user items: %w", err)))
 		return
 	}
+	
 	// Xây dựng thông tin người đối tác
 	partner, err := server.dbStore.GetUserByID(c.Request.Context(), partnerID)
 	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", partnerID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner info: %w", err)))
 		return
 	}
 	
 	// Xây dựng thông tin đơn hàng của đối tác
-	partnerOrder, err := server.dbStore.GetOrderByID(c.Request.Context(), partnerOrderID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner order: %w", err)))
-		return
+	var partnerOrder *db.Order
+	if partnerOrderID != nil {
+		order, err := server.dbStore.GetOrderByID(c.Request.Context(), *partnerOrderID)
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner order: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
+			partnerOrder = &order
+		}
 	}
 	
 	// Xây dựng thông tin địa chỉ của đối tác
 	var partnerFromDelivery, partnerToDelivery *db.DeliveryInformation
 	if partnerFromDeliveryID != nil {
 		fromDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *partnerFromDeliveryID)
-		if err == nil {
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner from delivery: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
 			partnerFromDelivery = &fromDelivery
 		}
 	}
 	
 	if partnerToDeliveryID != nil {
 		toDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *partnerToDeliveryID)
-		if err == nil {
+		if err != nil {
+			if !errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner to delivery: %w", err)))
+				return
+			}
+			// Nếu là ErrRecordNotFound, không làm gì cả
+		} else {
 			partnerToDelivery = &toDelivery
 		}
 	}
@@ -190,26 +266,32 @@ func (server *Server) getExchangeDetails(c *gin.Context) {
 	
 	// Đóng gói thông tin người dùng hiện tại
 	result.CurrentUser = db.ExchangeUserInfo{
-		ID:              currentUser.ID,
-		FullName:        currentUser.FullName,
-		AvatarURL:       currentUser.AvatarURL,
-		Order:           &currentUserOrder,
-		FromDelivery:    currentUserFromDelivery,
-		ToDelivery:      currentUserToDelivery,
-		DeliveryFeePaid: currentUserDeliveryFeePaid,
-		Items:           currentUserItems,
+		ID:                   currentUser.ID,
+		FullName:             currentUser.FullName,
+		AvatarURL:            currentUser.AvatarURL,
+		Order:                currentUserOrder,
+		FromDelivery:         currentUserFromDelivery,
+		ToDelivery:           currentUserToDelivery,
+		DeliveryFee:          currentUserDeliveryFee,
+		DeliveryFeePaid:      currentUserDeliveryFeePaid,
+		ExpectedDeliveryTime: currentUserOrderExpectedDeliveryTime,
+		Note:                 currentUserOrderNote,
+		Items:                currentUserItems,
 	}
 	
 	// Đóng gói thông tin đối tác
 	result.Partner = db.ExchangeUserInfo{
-		ID:              partner.ID,
-		FullName:        partner.FullName,
-		AvatarURL:       partner.AvatarURL,
-		Order:           &partnerOrder,
-		FromDelivery:    partnerFromDelivery,
-		ToDelivery:      partnerToDelivery,
-		DeliveryFeePaid: partnerDeliveryFeePaid,
-		Items:           partnerItems,
+		ID:                   partner.ID,
+		FullName:             partner.FullName,
+		AvatarURL:            partner.AvatarURL,
+		Order:                partnerOrder,
+		FromDelivery:         partnerFromDelivery,
+		ToDelivery:           partnerToDelivery,
+		DeliveryFee:          partnerDeliveryFee,
+		DeliveryFeePaid:      partnerDeliveryFeePaid,
+		ExpectedDeliveryTime: partnerOrderExpectedDeliveryTime,
+		Note:                 partnerOrderNote,
+		Items:                partnerItems,
 	}
 	
 	c.JSON(http.StatusOK, result)
@@ -231,6 +313,7 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 	// Xử lý tham số lọc theo trạng thái
 	status := c.Query("status")
 	var exchangeStatus db.ExchangeStatus
+	var validStatus bool
 	if status != "" {
 		if err := db.IsValidExchangeStatus(status); err != nil {
 			c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid exchange status: %s", status)))
@@ -238,6 +321,7 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		}
 		
 		exchangeStatus = db.ExchangeStatus(status)
+		validStatus = true
 	}
 	
 	// Lấy danh sách các exchange của người dùng
@@ -245,7 +329,7 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		UserID: userID,
 		Status: db.NullExchangeStatus{
 			ExchangeStatus: exchangeStatus,
-			Valid:          true,
+			Valid:          validStatus,
 		},
 	})
 	if err != nil {
@@ -276,34 +360,58 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		
 		// Xây dựng thông tin người dùng hiện tại và đối tác
 		var currentUserID, partnerID string
-		var currentUserOrderID, partnerOrderID uuid.UUID
+		var currentUserOrderID, partnerOrderID *uuid.UUID
 		var currentUserFromDeliveryID, currentUserToDeliveryID, partnerFromDeliveryID, partnerToDeliveryID *int64
+		var currentUserDeliveryFee, partnerDeliveryFee *int64
 		var currentUserDeliveryFeePaid, partnerDeliveryFeePaid bool
+		var currentUserOrderNote, partnerOrderNote *string
+		var currentUserOrderExpectedDeliveryTime, partnerOrderExpectedDeliveryTime *time.Time
 		var isCurrentUserItemFromPoster, isPartnerItemFromPoster bool
+		
 		if isCurrentUserPoster {
 			currentUserID = exchange.PosterID
 			partnerID = exchange.OffererID
-			currentUserOrderID = exchange.PosterOrderID
-			partnerOrderID = exchange.OffererOrderID
+			if exchange.PosterOrderID != nil {
+				currentUserOrderID = exchange.PosterOrderID
+			}
+			if exchange.OffererOrderID != nil {
+				partnerOrderID = exchange.OffererOrderID
+			}
 			currentUserFromDeliveryID = exchange.PosterFromDeliveryID
 			currentUserToDeliveryID = exchange.PosterToDeliveryID
 			partnerFromDeliveryID = exchange.OffererFromDeliveryID
 			partnerToDeliveryID = exchange.OffererToDeliveryID
+			currentUserDeliveryFee = exchange.PosterDeliveryFee
+			partnerDeliveryFee = exchange.OffererDeliveryFee
 			currentUserDeliveryFeePaid = exchange.PosterDeliveryFeePaid
 			partnerDeliveryFeePaid = exchange.OffererDeliveryFeePaid
+			currentUserOrderNote = exchange.PosterOrderNote
+			partnerOrderNote = exchange.OffererOrderNote
+			currentUserOrderExpectedDeliveryTime = exchange.PosterOrderExpectedDeliveryTime
+			partnerOrderExpectedDeliveryTime = exchange.OffererOrderExpectedDeliveryTime
 			isCurrentUserItemFromPoster = true
 			isPartnerItemFromPoster = false
 		} else {
 			currentUserID = exchange.OffererID
 			partnerID = exchange.PosterID
-			currentUserOrderID = exchange.OffererOrderID
-			partnerOrderID = exchange.PosterOrderID
+			if exchange.OffererOrderID != nil {
+				currentUserOrderID = exchange.OffererOrderID
+			}
+			if exchange.PosterOrderID != nil {
+				partnerOrderID = exchange.PosterOrderID
+			}
 			currentUserFromDeliveryID = exchange.OffererFromDeliveryID
 			currentUserToDeliveryID = exchange.OffererToDeliveryID
 			partnerFromDeliveryID = exchange.PosterFromDeliveryID
 			partnerToDeliveryID = exchange.PosterToDeliveryID
+			currentUserDeliveryFee = exchange.OffererDeliveryFee
+			partnerDeliveryFee = exchange.PosterDeliveryFee
 			currentUserDeliveryFeePaid = exchange.OffererDeliveryFeePaid
 			partnerDeliveryFeePaid = exchange.PosterDeliveryFeePaid
+			currentUserOrderNote = exchange.OffererOrderNote
+			partnerOrderNote = exchange.PosterOrderNote
+			currentUserOrderExpectedDeliveryTime = exchange.OffererOrderExpectedDeliveryTime
+			partnerOrderExpectedDeliveryTime = exchange.PosterOrderExpectedDeliveryTime
 			isCurrentUserItemFromPoster = false
 			isPartnerItemFromPoster = true
 		}
@@ -311,29 +419,54 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		// Xây dựng thông tin người dùng hiện tại
 		currentUser, err := server.dbStore.GetUserByID(c.Request.Context(), currentUserID)
 		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("user ID %s not found", currentUserID)))
+				return
+			}
+			
 			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user info: %w", err)))
 			return
 		}
 		
 		// Xây dựng thông tin đơn hàng của người dùng hiện tại
-		currentUserOrder, err := server.dbStore.GetOrderByID(c.Request.Context(), currentUserOrderID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user order: %w", err)))
-			return
+		var currentUserOrder *db.Order
+		if currentUserOrderID != nil {
+			order, err := server.dbStore.GetOrderByID(c.Request.Context(), *currentUserOrderID)
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user order: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
+				currentUserOrder = &order
+			}
 		}
 		
 		// Xây dựng thông tin địa chỉ của người dùng hiện tại
 		var currentUserFromDelivery, currentUserToDelivery *db.DeliveryInformation
 		if currentUserFromDeliveryID != nil {
 			fromDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *currentUserFromDeliveryID)
-			if err == nil {
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user from delivery: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
 				currentUserFromDelivery = &fromDelivery
 			}
 		}
 		
 		if currentUserToDeliveryID != nil {
 			toDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *currentUserToDeliveryID)
-			if err == nil {
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get current user to delivery: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
 				currentUserToDelivery = &toDelivery
 			}
 		}
@@ -347,32 +480,58 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to list current user items: %w", err)))
 			return
 		}
+		
 		// Xây dựng thông tin người đối tác
 		partner, err := server.dbStore.GetUserByID(c.Request.Context(), partnerID)
 		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("partner ID %s not found", partnerID)))
+				return
+			}
+			
 			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner info: %w", err)))
 			return
 		}
 		
 		// Xây dựng thông tin đơn hàng của đối tác
-		partnerOrder, err := server.dbStore.GetOrderByID(c.Request.Context(), partnerOrderID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner order: %w", err)))
-			return
+		var partnerOrder *db.Order
+		if partnerOrderID != nil {
+			order, err := server.dbStore.GetOrderByID(c.Request.Context(), *partnerOrderID)
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner order: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
+				partnerOrder = &order
+			}
 		}
 		
 		// Xây dựng thông tin địa chỉ của đối tác
 		var partnerFromDelivery, partnerToDelivery *db.DeliveryInformation
 		if partnerFromDeliveryID != nil {
 			fromDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *partnerFromDeliveryID)
-			if err == nil {
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner from delivery: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
 				partnerFromDelivery = &fromDelivery
 			}
 		}
 		
 		if partnerToDeliveryID != nil {
 			toDelivery, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), *partnerToDeliveryID)
-			if err == nil {
+			if err != nil {
+				if !errors.Is(err, db.ErrRecordNotFound) {
+					c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to get partner to delivery: %w", err)))
+					return
+				}
+				// Nếu là ErrRecordNotFound, không làm gì cả
+			} else {
 				partnerToDelivery = &toDelivery
 			}
 		}
@@ -389,26 +548,32 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		
 		// Đóng gói thông tin người dùng hiện tại
 		details.CurrentUser = db.ExchangeUserInfo{
-			ID:              currentUser.ID,
-			FullName:        currentUser.FullName,
-			AvatarURL:       currentUser.AvatarURL,
-			Order:           &currentUserOrder,
-			FromDelivery:    currentUserFromDelivery,
-			ToDelivery:      currentUserToDelivery,
-			DeliveryFeePaid: currentUserDeliveryFeePaid,
-			Items:           currentUserItems,
+			ID:                   currentUser.ID,
+			FullName:             currentUser.FullName,
+			AvatarURL:            currentUser.AvatarURL,
+			Order:                currentUserOrder,
+			FromDelivery:         currentUserFromDelivery,
+			ToDelivery:           currentUserToDelivery,
+			DeliveryFee:          currentUserDeliveryFee,
+			DeliveryFeePaid:      currentUserDeliveryFeePaid,
+			ExpectedDeliveryTime: currentUserOrderExpectedDeliveryTime,
+			Note:                 currentUserOrderNote,
+			Items:                currentUserItems,
 		}
 		
 		// Đóng gói thông tin đối tác
 		details.Partner = db.ExchangeUserInfo{
-			ID:              partner.ID,
-			FullName:        partner.FullName,
-			AvatarURL:       partner.AvatarURL,
-			Order:           &partnerOrder,
-			FromDelivery:    partnerFromDelivery,
-			ToDelivery:      partnerToDelivery,
-			DeliveryFeePaid: partnerDeliveryFeePaid,
-			Items:           partnerItems,
+			ID:                   partner.ID,
+			FullName:             partner.FullName,
+			AvatarURL:            partner.AvatarURL,
+			Order:                partnerOrder,
+			FromDelivery:         partnerFromDelivery,
+			ToDelivery:           partnerToDelivery,
+			DeliveryFee:          partnerDeliveryFee,
+			DeliveryFeePaid:      partnerDeliveryFeePaid,
+			ExpectedDeliveryTime: partnerOrderExpectedDeliveryTime,
+			Note:                 partnerOrderNote,
+			Items:                partnerItems,
 		}
 		
 		result = append(result, details)
@@ -608,6 +773,128 @@ func (server *Server) provideExchangeDeliveryAddresses(c *gin.Context) {
 	} else {
 		log.Info().Msgf("Notification sent to partner: %s", partnerID)
 	}
+	
+	c.JSON(http.StatusOK, result)
+}
+
+// PayExchangeDeliveryFeeRequest định nghĩa request cho việc thanh toán phí vận chuyển
+type PayExchangeDeliveryFeeRequest struct {
+	DeliveryFee          int64     `json:"delivery_fee" binding:"required,min=1"`
+	ExpectedDeliveryTime time.Time `json:"expected_delivery_time" binding:"required"`
+	Note                 *string   `json:"note"`
+}
+
+//	@Summary		Pay delivery fee for exchange
+//	@Description	Pays the delivery fee for an exchange transaction. When both parties have paid, the system creates two orders.
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			exchangeID	path		string							true	"Exchange ID"
+//	@Param			request		body		PayExchangeDeliveryFeeRequest	true	"Delivery fee information"
+//	@Success		200			{object}	db.PayExchangeDeliveryFeeTxResult
+//	@Router			/exchanges/{exchangeID}/pay-delivery-fee [post]
+func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	var req PayExchangeDeliveryFeeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Parse exchange ID from path
+	exchangeIDStr := c.Param("exchangeID")
+	exchangeID, err := uuid.Parse(exchangeIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid exchange ID: %s", exchangeIDStr)))
+		return
+	}
+	
+	// Get exchange details
+	exchange, err := server.dbStore.GetExchangeByID(c.Request.Context(), exchangeID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange ID %s not found", exchangeIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Verify user is part of the exchange
+	isPoster := exchange.PosterID == userID
+	isOfferer := exchange.OffererID == userID
+	if !isPoster && !isOfferer {
+		err = fmt.Errorf("exchange ID %s does not belong to user ID %s", exchangeIDStr, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Check exchange status
+	if exchange.Status != "pending" {
+		err = fmt.Errorf("exchange ID %s is not in pending status", exchangeIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Check if delivery addresses have been provided by both parties
+	if exchange.PosterFromDeliveryID == nil || exchange.PosterToDeliveryID == nil ||
+		exchange.OffererFromDeliveryID == nil || exchange.OffererToDeliveryID == nil {
+		err = fmt.Errorf("both parties must provide delivery addresses before payment")
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Check if user has already paid
+	if (isPoster && exchange.PosterDeliveryFeePaid) || (isOfferer && exchange.OffererDeliveryFeePaid) {
+		err = fmt.Errorf("user ID %s has already paid the delivery fee for exchange ID %s", userID, exchangeIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Get delivery fee amount from request
+	deliveryFee := req.DeliveryFee
+	
+	// Check user's wallet balance
+	wallet, err := server.dbStore.GetWalletByUserID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("wallet not found for user ID %s", userID)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if wallet.Balance < deliveryFee {
+		err = fmt.Errorf("insufficient balance to pay delivery fee: required %d, available %d",
+			deliveryFee, wallet.Balance)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Execute transaction
+	arg := db.PayExchangeDeliveryFeeTxParams{
+		ExchangeID:           exchangeID,
+		UserID:               userID,
+		IsPoster:             isPoster,
+		DeliveryFee:          deliveryFee,
+		Exchange:             exchange,
+		Note:                 req.Note,
+		ExpectedDeliveryTime: req.ExpectedDeliveryTime,
+	}
+	
+	result, err := server.dbStore.PayExchangeDeliveryFeeTx(c.Request.Context(), arg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// TODO: Gửi thông báo về việc thanh toán phí vận chuyển thành công cho các bên liên quan
 	
 	c.JSON(http.StatusOK, result)
 }

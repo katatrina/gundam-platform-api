@@ -166,10 +166,14 @@ type ExchangeUserInfo struct {
 	AvatarURL *string `json:"avatar_url"` // URL ảnh đại diện người dùng
 	
 	// Thông tin đơn hàng và vận chuyển
-	Order           *Order               `json:"order"`             // Thông tin đơn hàng (đơn hàng mà người này là người nhận)
-	FromDelivery    *DeliveryInformation `json:"from_address"`      // Địa chỉ gửi hàng
-	ToDelivery      *DeliveryInformation `json:"to_address"`        // Địa chỉ nhận hàng
-	DeliveryFeePaid bool                 `json:"delivery_fee_paid"` // Đã thanh toán phí vận chuyển chưa
+	Order                *Order               `json:"order"`                  // Thông tin đơn hàng (đơn hàng mà người này là người nhận)
+	FromDelivery         *DeliveryInformation `json:"from_address"`           // Địa chỉ gửi hàng
+	ToDelivery           *DeliveryInformation `json:"to_address"`             // Địa chỉ nhận hàng
+	DeliveryFee          *int64               `json:"delivery_fee"`           // Phí vận chuyển
+	DeliveryFeePaid      bool                 `json:"delivery_fee_paid"`      // Đã thanh toán phí vận chuyển chưa
+	ExpectedDeliveryTime *time.Time           `json:"expected_delivery_time"` // Thời gian giao hàng dự kiến
+	
+	Note *string `json:"note"` // Ghi chú của người dùng
 	
 	Items []ExchangeItem `json:"items"` // Danh sách Gundam
 }

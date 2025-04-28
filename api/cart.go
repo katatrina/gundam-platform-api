@@ -50,7 +50,7 @@ func (server *Server) addCartItem(ctx *gin.Context) {
 			return
 		}
 		
-		log.Err(err).Msg("failed to get Gundam by OfferID")
+		log.Err(err).Msg("failed to get gundam by ID")
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -119,7 +119,7 @@ func (server *Server) listCartItems(ctx *gin.Context) {
 //	@Description	Removes a specific item from the user's shopping cart
 //	@Tags			cart
 //	@Security		accessToken
-//	@Param			id	path	string	true	"Cart Item OfferID to delete"	example(1)
+//	@Param			id	path	string	true	"Cart Item ID to delete"	example(1)
 //	@Success		204	"Successfully deleted cart item"
 //	@Router			/cart/items/{id} [delete]
 func (server *Server) deleteCartItem(ctx *gin.Context) {
