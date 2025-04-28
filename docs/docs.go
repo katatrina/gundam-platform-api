@@ -328,6 +328,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/exchanges/{exchangeID}/delivery-addresses": {
+            "put": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Provides shipping addresses (from and to) for an exchange transaction. Both participants must provide their addresses before proceeding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Provide delivery addresses for exchange",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange ID",
+                        "name": "exchangeID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Delivery addresses information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.provideExchangeDeliveryAddressesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.ProvideDeliveryAddressesForExchangeTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/grades": {
             "get": {
                 "description": "Retrieves a list of all available Gundam model grades",
@@ -3084,6 +3130,23 @@ const docTemplate = `{
                 }
             }
         },
+        "api.provideExchangeDeliveryAddressesRequest": {
+            "type": "object",
+            "required": [
+                "from_address_id",
+                "to_address_id"
+            ],
+            "properties": {
+                "from_address_id": {
+                    "description": "ID địa chỉ gửi đã được lưu trong bảng user_addresses",
+                    "type": "integer"
+                },
+                "to_address_id": {
+                    "description": "ID địa chỉ nhận đã được lưu trong bảng user_addresses",
+                    "type": "integer"
+                }
+            }
+        },
         "api.requestNegotiationForOfferRequest": {
             "type": "object",
             "required": [
@@ -4664,6 +4727,17 @@ const docTemplate = `{
                 "PaymentMethodCod",
                 "PaymentMethodWallet"
             ]
+        },
+        "db.ProvideDeliveryAddressesForExchangeTxResult": {
+            "type": "object",
+            "required": [
+                "exchange"
+            ],
+            "properties": {
+                "exchange": {
+                    "$ref": "#/definitions/db.Exchange"
+                }
+            }
         },
         "db.RequestNegotiationForOfferTxResult": {
             "type": "object",

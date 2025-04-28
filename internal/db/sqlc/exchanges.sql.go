@@ -149,3 +149,54 @@ func (q *Queries) ListUserExchanges(ctx context.Context, arg ListUserExchangesPa
 	}
 	return items, nil
 }
+
+const updateExchange = `-- name: UpdateExchange :one
+UPDATE exchanges
+SET poster_from_delivery_id  = COALESCE($2, poster_from_delivery_id),
+    poster_to_delivery_id    = COALESCE($3, poster_to_delivery_id),
+    offerer_from_delivery_id = COALESCE($4, offerer_from_delivery_id),
+    offerer_to_delivery_id   = COALESCE($5, offerer_to_delivery_id),
+    updated_at               = now()
+WHERE id = $1 RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee_paid, offerer_delivery_fee_paid, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+`
+
+type UpdateExchangeParams struct {
+	ID                    uuid.UUID `json:"id"`
+	PosterFromDeliveryID  *int64    `json:"poster_from_delivery_id"`
+	PosterToDeliveryID    *int64    `json:"poster_to_delivery_id"`
+	OffererFromDeliveryID *int64    `json:"offerer_from_delivery_id"`
+	OffererToDeliveryID   *int64    `json:"offerer_to_delivery_id"`
+}
+
+func (q *Queries) UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error) {
+	row := q.db.QueryRow(ctx, updateExchange,
+		arg.ID,
+		arg.PosterFromDeliveryID,
+		arg.PosterToDeliveryID,
+		arg.OffererFromDeliveryID,
+		arg.OffererToDeliveryID,
+	)
+	var i Exchange
+	err := row.Scan(
+		&i.ID,
+		&i.PosterID,
+		&i.OffererID,
+		&i.PosterOrderID,
+		&i.OffererOrderID,
+		&i.PosterFromDeliveryID,
+		&i.PosterToDeliveryID,
+		&i.OffererFromDeliveryID,
+		&i.OffererToDeliveryID,
+		&i.PosterDeliveryFeePaid,
+		&i.OffererDeliveryFeePaid,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.Status,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}

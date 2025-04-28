@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/katatrina/gundam-BE/internal/worker"
+	"github.com/rs/zerolog/log"
 )
 
 //	@Summary		Get exchange details
@@ -408,6 +412,201 @@ func (server *Server) listUserExchanges(c *gin.Context) {
 		}
 		
 		result = append(result, details)
+	}
+	
+	c.JSON(http.StatusOK, result)
+}
+
+// provideExchangeDeliveryAddressesRequest định nghĩa request để cung cấp thông tin vận chuyển
+type provideExchangeDeliveryAddressesRequest struct {
+	// ID địa chỉ gửi đã được lưu trong bảng user_addresses
+	FromAddressID int64 `json:"from_address_id" binding:"required"`
+	
+	// ID địa chỉ nhận đã được lưu trong bảng user_addresses
+	ToAddressID int64 `json:"to_address_id" binding:"required"`
+}
+
+//	@Summary		Provide delivery addresses for exchange
+//	@Description	Provides shipping addresses (from and to) for an exchange transaction. Both participants must provide their addresses before proceeding.
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			exchangeID	path		string									true	"Exchange ID"
+//	@Param			request		body		provideExchangeDeliveryAddressesRequest	true	"Delivery addresses information"
+//	@Success		200			{object}	db.ProvideDeliveryAddressesForExchangeTxResult
+//	@Router			/exchanges/{exchangeID}/delivery-addresses [put]
+func (server *Server) provideExchangeDeliveryAddresses(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	var req provideExchangeDeliveryAddressesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	exchangeIDStr := c.Param("exchangeID")
+	exchangeID, err := uuid.Parse(exchangeIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid exchange ID: %s", exchangeIDStr)))
+		return
+	}
+	
+	// Kiểm tra xem exchange có tồn tại không
+	exchange, err := server.dbStore.GetExchangeByID(c.Request.Context(), exchangeID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange ID %s not found", exchangeIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Phần 1: Kiểm tra business rules
+	
+	// Kiểm tra xem người dùng có tham gia vào exchange này không
+	isPoster := exchange.PosterID == userID
+	isOfferer := exchange.OffererID == userID
+	if !isPoster && !isOfferer {
+		err = fmt.Errorf("exchange ID %s does not belong to user ID %s", exchangeIDStr, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra trạng thái exchange
+	if exchange.Status != "pending" {
+		err = fmt.Errorf("exchange ID %s is not in pending status", exchangeIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem người dùng đã cung cấp thông tin vận chuyển chưa
+	// Chỉ cho phép cung cấp khi các cột thông tin vận chuyển là null
+	if isPoster && (exchange.PosterFromDeliveryID != nil || exchange.PosterToDeliveryID != nil) {
+		err = fmt.Errorf("user ID %s has already provided shipping information for exchange ID %s", userID, exchangeIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	if isOfferer && (exchange.OffererFromDeliveryID != nil || exchange.OffererToDeliveryID != nil) {
+		err = fmt.Errorf("user ID %s has already provided shipping information for exchange ID %s", userID, exchangeIDStr)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra từng địa chỉ
+	
+	// 1. Kiểm tra địa chỉ gửi
+	fromAddress, err := server.dbStore.GetUserAddressByID(c.Request.Context(), db.GetUserAddressByIDParams{
+		ID:     req.FromAddressID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("from address ID %d not found for user ID %s", req.FromAddressID, userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem địa chỉ có thuộc về người dùng không
+	if fromAddress.UserID != userID {
+		err = fmt.Errorf("from address ID %d does not belong to user ID %s", req.FromAddressID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 2. Kiểm tra địa chỉ nhận
+	toAddress, err := server.dbStore.GetUserAddressByID(c.Request.Context(), db.GetUserAddressByIDParams{
+		ID:     req.ToAddressID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("to address ID %d not found for user ID %s", req.ToAddressID, userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra xem địa chỉ có thuộc về người dùng không
+	if toAddress.UserID != userID {
+		err = fmt.Errorf("to address ID %d does not belong to user ID %s", req.ToAddressID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Phần 2: Xử lý transaction
+	
+	// Chuẩn bị tham số cho transaction
+	arg := db.ProvideDeliveryAddressesForExchangeTxParams{
+		ExchangeID:  exchangeID,
+		UserID:      userID,
+		IsPoster:    isPoster,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+	}
+	
+	// Gọi transaction
+	result, err := server.dbStore.ProvideDeliveryAddressesForExchangeTx(c.Request.Context(), arg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Xác định ID của đối tác
+	partnerID := ""
+	if isPoster {
+		partnerID = exchange.OffererID
+	} else {
+		partnerID = exchange.PosterID
+	}
+	
+	// Kiểm tra xem đối tác đã cung cấp thông tin chưa
+	partnerHasProvidedInfo := false
+	if isPoster {
+		partnerHasProvidedInfo = exchange.OffererFromDeliveryID != nil && exchange.OffererToDeliveryID != nil
+	} else {
+		partnerHasProvidedInfo = exchange.PosterFromDeliveryID != nil && exchange.PosterToDeliveryID != nil
+	}
+	
+	// Gửi thông báo cho đối tác trong mọi trường hợp
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.ProcessIn(time.Second * 1),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Chọn nội dung thông báo phù hợp dựa trên việc đối tác đã cung cấp thông tin chưa
+	title := "Đối tác đã cung cấp thông tin vận chuyển"
+	var message string
+	
+	if partnerHasProvidedInfo {
+		message = fmt.Sprintf("Đối tác đã cung cấp thông tin vận chuyển cho giao dịch trao đổi %s. Bây giờ bạn có thể xem chi tiết và tiến hành thanh toán phí vận chuyển.", exchangeID)
+	} else {
+		message = fmt.Sprintf("Đối tác đã cung cấp thông tin vận chuyển cho giao dịch trao đổi %s. Vui lòng cung cấp thông tin vận chuyển của bạn để tiếp tục quá trình trao đổi.", exchangeID)
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: partnerID,
+		Title:       title,
+		Message:     message,
+		Type:        "exchange",
+		ReferenceID: exchangeID.String(),
+	}, opts...)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send notification to partner")
+	} else {
+		log.Info().Msgf("Notification sent to partner: %s", partnerID)
 	}
 	
 	c.JSON(http.StatusOK, result)

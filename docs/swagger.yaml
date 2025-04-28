@@ -330,6 +330,18 @@ definitions:
     required:
     - id_token
     type: object
+  api.provideExchangeDeliveryAddressesRequest:
+    properties:
+      from_address_id:
+        description: ID địa chỉ gửi đã được lưu trong bảng user_addresses
+        type: integer
+      to_address_id:
+        description: ID địa chỉ nhận đã được lưu trong bảng user_addresses
+        type: integer
+    required:
+    - from_address_id
+    - to_address_id
+    type: object
   api.requestNegotiationForOfferRequest:
     properties:
       note:
@@ -1450,6 +1462,13 @@ definitions:
     x-enum-varnames:
     - PaymentMethodCod
     - PaymentMethodWallet
+  db.ProvideDeliveryAddressesForExchangeTxResult:
+    properties:
+      exchange:
+        $ref: '#/definitions/db.Exchange'
+    required:
+    - exchange
+    type: object
   db.RequestNegotiationForOfferTxResult:
     properties:
       note:
@@ -2130,6 +2149,36 @@ paths:
       security:
       - accessToken: []
       summary: Get exchange details
+      tags:
+      - exchanges
+  /exchanges/{exchangeID}/delivery-addresses:
+    put:
+      consumes:
+      - application/json
+      description: Provides shipping addresses (from and to) for an exchange transaction.
+        Both participants must provide their addresses before proceeding.
+      parameters:
+      - description: Exchange ID
+        in: path
+        name: exchangeID
+        required: true
+        type: string
+      - description: Delivery addresses information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.provideExchangeDeliveryAddressesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/db.ProvideDeliveryAddressesForExchangeTxResult'
+      security:
+      - accessToken: []
+      summary: Provide delivery addresses for exchange
       tags:
       - exchanges
   /grades:

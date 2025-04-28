@@ -102,6 +102,7 @@ type Querier interface {
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
+	UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error)
 	UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error)
 	UpdateExchangePost(ctx context.Context, arg UpdateExchangePostParams) (ExchangePost, error)
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error

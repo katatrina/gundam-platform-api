@@ -185,10 +185,10 @@ func (server *Server) setupRouter() *gin.Engine {
 	
 	exchangeGroup := v1.Group("/exchanges", authMiddleware(server.tokenMaker))
 	{
-		exchangeGroup.GET("", server.listUserExchanges)             // ✅ Liệt kê các giao dịch trao đổi của người dùng
-		exchangeGroup.GET(":exchangeID", server.getExchangeDetails) // ✅ Lấy chi tiết giao dịch trao đổi
-		// exchangeGroup.POST(":exchangeID/shipping-info", server.provideExchangeShippingInfo)  // Cung cấp thông tin vận chuyển
-		// exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)    // Thanh toán phí vận chuyển
+		exchangeGroup.GET("", server.listUserExchanges)                                              // ✅ Liệt kê các giao dịch trao đổi của người dùng
+		exchangeGroup.GET(":exchangeID", server.getExchangeDetails)                                  // ✅ Lấy chi tiết giao dịch trao đổi
+		exchangeGroup.PUT(":exchangeID/delivery-addresses", server.provideExchangeDeliveryAddresses) // ✅ Cung cấp địa chỉ gửi và nhận hàng
+		// exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)               // Thanh toán phí vận chuyển
 		// exchangeGroup.PATCH(":exchangeID/cancel", server.cancelExchange)   // Hủy giao dịch trao đổi
 	}
 	

@@ -37,6 +37,7 @@ type Store interface {
 	UpdateExchangeOfferTx(ctx context.Context, arg UpdateExchangeOfferTxParams) (UpdateExchangeOfferTxResult, error)
 	AcceptExchangeOfferTx(ctx context.Context, arg AcceptExchangeOfferTxParams) (AcceptExchangeOfferTxResult, error)
 	GetGundamDetailsByID(ctx context.Context, q *Queries, gundamID int64) (GundamDetails, error)
+	ProvideDeliveryAddressesForExchangeTx(ctx context.Context, arg ProvideDeliveryAddressesForExchangeTxParams) (ProvideDeliveryAddressesForExchangeTxResult, error)
 }
 
 type SQLStore struct {
