@@ -406,7 +406,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.PayExchangeDeliveryFeeRequest"
+                            "$ref": "#/definitions/api.payExchangeDeliveryFeeRequest"
                         }
                     }
                 ],
@@ -2763,26 +2763,6 @@ const docTemplate = `{
                 }
             }
         },
-        "api.PayExchangeDeliveryFeeRequest": {
-            "type": "object",
-            "required": [
-                "delivery_fee",
-                "expected_delivery_time",
-                "note"
-            ],
-            "properties": {
-                "delivery_fee": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "expected_delivery_time": {
-                    "type": "string"
-                },
-                "note": {
-                    "type": "string"
-                }
-            }
-        },
         "api.VerifyEmailOTPRequest": {
             "type": "object",
             "required": [
@@ -3138,6 +3118,26 @@ const docTemplate = `{
             ],
             "properties": {
                 "id_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.payExchangeDeliveryFeeRequest": {
+            "type": "object",
+            "required": [
+                "delivery_fee",
+                "expected_delivery_time",
+                "note"
+            ],
+            "properties": {
+                "delivery_fee": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "expected_delivery_time": {
+                    "type": "string"
+                },
+                "note": {
                     "type": "string"
                 }
             }
@@ -4773,9 +4773,9 @@ const docTemplate = `{
             "required": [
                 "both_parties_paid",
                 "exchange",
-                "offerer_order_id",
+                "offerer_order",
                 "partner_has_paid",
-                "poster_order_id"
+                "poster_order"
             ],
             "properties": {
                 "both_parties_paid": {
@@ -4784,14 +4784,14 @@ const docTemplate = `{
                 "exchange": {
                     "$ref": "#/definitions/db.Exchange"
                 },
-                "offerer_order_id": {
-                    "type": "string"
+                "offerer_order": {
+                    "$ref": "#/definitions/db.Order"
                 },
                 "partner_has_paid": {
                     "type": "boolean"
                 },
-                "poster_order_id": {
-                    "type": "string"
+                "poster_order": {
+                    "$ref": "#/definitions/db.Order"
                 }
             }
         },

@@ -92,16 +92,15 @@ type PayExchangeDeliveryFeeTxParams struct {
 	IsPoster             bool
 	DeliveryFee          int64
 	ExpectedDeliveryTime time.Time
-	Exchange             Exchange
 	Note                 *string
 }
 
 type PayExchangeDeliveryFeeTxResult struct {
-	Exchange        Exchange   `json:"exchange"`
-	BothPartiesPaid bool       `json:"both_parties_paid"`
-	PartnerHasPaid  bool       `json:"partner_has_paid"`
-	PosterOrderID   *uuid.UUID `json:"poster_order_id"`
-	OffererOrderID  *uuid.UUID `json:"offerer_order_id"`
+	Exchange        Exchange `json:"exchange"`
+	BothPartiesPaid bool     `json:"both_parties_paid"`
+	PartnerHasPaid  bool     `json:"partner_has_paid"`
+	PosterOrder     *Order   `json:"poster_order"`
+	OffererOrder    *Order   `json:"offerer_order"`
 }
 
 func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExchangeDeliveryFeeTxParams) (PayExchangeDeliveryFeeTxResult, error) {
@@ -110,19 +109,19 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		var err error
 		
-		// 1. Lưu phí vận chuyển và ghi chú (nếu có) vào bảng exchanges
+		// 1. Cập nhật phí vận chuyển, thời gian giao hàng dự kiến, và ghi chú (nếu có) vào bảng exchanges
 		updateExchangeParams := UpdateExchangeParams{
 			ID: arg.ExchangeID,
 		}
 		
 		if arg.IsPoster {
 			updateExchangeParams.PosterDeliveryFee = &arg.DeliveryFee
-			updateExchangeParams.PosterOrderNote = arg.Note
 			updateExchangeParams.PosterOrderExpectedDeliveryTime = &arg.ExpectedDeliveryTime
+			updateExchangeParams.PosterOrderNote = arg.Note
 		} else {
 			updateExchangeParams.OffererDeliveryFee = &arg.DeliveryFee
-			updateExchangeParams.OffererOrderNote = arg.Note
 			updateExchangeParams.OffererOrderExpectedDeliveryTime = &arg.ExpectedDeliveryTime
+			updateExchangeParams.OffererOrderNote = arg.Note
 		}
 		
 		updatedExchange, err := qTx.UpdateExchange(ctx, updateExchangeParams)
@@ -132,7 +131,7 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 		
 		// 2. Trừ tiền từ ví người dùng
 		_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
-			Amount: -arg.DeliveryFee,
+			Amount: -arg.DeliveryFee, // Truyền số âm để trừ
 			UserID: arg.UserID,
 		})
 		if err != nil {
@@ -168,8 +167,6 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 			return err
 		}
 		
-		result.Exchange = updatedExchange
-		
 		// 5. Kiểm tra xem cả hai bên đã thanh toán chưa
 		partnerHasPaid := false
 		if arg.IsPoster {
@@ -184,28 +181,7 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 		
 		// 6. Nếu cả hai đã thanh toán, tạo hai đơn hàng
 		if bothPartiesPaid {
-			// 6.1 Lấy thông tin địa chỉ vận chuyển
-			_, err := qTx.GetDeliveryInformation(ctx, *updatedExchange.PosterFromDeliveryID)
-			if err != nil {
-				return err
-			}
-			
-			_, err = qTx.GetDeliveryInformation(ctx, *updatedExchange.PosterToDeliveryID)
-			if err != nil {
-				return err
-			}
-			
-			_, err = qTx.GetDeliveryInformation(ctx, *updatedExchange.OffererFromDeliveryID)
-			if err != nil {
-				return err
-			}
-			
-			_, err = qTx.GetDeliveryInformation(ctx, *updatedExchange.OffererToDeliveryID)
-			if err != nil {
-				return err
-			}
-			
-			// 6.2 Tạo đơn hàng cho poster (từ offerer đến poster)
+			// 6.1 Tạo đơn hàng cho poster
 			posterOrderID, err := uuid.NewV7()
 			if err != nil {
 				return err
@@ -231,12 +207,12 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 				Note:          updatedExchange.PosterOrderNote,
 			}
 			
-			_, err = qTx.CreateOrder(ctx, posterOrderParams)
+			posterOrder, err := qTx.CreateOrder(ctx, posterOrderParams)
 			if err != nil {
 				return err
 			}
 			
-			// 6.3 Tạo đơn hàng cho offerer (từ poster đến offerer)
+			// 6.2 Tạo đơn hàng cho offerer
 			offererOrderID, err := uuid.NewV7()
 			if err != nil {
 				return err
@@ -262,14 +238,14 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 				Note:          updatedExchange.OffererOrderNote,
 			}
 			
-			_, err = qTx.CreateOrder(ctx, offererOrderParams)
+			offererOrder, err := qTx.CreateOrder(ctx, offererOrderParams)
 			if err != nil {
 				return err
 			}
 			
-			// 6.4 Tạo thông tin giao hàng cho đơn hàng poster
+			// 6.3 Tạo thông tin giao hàng cho đơn hàng của poster
 			// Các cột status, overall_status, delivery_tracking_code sẽ được cập nhật sau
-			// khi người bán đóng gói đơn hàng.
+			// khi người kia đóng gói đơn hàng.
 			_, err = qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
 				OrderID:              posterOrderID,
 				ExpectedDeliveryTime: *updatedExchange.PosterOrderExpectedDeliveryTime,
@@ -280,9 +256,9 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 				return err
 			}
 			
-			// 6.5 Tạo thông tin giao hàng cho đơn hàng offerer
+			// 6.4 Tạo thông tin giao hàng cho đơn hàng của offerer
 			// Các cột status, overall_status, delivery_tracking_code sẽ được cập nhật sau
-			// khi người bán đóng gói đơn hàng.
+			// khi người kia đóng gói đơn hàng.
 			_, err = qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
 				OrderID:              offererOrderID,
 				ExpectedDeliveryTime: *updatedExchange.OffererOrderExpectedDeliveryTime,
@@ -293,16 +269,15 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 				return err
 			}
 			
-			// 6.6 Lấy danh sách sản phẩm trong giao dịch trao đổi
+			// 6.5 Lấy danh sách sản phẩm trong giao dịch trao đổi
 			exchangeItems, err := qTx.ListExchangeItems(ctx, ListExchangeItemsParams{
-				ExchangeID:   updatedExchange.ID,
-				IsFromPoster: nil,
+				ExchangeID: updatedExchange.ID,
 			})
 			if err != nil {
 				return err
 			}
 			
-			// 6.7 Tạo các order item cho mỗi đơn hàng
+			// 6.6 Tạo các order item cho mỗi đơn hàng
 			for _, item := range exchangeItems {
 				// Xác định đơn hàng cần thêm item này
 				orderID := posterOrderID
@@ -343,7 +318,7 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 				}
 			}
 			
-			// 6.8 Cập nhật exchange với ID đơn hàng và chuyển trạng thái
+			// 6.7 Cập nhật exchange với ID đơn hàng và chuyển trạng thái
 			updateExchangeParams = UpdateExchangeParams{
 				ID:             arg.ExchangeID,
 				PosterOrderID:  &posterOrderID,
@@ -360,8 +335,8 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 			}
 			
 			result.Exchange = updatedExchange
-			result.PosterOrderID = &posterOrderID
-			result.OffererOrderID = &offererOrderID
+			result.PosterOrder = &posterOrder
+			result.OffererOrder = &offererOrder
 		}
 		
 		return nil

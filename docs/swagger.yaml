@@ -51,20 +51,6 @@ definitions:
     - otp_code
     - phone_number
     type: object
-  api.PayExchangeDeliveryFeeRequest:
-    properties:
-      delivery_fee:
-        minimum: 1
-        type: integer
-      expected_delivery_time:
-        type: string
-      note:
-        type: string
-    required:
-    - delivery_fee
-    - expected_delivery_time
-    - note
-    type: object
   api.VerifyEmailOTPRequest:
     properties:
       email:
@@ -343,6 +329,20 @@ definitions:
         type: string
     required:
     - id_token
+    type: object
+  api.payExchangeDeliveryFeeRequest:
+    properties:
+      delivery_fee:
+        minimum: 1
+        type: integer
+      expected_delivery_time:
+        type: string
+      note:
+        type: string
+    required:
+    - delivery_fee
+    - expected_delivery_time
+    - note
     type: object
   api.provideExchangeDeliveryAddressesRequest:
     properties:
@@ -1504,18 +1504,18 @@ definitions:
         type: boolean
       exchange:
         $ref: '#/definitions/db.Exchange'
-      offerer_order_id:
-        type: string
+      offerer_order:
+        $ref: '#/definitions/db.Order'
       partner_has_paid:
         type: boolean
-      poster_order_id:
-        type: string
+      poster_order:
+        $ref: '#/definitions/db.Order'
     required:
     - both_parties_paid
     - exchange
-    - offerer_order_id
+    - offerer_order
     - partner_has_paid
-    - poster_order_id
+    - poster_order
     type: object
   db.PaymentMethod:
     enum:
@@ -2261,7 +2261,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/api.PayExchangeDeliveryFeeRequest'
+          $ref: '#/definitions/api.payExchangeDeliveryFeeRequest'
       produces:
       - application/json
       responses:

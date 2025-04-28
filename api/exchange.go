@@ -777,8 +777,7 @@ func (server *Server) provideExchangeDeliveryAddresses(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// PayExchangeDeliveryFeeRequest định nghĩa request cho việc thanh toán phí vận chuyển
-type PayExchangeDeliveryFeeRequest struct {
+type payExchangeDeliveryFeeRequest struct {
 	DeliveryFee          int64     `json:"delivery_fee" binding:"required,min=1"`
 	ExpectedDeliveryTime time.Time `json:"expected_delivery_time" binding:"required"`
 	Note                 *string   `json:"note"`
@@ -791,14 +790,14 @@ type PayExchangeDeliveryFeeRequest struct {
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			exchangeID	path		string							true	"Exchange ID"
-//	@Param			request		body		PayExchangeDeliveryFeeRequest	true	"Delivery fee information"
+//	@Param			request		body		payExchangeDeliveryFeeRequest	true	"Delivery fee information"
 //	@Success		200			{object}	db.PayExchangeDeliveryFeeTxResult
 //	@Router			/exchanges/{exchangeID}/pay-delivery-fee [post]
 func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	var req PayExchangeDeliveryFeeRequest
+	var req payExchangeDeliveryFeeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -834,7 +833,7 @@ func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
 	}
 	
 	// Check exchange status
-	if exchange.Status != "pending" {
+	if exchange.Status != db.ExchangeStatusPending {
 		err = fmt.Errorf("exchange ID %s is not in pending status", exchangeIDStr)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
@@ -883,7 +882,6 @@ func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
 		UserID:               userID,
 		IsPoster:             isPoster,
 		DeliveryFee:          deliveryFee,
-		Exchange:             exchange,
 		Note:                 req.Note,
 		ExpectedDeliveryTime: req.ExpectedDeliveryTime,
 	}
@@ -894,7 +892,116 @@ func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
 		return
 	}
 	
-	// TODO: Gửi thông báo về việc thanh toán phí vận chuyển thành công cho các bên liên quan
+	// Gửi thông báo về việc thanh toán phí vận chuyển thành công cho các bên liên quan
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.ProcessIn(time.Second * 1),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Tạo mã cuộc trao đổi ngắn gọn để hiển thị trong thông báo
+	exchangeCode := arg.ExchangeID.String()[:8] // Lấy 8 ký tự đầu của UUID làm mã tham chiếu
+	
+	// Khởi tạo tên người dùng mặc định
+	currentUserName := "Đối tác của bạn"
+	
+	// Lấy thông tin người dùng hiện tại
+	currentUser, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err == nil {
+		currentUserName = currentUser.FullName
+	} else {
+		log.Error().Err(err).Msgf("failed to get current user %s", userID)
+	}
+	
+	// 1. Gửi thông báo cho người thanh toán về việc thanh toán thành công
+	paymentSuccessMsg := fmt.Sprintf("Bạn đã thanh toán phí vận chuyển %s cho cuộc trao đổi #%s thành công.",
+		util.FormatVND(arg.DeliveryFee), exchangeCode)
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: userID,
+		Title:       "Thanh toán phí vận chuyển thành công",
+		Message:     paymentSuccessMsg,
+		Type:        "exchange",
+		ReferenceID: arg.ExchangeID.String(),
+	}, opts...)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send payment success notification")
+	} else {
+		log.Info().Msgf("payment success notification sent to user: %s", userID)
+	}
+	
+	// 2. Xác định đối tác và gửi thông báo cho họ nếu chưa thanh toán
+	var partnerID string
+	if arg.IsPoster {
+		partnerID = result.Exchange.OffererID
+	} else {
+		partnerID = result.Exchange.PosterID
+	}
+	
+	if !result.PartnerHasPaid {
+		// Đối tác chưa thanh toán, thông báo cho họ biết để thanh toán
+		partnerMsg := fmt.Sprintf("%s đã thanh toán phí vận chuyển %s cho cuộc trao đổi #%s. Vui lòng thanh toán phí vận chuyển của bạn để tiếp tục quá trình trao đổi.",
+			currentUserName, util.FormatVND(arg.DeliveryFee), exchangeCode)
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: partnerID,
+			Title:       "Đối tác đã thanh toán phí vận chuyển",
+			Message:     partnerMsg,
+			Type:        "exchange",
+			ReferenceID: arg.ExchangeID.String(),
+		}, opts...)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send notification to partner")
+		} else {
+			log.Info().Msgf("notification sent to partner: %s", partnerID)
+		}
+	}
+	
+	// 3. Nếu cả hai bên đã thanh toán, gửi thông báo về việc tạo đơn hàng
+	if result.BothPartiesPaid {
+		// Kiểm tra xem các đơn hàng đã được tạo chưa
+		if result.PosterOrder == nil || result.OffererOrder == nil {
+			log.Error().Msg("order information is missing in the result")
+			return
+		}
+		
+		// Lấy thông tin đơn hàng từ result
+		posterOrderCode := result.PosterOrder.Code
+		offererOrderCode := result.OffererOrder.Code
+		
+		// Thông báo cho người đăng bài (poster)
+		posterOrderMsg := fmt.Sprintf("Cả hai bên đã thanh toán phí vận chuyển cho cuộc trao đổi #%s. Đơn hàng #%s của bạn đã được tạo. Vui lòng đóng gói để đơn vị vận chuyển lại lấy hàng.",
+			exchangeCode, posterOrderCode)
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: result.Exchange.PosterID,
+			Title:       "Đơn hàng trao đổi đã được tạo",
+			Message:     posterOrderMsg,
+			Type:        "exchange",
+			ReferenceID: result.OffererOrder.ID.String(), // OrderID mà poster cần gửi hàng
+		}, opts...)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send order creation notification to poster")
+		} else {
+			log.Info().Msgf("order creation notification sent to poster: %s", result.Exchange.PosterID)
+		}
+		
+		// Thông báo cho người đề xuất (offerer)
+		offererOrderMsg := fmt.Sprintf("Cả hai bên đã thanh toán phí vận chuyển cho cuộc trao đổi #%s. Đơn hàng #%s của bạn đã được tạo. Vui lòng đóng gói để đơn vị vận chuyển lại lấy hàng.",
+			exchangeCode, offererOrderCode)
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: result.Exchange.OffererID,
+			Title:       "Đơn hàng trao đổi đã được tạo",
+			Message:     offererOrderMsg,
+			Type:        "exchange",
+			ReferenceID: result.PosterOrder.ID.String(), // OrderID mà offerer cần gửi hàng
+		}, opts...)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send order creation notification to offerer")
+		} else {
+			log.Info().Msgf("order creation notification sent to offerer: %s", result.Exchange.OffererID)
+		}
+	}
 	
 	c.JSON(http.StatusOK, result)
 }
