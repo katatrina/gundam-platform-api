@@ -233,6 +233,9 @@ SET poster_order_id                      = COALESCE($2, poster_order_id),
 
     poster_order_note                    = COALESCE($15, poster_order_note),
     offerer_order_note                   = COALESCE($16, offerer_order_note),
+
+    completed_at                         = COALESCE($17, completed_at),
+
     updated_at                           = now()
 WHERE id = $1 RETURNING id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
@@ -254,6 +257,7 @@ type UpdateExchangeParams struct {
 	OffererOrderExpectedDeliveryTime *time.Time         `json:"offerer_order_expected_delivery_time"`
 	PosterOrderNote                  *string            `json:"poster_order_note"`
 	OffererOrderNote                 *string            `json:"offerer_order_note"`
+	CompletedAt                      *time.Time         `json:"completed_at"`
 }
 
 func (q *Queries) UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error) {
@@ -274,6 +278,7 @@ func (q *Queries) UpdateExchange(ctx context.Context, arg UpdateExchangeParams) 
 		arg.OffererOrderExpectedDeliveryTime,
 		arg.PosterOrderNote,
 		arg.OffererOrderNote,
+		arg.CompletedAt,
 	)
 	var i Exchange
 	err := row.Scan(

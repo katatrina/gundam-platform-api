@@ -49,5 +49,8 @@ SET poster_order_id                      = COALESCE(sqlc.narg('poster_order_id')
 
     poster_order_note                    = COALESCE(sqlc.narg('poster_order_note'), poster_order_note),
     offerer_order_note                   = COALESCE(sqlc.narg('offerer_order_note'), offerer_order_note),
+
+    completed_at                         = COALESCE(sqlc.narg('completed_at'), completed_at),
+
     updated_at                           = now()
 WHERE id = $1 RETURNING *;

@@ -76,7 +76,7 @@ func (store *SQLStore) GetGundamDetailsByID(ctx context.Context, q *Queries, gun
 }
 
 // Hàm hỗ trợ để xác định trạng thái thấp nhất
-func getLowestOrderStatus(status1, status2 OrderStatus) OrderStatus {
+func GetLowestOrderStatus(status1, status2 OrderStatus) OrderStatus {
 	// Định nghĩa thứ tự các trạng thái từ thấp đến cao
 	statusOrder := map[OrderStatus]int{
 		OrderStatusPending:    1,

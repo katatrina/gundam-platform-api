@@ -2,6 +2,7 @@ package ordertracking
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 	
@@ -72,7 +73,7 @@ func (t *OrderTracker) Stop() error {
 func (t *OrderTracker) checkOrderStatus() {
 	ctx := context.Background()
 	
-	// Lấy danh sách đơn hàng đang vận chuyển ("picking", "delivering", "return")
+	// Lấy danh sách đơn hàng đang vận chuyển ("picking", "delivering")
 	orderDeliveries, err := t.store.GetActiveOrderDeliveries(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get orderDeliveries for tracking")
@@ -153,6 +154,9 @@ func (t *OrderTracker) checkOrderStatus() {
 					}
 					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\"", updatedOrder.Status)
 					
+					// Kiểm tra và cập nhật giao dịch trao đổi nếu có
+					t.updateExchangeStatusIfNeeded(ctx, updatedOrder)
+					
 					opts := []asynq.Option{
 						asynq.MaxRetry(3),
 						asynq.Queue(worker.QueueCritical),
@@ -200,6 +204,9 @@ func (t *OrderTracker) checkOrderStatus() {
 					}
 					log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\"", updatedOrder.Status)
 					
+					// Kiểm tra và cập nhật giao dịch trao đổi nếu có
+					t.updateExchangeStatusIfNeeded(ctx, updatedOrder)
+					
 					opts := []asynq.Option{
 						asynq.MaxRetry(3),
 						asynq.Queue(worker.QueueCritical),
@@ -221,7 +228,7 @@ func (t *OrderTracker) checkOrderStatus() {
 					/* TODO: Thêm task xử lý hoàn tất đơn hàng (cộng tiền cho người bán, đánh dấu đơn hàng là hoàn tất, v.v.)
 					với deadline là 7 ngày sau khi đơn hàng được giao thành công.
 					Nếu người mua không xác nhận trong 7 ngày, tự động đánh dấu đơn hàng là hoàn tất.
-					Nếu người mua xác nhận đã nhận hàng, hủy task này.
+					Nếu người mua xác nhận đã nhận hàng, hủy task này. (Tạm thời bỏ qua)
 					*/
 					
 					// Gửi thông báo cho người bán
@@ -242,6 +249,97 @@ func (t *OrderTracker) checkOrderStatus() {
 					log.Info().Msgf("Unhandled status change: \"%s\" -> \"%s\"", oldOverallStatus, newOverallStatus)
 				}
 			}
+		}
+	}
+}
+
+// updateExchangeStatusIfNeeded kiểm tra xem đơn hàng có phải là một phần của giao dịch trao đổi không
+// và cập nhật trạng thái của giao dịch trao đổi dựa trên trạng thái của đơn hàng
+func (t *OrderTracker) updateExchangeStatusIfNeeded(ctx context.Context, order db.Order) {
+	if order.Type != db.OrderTypeExchange {
+		return
+	}
+	
+	// Tìm giao dịch trao đổi liên quan đến đơn hàng
+	exchange, err := t.store.GetExchangeByOrderID(ctx, &order.ID)
+	if err != nil {
+		if !errors.Is(err, db.ErrRecordNotFound) {
+			log.Error().Err(err).Str("order_id", order.ID.String()).Msg("failed to get exchange by order ID")
+		}
+		return
+	}
+	
+	// Lấy cả hai đơn hàng liên quan đến giao dịch trao đổi
+	var posterOrder, offererOrder db.Order
+	var err1, err2 error
+	
+	if exchange.PosterOrderID != nil {
+		posterOrder, err1 = t.store.GetOrderByID(ctx, *exchange.PosterOrderID)
+	}
+	
+	if exchange.OffererOrderID != nil {
+		offererOrder, err2 = t.store.GetOrderByID(ctx, *exchange.OffererOrderID)
+	}
+	
+	if err1 != nil || err2 != nil {
+		log.Error().
+			Err(err1).
+			AnErr("err2", err2).
+			Str("exchange_id", exchange.ID.String()).
+			Msg("failed to get exchange orders")
+		return
+	}
+	
+	// Xác định trạng thái thấp nhất giữa hai đơn hàng
+	lowestStatus := db.GetLowestOrderStatus(posterOrder.Status, offererOrder.Status)
+	
+	// Ánh xạ từ trạng thái đơn hàng sang trạng thái exchange
+	var exchangeStatus db.ExchangeStatus
+	switch lowestStatus {
+	case db.OrderStatusPending:
+		exchangeStatus = db.ExchangeStatusPending
+	case db.OrderStatusPackaging:
+		exchangeStatus = db.ExchangeStatusPackaging
+	case db.OrderStatusDelivering:
+		exchangeStatus = db.ExchangeStatusDelivering
+	case db.OrderStatusDelivered:
+		exchangeStatus = db.ExchangeStatusDelivered
+	case db.OrderStatusCompleted:
+		exchangeStatus = db.ExchangeStatusCompleted
+	case db.OrderStatusFailed:
+		exchangeStatus = db.ExchangeStatusFailed
+	case db.OrderStatusCanceled:
+		exchangeStatus = db.ExchangeStatusCanceled
+	default:
+		exchangeStatus = exchange.Status
+	}
+	
+	// Cập nhật trạng thái exchange nếu khác với trạng thái hiện tại
+	if exchange.Status != exchangeStatus {
+		log.Info().
+			Str("exchange_id", exchange.ID.String()).
+			Str("old_status", string(exchange.Status)).
+			Str("new_status", string(exchangeStatus)).
+			Msg("Updating exchange status")
+		
+		updateParams := db.UpdateExchangeParams{
+			ID: exchange.ID,
+			Status: db.NullExchangeStatus{
+				ExchangeStatus: exchangeStatus,
+				Valid:          true,
+			},
+		}
+		
+		// Nếu trạng thái là completed, cập nhật thêm completed_at
+		if exchangeStatus == db.ExchangeStatusCompleted {
+			now := time.Now()
+			updateParams.CompletedAt = &now
+		}
+		
+		_, err := t.store.UpdateExchange(ctx, updateParams)
+		if err != nil {
+			log.Error().Err(err).Str("exchange_id", exchange.ID.String()).Msg("failed to update exchange status")
+			return
 		}
 	}
 }

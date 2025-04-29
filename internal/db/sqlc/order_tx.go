@@ -310,7 +310,7 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 			}
 			
 			// Xác định trạng thái thấp nhất giữa hai đơn hàng
-			lowestStatus := getLowestOrderStatus(posterOrder.Status, offererOrder.Status)
+			lowestStatus := GetLowestOrderStatus(posterOrder.Status, offererOrder.Status)
 			
 			// Ánh xạ từ trạng thái đơn hàng sang trạng thái exchange
 			var exchangeStatus ExchangeStatus
