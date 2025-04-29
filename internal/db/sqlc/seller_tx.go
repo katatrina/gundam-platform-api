@@ -249,8 +249,8 @@ func ConvertToDeliveryCreateOrderRequest(order Order, orderItems []OrderItem, se
 }
 
 type CancelOrderBySellerTxParams struct {
-	Order          *Order
-	CanceledReason string
+	Order  *Order
+	Reason *string
 }
 
 type CancelOrderBySellerTxResult struct {
@@ -272,7 +272,7 @@ func (store *SQLStore) CancelOrderBySellerTx(ctx context.Context, arg CancelOrde
 				Valid:       true,
 			},
 			CanceledBy:     util.StringPointer(arg.Order.SellerID),
-			CanceledReason: util.StringPointer(arg.CanceledReason),
+			CanceledReason: arg.Reason,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update order status to cancel: %w", err)

@@ -594,7 +594,7 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 }
 
 type cancelOrderRequest struct {
-	Reason *string `json:"reason" binding:"required"`
+	Reason *string `json:"reason"`
 }
 
 //	@Summary		Cancel order by buyer
@@ -603,7 +603,7 @@ type cancelOrderRequest struct {
 //	@Accept			json
 //	@Produce		json
 //	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Param			request	body		cancelOrderRequest				true	"Cancel order request"
+//	@Param			request	body		cancelOrderRequest				false	"Cancel order request"
 //	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"Order canceled successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/cancel [patch]

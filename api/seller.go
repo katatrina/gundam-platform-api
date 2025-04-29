@@ -728,10 +728,6 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-type cancelOrderByBuyerSellerRequest struct {
-	CanceledReason string `json:"canceled_reason" binding:"required"`
-}
-
 //	@Summary		Cancel order by seller
 //	@Description	Cancel a pending order by the seller
 //	@Tags			sellers
@@ -739,17 +735,12 @@ type cancelOrderByBuyerSellerRequest struct {
 //	@Produce		json
 //	@Param			sellerID	path		string							true	"Seller ID"	example(s123e456-e789-45d0-9876-54321abcdef)
 //	@Param			orderID		path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Param			request		body		cancelOrderRequest				true	"Cancellation reason"
+//	@Param			request		body		cancelOrderRequest				false	"Cancellation reason"
 //	@Success		200			{object}	db.CancelOrderBySellerTxResult	"Order canceled successfully"
-//	@Failure		400			"Bad request"
-//	@Failure		404			"Order not found"
-//	@Failure		403			"Forbidden - Order does not belong to this seller"
-//	@Failure		409			"Conflict - Order cannot be canceled in the current status"
-//	@Failure		500			"Internal server error"
 //	@Security		accessToken
 //	@Router			/sellers/{sellerID}/orders/{orderID}/cancel [patch]
 func (server *Server) cancelOrderBySeller(c *gin.Context) {
-	user := c.MustGet(sellerPayloadKey).(*db.User)
+	seller := c.MustGet(sellerPayloadKey).(*db.User)
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
@@ -758,7 +749,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 		return
 	}
 	
-	var req cancelOrderByBuyerSellerRequest
+	var req cancelOrderRequest
 	if err = c.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to bind JSON")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
@@ -767,7 +758,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	
 	order, err := server.dbStore.GetSalesOrder(c.Request.Context(), db.GetSalesOrderParams{
 		OrderID:  orderID,
-		SellerID: user.ID,
+		SellerID: seller.ID,
 	})
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -781,8 +772,8 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 		return
 	}
 	
-	if order.SellerID != user.ID {
-		err = fmt.Errorf("order ID %s does not belong to seller ID %s", order.ID, user.ID)
+	if order.SellerID != seller.ID {
+		err = fmt.Errorf("order ID %s does not belong to seller ID %s", order.ID, seller.ID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -794,8 +785,8 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	}
 	
 	arg := db.CancelOrderBySellerTxParams{
-		Order:          &order,
-		CanceledReason: req.CanceledReason,
+		Order:  &order,
+		Reason: req.Reason,
 	}
 	result, err := server.dbStore.CancelOrderBySellerTx(c.Request.Context(), arg)
 	if err != nil {
@@ -814,9 +805,8 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
 		Title:       "Đơn hàng của bạn đã bị hủy bởi người bán",
-		Message: fmt.Sprintf("Đơn hàng #%s đã bị hủy bởi người bán với lý do: \"%s\". Số tiền %s đã được hoàn trả vào ví của bạn.",
+		Message: fmt.Sprintf("Đơn hàng #%s đã bị hủy bởi người bán. Số tiền %s đã được hoàn trả vào ví của bạn.",
 			result.Order.Code,
-			req.CanceledReason,
 			util.FormatVND(result.OrderTransaction.Amount)),
 		Type:        "order",
 		ReferenceID: result.Order.Code,
@@ -830,7 +820,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.SellerID,
 		Title:       "Bạn đã hủy đơn hàng thành công",
-		Message: fmt.Sprintf("Đơn hàng #%s (giá trị %s) đã được hủy thành công. Các sản phẩm đã được đưa về trạng thái có thể bán lại.",
+		Message: fmt.Sprintf("Đơn hàng %s (giá trị %s) đã được hủy thành công. Các sản phẩm đã được đưa về trạng thái có thể bán lại.",
 			result.Order.Code,
 			util.FormatVND(result.OrderTransaction.Amount)),
 		Type:        "order",

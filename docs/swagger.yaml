@@ -2509,7 +2509,6 @@ paths:
       - description: Cancel order request
         in: body
         name: request
-        required: true
         schema:
           $ref: '#/definitions/api.cancelOrderRequest'
       produces:
@@ -2997,7 +2996,6 @@ paths:
       - description: Cancellation reason
         in: body
         name: request
-        required: true
         schema:
           $ref: '#/definitions/api.cancelOrderRequest'
       produces:
@@ -3007,16 +3005,6 @@ paths:
           description: Order canceled successfully
           schema:
             $ref: '#/definitions/db.CancelOrderBySellerTxResult'
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - Order does not belong to this seller
-        "404":
-          description: Order not found
-        "409":
-          description: Conflict - Order cannot be canceled in the current status
-        "500":
-          description: Internal server error
       security:
       - accessToken: []
       summary: Cancel order by seller

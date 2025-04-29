@@ -754,7 +754,6 @@ const docTemplate = `{
                         "description": "Cancel order request",
                         "name": "request",
                         "in": "body",
-                        "required": true,
                         "schema": {
                             "$ref": "#/definitions/api.cancelOrderRequest"
                         }
@@ -1489,7 +1488,6 @@ const docTemplate = `{
                         "description": "Cancellation reason",
                         "name": "request",
                         "in": "body",
-                        "required": true,
                         "schema": {
                             "$ref": "#/definitions/api.cancelOrderRequest"
                         }
@@ -1501,21 +1499,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderBySellerTxResult"
                         }
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    },
-                    "403": {
-                        "description": "Forbidden - Order does not belong to this seller"
-                    },
-                    "404": {
-                        "description": "Order not found"
-                    },
-                    "409": {
-                        "description": "Conflict - Order cannot be canceled in the current status"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }

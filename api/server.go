@@ -221,10 +221,10 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Nhóm các API chỉ liên quan đến đơn bán (không bao gồm đơn hàng trao đổi)
 		sellerOrderGroup := sellerGroup.Group("orders")
 		{
-			sellerOrderGroup.GET("", server.listSalesOrders)                // ✅ Liệt kê tất cả đơn bán
-			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)   // ✅ Lấy thông tin chi tiết của một đơn bán
-			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder) // ✅ Người bán xác nhận sẽ gửi đơn hàng
-			// sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // Người bán hủy đơn hàng
+			sellerOrderGroup.GET("", server.listSalesOrders)                      // ✅ Liệt kê tất cả đơn bán
+			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)         // ✅ Lấy thông tin chi tiết của một đơn bán
+			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)       // ✅ Người bán xác nhận sẽ gửi đơn hàng
+			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // ✅ Người bán hủy đơn hàng
 		}
 		
 		gundamGroup := sellerGroup.Group("gundams")
