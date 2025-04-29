@@ -212,7 +212,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		orderGroup.GET(":orderID", server.getMemberOrderDetails)           // ✅ Lấy thông tin chi tiết của một đơn hàng thông thường hoặc đơn hàng trao đổi
 		orderGroup.PATCH(":orderID/package", server.packageOrder)          // ✅ Người gửi đóng gói đơn hàng
 		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived) // ✅ Người nhận hàng xác nhận đã nhận hàng thành công
-		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)     // Người mua hủy đơn hàng
+		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)     // ✅ Người mua hủy đơn hàng
 	}
 	
 	// Nhóm các API chỉ dành cho seller
@@ -221,10 +221,10 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Nhóm các API chỉ liên quan đến đơn bán (không bao gồm đơn hàng trao đổi)
 		sellerOrderGroup := sellerGroup.Group("orders")
 		{
-			sellerOrderGroup.GET("", server.listSalesOrders)                      // ✅ Liệt kê tất cả đơn bán
-			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)         // ✅ Lấy thông tin chi tiết của một đơn bán
-			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder)       // ✅ Người bán xác nhận sẽ gửi đơn hàng
-			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // Người bán hủy đơn hàng
+			sellerOrderGroup.GET("", server.listSalesOrders)                // ✅ Liệt kê tất cả đơn bán
+			sellerOrderGroup.GET(":orderID", server.getSalesOrderDetails)   // ✅ Lấy thông tin chi tiết của một đơn bán
+			sellerOrderGroup.PATCH(":orderID/confirm", server.confirmOrder) // ✅ Người bán xác nhận sẽ gửi đơn hàng
+			// sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // Người bán hủy đơn hàng
 		}
 		
 		gundamGroup := sellerGroup.Group("gundams")

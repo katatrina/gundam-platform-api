@@ -381,3 +381,58 @@ func (server *Server) sendExchangeCancelNotifications(ctx context.Context, resul
 		log.Err(err).Msg("failed to send confirmation to canceler")
 	}
 }
+
+// sendOrderCancelNotifications sends notifications about order cancellation to relevant parties
+func (server *Server) sendOrderCancelNotifications(ctx context.Context, result db.CancelOrderByBuyerTxResult, canceledByID string) {
+	order := result.Order
+	
+	// Get user who canceled
+	canceledBy, err := server.dbStore.GetUserByID(ctx, canceledByID)
+	if err != nil {
+		log.Err(err).Msg("failed to get user who canceled order")
+		return
+	}
+	
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Create base notification content
+	baseTitle := "Đơn hàng đã bị hủy"
+	baseMessage := fmt.Sprintf("Đơn hàng #%s đã bị hủy bởi người mua %s.", order.Code, canceledBy.FullName)
+	
+	// Add reason if provided
+	if order.CanceledReason != nil && *order.CanceledReason != "" {
+		baseMessage += fmt.Sprintf(" Lý do: %s", *order.CanceledReason)
+	}
+	
+	// Send notification to seller
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+		RecipientID: order.SellerID,
+		Title:       baseTitle,
+		Message:     baseMessage,
+		Type:        "order",
+		ReferenceID: order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+	}
+	
+	// Send confirmation to buyer
+	refundMessage := ""
+	if result.RefundEntry.Amount > 0 {
+		refundMessage = fmt.Sprintf(" Số tiền %s đã được hoàn lại vào ví của bạn.", util.FormatVND(result.RefundEntry.Amount))
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+		RecipientID: order.BuyerID,
+		Title:       "Bạn đã hủy đơn hàng",
+		Message:     fmt.Sprintf("Bạn đã hủy đơn hàng #%s thành công.%s", order.Code, refundMessage),
+		Type:        "order",
+		ReferenceID: order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send confirmation to buyer")
+	}
+}

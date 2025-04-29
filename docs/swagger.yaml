@@ -91,19 +91,12 @@ definitions:
     required:
     - reason
     type: object
-  api.cancelOrderByBuyerRequest:
-    properties:
-      canceled_reason:
-        type: string
-    required:
-    - canceled_reason
-    type: object
   api.cancelOrderRequest:
     properties:
-      canceled_reason:
+      reason:
         type: string
     required:
-    - canceled_reason
+    - reason
     type: object
   api.checkEmailRequest:
     properties:
@@ -2505,7 +2498,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Cancel an order by the buyer
+      description: Allows the buyer to cancel a regular order that is only in pending.
       parameters:
       - description: Order ID
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -2513,12 +2506,12 @@ paths:
         name: orderID
         required: true
         type: string
-      - description: Cancellation reason
+      - description: Cancel order request
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/api.cancelOrderByBuyerRequest'
+          $ref: '#/definitions/api.cancelOrderRequest'
       produces:
       - application/json
       responses:

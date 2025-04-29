@@ -728,13 +728,8 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-type cancelOrderRequest struct {
+type cancelOrderByBuyerSellerRequest struct {
 	CanceledReason string `json:"canceled_reason" binding:"required"`
-}
-
-type cancelOrderRequestParams struct {
-	SellerID string `uri:"sellerID" binding:"required"`
-	OrderID  string `uri:"orderID" binding:"required"`
 }
 
 //	@Summary		Cancel order by seller
@@ -763,7 +758,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 		return
 	}
 	
-	var req cancelOrderRequest
+	var req cancelOrderByBuyerSellerRequest
 	if err = c.ShouldBindJSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to bind JSON")
 		c.JSON(http.StatusBadRequest, errorResponse(err))

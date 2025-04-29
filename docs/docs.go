@@ -730,7 +730,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Cancel an order by the buyer",
+                "description": "Allows the buyer to cancel a regular order that is only in pending.",
                 "consumes": [
                     "application/json"
                 ],
@@ -751,12 +751,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Cancellation reason",
+                        "description": "Cancel order request",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.cancelOrderByBuyerRequest"
+                            "$ref": "#/definitions/api.cancelOrderRequest"
                         }
                     }
                 ],
@@ -2862,24 +2862,13 @@ const docTemplate = `{
                 }
             }
         },
-        "api.cancelOrderByBuyerRequest": {
-            "type": "object",
-            "required": [
-                "canceled_reason"
-            ],
-            "properties": {
-                "canceled_reason": {
-                    "type": "string"
-                }
-            }
-        },
         "api.cancelOrderRequest": {
             "type": "object",
             "required": [
-                "canceled_reason"
+                "reason"
             ],
             "properties": {
-                "canceled_reason": {
+                "reason": {
                     "type": "string"
                 }
             }

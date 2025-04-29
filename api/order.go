@@ -593,17 +593,17 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-type cancelOrderByBuyerRequest struct {
-	CanceledReason string `json:"canceled_reason" binding:"required"`
+type cancelOrderRequest struct {
+	Reason *string `json:"reason" binding:"required"`
 }
 
 //	@Summary		Cancel order by buyer
-//	@Description	Cancel an order by the buyer
+//	@Description	Allows the buyer to cancel a regular order that is only in pending.
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
 //	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Param			request	body		cancelOrderByBuyerRequest		true	"Cancellation reason"
+//	@Param			request	body		cancelOrderRequest				true	"Cancel order request"
 //	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"Order canceled successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/cancel [patch]
@@ -611,37 +611,32 @@ func (server *Server) cancelOrderByBuyer(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	// Parse order ID
+	orderIDStr := c.Param("orderID")
+	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user ID %s not found", userID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get user by ID")
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid order ID format: %s", orderIDStr)))
 		return
 	}
 	
-	orderID, err := uuid.Parse(c.Param("orderID"))
-	if err != nil {
+	// Parse request body
+	var req cancelOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 	
-	var req cancelOrderByBuyerRequest
-	if err = c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+	// Validate reason if provided
+	if req.Reason != nil && *req.Reason == "" {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("reason cannot be empty")))
 		return
 	}
 	
-	// Lấy thông tin đơn hàng
-	order, err := server.dbStore.GetOrderByID(c.Request.Context(), orderID)
+	// 1. Lấy thông tin đơn hàng
+	order, err := server.dbStore.GetOrderByID(c, orderID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order ID %s not found", orderID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("order ID %s not found", orderID)))
 			return
 		}
 		
@@ -650,66 +645,56 @@ func (server *Server) cancelOrderByBuyer(c *gin.Context) {
 		return
 	}
 	
-	// Kiểm tra xem người mua có quyền hủy đơn hàng không
+	// 2. Verify order type
+	if order.Type != db.OrderTypeRegular {
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("this API can only cancel regular orders, current order type: %s", order.Type)))
+		return
+	}
+	
+	// 3. Kiểm tra người dùng hiện tại có phải người mua của đơn hàng không
 	if order.BuyerID != userID {
-		err = fmt.Errorf("order %s does not belong to user ID %s", order.Code, userID)
-		c.JSON(http.StatusForbidden, errorResponse(err))
+		c.JSON(http.StatusForbidden, errorResponse(fmt.Errorf("order %s does not belong to user %s", order.Code, userID)))
 		return
 	}
 	
-	// Kiểm tra trạng thái đơn hàng
-	// Chỉ cho phép hủy đơn hàng khi đơn hàng đang ở trạng thái "pending"
+	// 4. Kiểm tra trạng thái đơn hàng
 	if order.Status != db.OrderStatusPending {
-		err = fmt.Errorf("order %s cannot be canceled in status %s", order.Code, order.Status)
-		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("order can only be canceled in 'pending' status, current status: %s", order.Status)))
 		return
 	}
 	
-	result, err := server.dbStore.CancelOrderByBuyerTx(c.Request.Context(), db.CancelOrderByBuyerTxParams{
-		Order:          &order,
-		CanceledReason: req.CanceledReason,
+	// 5. Lấy thông tin giao dịch đơn hàng
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c, orderID)
+	if err != nil {
+		if !errors.Is(err, db.ErrRecordNotFound) {
+			log.Err(err).Msg("failed to get order transaction")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Nếu không có giao dịch, đơn hàng có thể chưa được thanh toán, nhưng vẫn có thể hủy
+		log.Warn().Str("order_id", orderID.String()).Msg("no order transaction found, but proceeding with cancellation")
+	}
+	
+	// 6. Kiểm tra trạng thái giao dịch (nếu có)
+	if err == nil && orderTransaction.Status != db.OrderTransactionStatusPending {
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("order transaction is in %s status, cannot be canceled", orderTransaction.Status)))
+		return
+	}
+	
+	// Tất cả điều kiện kiểm tra đều đã thỏa mãn, thực hiện giao dịch hủy đơn hàng
+	result, err := server.dbStore.CancelOrderByBuyerTx(c, db.CancelOrderByBuyerTxParams{
+		Order:  &order,
+		Reason: req.Reason,
 	})
 	if err != nil {
-		log.Err(err).Msg("failed to cancel order by buyer")
+		log.Err(err).Msg("failed to cancel order")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
-	opts := []asynq.Option{
-		asynq.MaxRetry(3),
-		asynq.Queue(worker.QueueCritical),
-	}
-	
-	// Gửi thông báo cho người mua
-	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-		RecipientID: result.Order.BuyerID,
-		Title:       "Đơn hàng của bạn đã được hủy",
-		Message: fmt.Sprintf("Đơn hàng #%s đã được hủy thành công. Số tiền %s đã được hoàn trả vào ví của bạn.",
-			result.Order.Code,
-			util.FormatVND(result.OrderTransaction.Amount)),
-		Type:        "order",
-		ReferenceID: result.Order.Code,
-	}, opts...)
-	if err != nil {
-		log.Err(err).Msg("failed to send notification to buyer")
-	}
-	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
-	
-	// Gửi thông báo cho người bán
-	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-		RecipientID: result.Order.SellerID,
-		Title:       "Đơn hàng đã bị hủy bởi người mua",
-		Message: fmt.Sprintf("Đơn hàng #%s (giá trị %s) đã bị hủy bởi người mua với lý do: \"%s\". Các sản phẩm đã được đưa về trạng thái có thể bán lại.",
-			result.Order.Code,
-			util.FormatVND(result.OrderTransaction.Amount),
-			req.CanceledReason),
-		Type:        "order",
-		ReferenceID: result.Order.Code,
-	}, opts...)
-	if err != nil {
-		log.Err(err).Msg("failed to send notification to seller")
-	}
-	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
+	// Gửi thông báo
+	server.sendOrderCancelNotifications(c, result, userID)
 	
 	c.JSON(http.StatusOK, result)
 }

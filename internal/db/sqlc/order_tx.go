@@ -495,8 +495,8 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 }
 
 type CancelOrderByBuyerTxParams struct {
-	Order          *Order
-	CanceledReason string
+	Order  *Order
+	Reason *string
 }
 
 type CancelOrderByBuyerTxResult struct {
@@ -510,8 +510,6 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 	var result CancelOrderByBuyerTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
-		// TODO: Tùy vào đơn hàng này là đơn hàng thông thường, trao đổi hay đấu giá, mà cần quy trình xử lý khác nhau
-		
 		// 1. Cập nhật trạng thái đơn hàng thành "canceled"
 		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
 			OrderID: arg.Order.ID,
@@ -520,7 +518,7 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 				Valid:       true,
 			},
 			CanceledBy:     util.StringPointer(arg.Order.BuyerID),
-			CanceledReason: util.StringPointer(arg.CanceledReason),
+			CanceledReason: arg.Reason,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update order status to cancel: %w", err)
