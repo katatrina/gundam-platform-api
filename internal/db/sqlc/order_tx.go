@@ -395,22 +395,22 @@ func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxPara
 	return
 }
 
-type ConfirmOrderReceivedTxParams struct {
+type ConfirmOrderReceivedByBuyerTxParams struct {
 	Order        *Order
 	OrderItems   []OrderItem
 	SellerEntry  *WalletEntry
 	SellerWallet *Wallet
 }
 
-type ConfirmOrderReceivedTxResult struct {
+type ConfirmOrderReceivedByBuyerTxResult struct {
 	Order            Order            `json:"order"`
 	OrderTransaction OrderTransaction `json:"order_transaction"`
 	SellerWallet     Wallet           `json:"seller_wallet"`
 	SellerEntry      WalletEntry      `json:"seller_entry"`
 }
 
-func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error) {
-	var result ConfirmOrderReceivedTxResult
+func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedByBuyerTxParams) (ConfirmOrderReceivedByBuyerTxResult, error) {
+	var result ConfirmOrderReceivedByBuyerTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		// 1. Chuyển tiền từ non_withdrawable_amount sang balance của người bán
@@ -446,7 +446,8 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 				OrderTransactionStatus: OrderTransactionStatusCompleted,
 				Valid:                  true,
 			},
-			OrderID: arg.Order.ID,
+			CompletedAt: util.TimePointer(time.Now()),
+			OrderID:     arg.Order.ID,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update order transaction status: %w", err)
@@ -480,13 +481,12 @@ func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg Co
 				OrderStatus: OrderStatusCompleted,
 				Valid:       true,
 			},
+			CompletedAt: util.TimePointer(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update order status: %w", err)
 		}
 		result.Order = updatedOrder
-		
-		// TODO: Nếu đây là đơn hàng liên quan đến trao đổi hay đấu giá, cập nhật trạng thái tương ứng
 		
 		return nil
 	})

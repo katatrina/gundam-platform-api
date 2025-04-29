@@ -211,7 +211,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		orderGroup.GET("", server.listMemberOrders)                        // ✅ Liệt kê tất cả đơn hàng thông thường và đơn hàng trao đổi trong tab "Đơn hàng" trong trang "Tài khoản của tôi"
 		orderGroup.GET(":orderID", server.getMemberOrderDetails)           // ✅ Lấy thông tin chi tiết của một đơn hàng thông thường hoặc đơn hàng trao đổi
 		orderGroup.PATCH(":orderID/package", server.packageOrder)          // ✅ Người gửi đóng gói đơn hàng
-		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived) // Người nhận hàng xác nhận đã nhận hàng thành công
+		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived) // ✅ Người nhận hàng xác nhận đã nhận hàng thành công
 		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)     // Người mua hủy đơn hàng
 	}
 	

@@ -27,7 +27,8 @@ type Store interface {
 	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 	ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error)
 	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
-	ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedTxParams) (ConfirmOrderReceivedTxResult, error)
+	ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedByBuyerTxParams) (ConfirmOrderReceivedByBuyerTxResult, error)
+	ConfirmExchangeOrderReceivedTx(ctx context.Context, arg ConfirmExchangeOrderReceivedTxParams) (ConfirmExchangeOrderReceivedTxResult, error)
 	CancelOrderByBuyerTx(ctx context.Context, arg CancelOrderByBuyerTxParams) (CancelOrderByBuyerTxResult, error)
 	CancelOrderBySellerTx(ctx context.Context, arg CancelOrderBySellerTxParams) (CancelOrderBySellerTxResult, error)
 	CreateExchangePostTx(ctx context.Context, arg CreateExchangePostTxParams) (CreateExchangePostTxResult, error)

@@ -38,5 +38,6 @@ SET is_packaged          = COALESCE(sqlc.narg('is_packaged'), is_packaged),
     status               = COALESCE(sqlc.narg('status'), status),
     canceled_by          = COALESCE(sqlc.narg('canceled_by'), canceled_by),
     canceled_reason      = COALESCE(sqlc.narg('canceled_reason'), canceled_reason),
+    completed_at         = COALESCE(sqlc.narg('completed_at'), completed_at),
     updated_at           = now()
 WHERE id = sqlc.arg('order_id') RETURNING *;

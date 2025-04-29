@@ -279,7 +279,8 @@ CREATE TABLE "orders"
     "canceled_by"          text,
     "canceled_reason"      text,
     "created_at"           timestamptz    NOT NULL DEFAULT (now()),
-    "updated_at"           timestamptz    NOT NULL DEFAULT (now())
+    "updated_at"           timestamptz    NOT NULL DEFAULT (now()),
+    "completed_at"         timestamptz
 );
 
 CREATE TABLE "order_items"

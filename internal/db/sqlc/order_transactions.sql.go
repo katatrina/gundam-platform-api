@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -77,8 +78,9 @@ SET amount          = COALESCE($1, amount),
     status          = COALESCE($2, status),
     buyer_entry_id  = COALESCE($3, buyer_entry_id),
     seller_entry_id = COALESCE($4, seller_entry_id),
+    completed_at    = COALESCE($5, completed_at),
     updated_at      = now()
-WHERE order_id = $5 RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
+WHERE order_id = $6 RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
 `
 
 type UpdateOrderTransactionParams struct {
@@ -86,6 +88,7 @@ type UpdateOrderTransactionParams struct {
 	Status        NullOrderTransactionStatus `json:"status"`
 	BuyerEntryID  *int64                     `json:"buyer_entry_id"`
 	SellerEntryID *int64                     `json:"seller_entry_id"`
+	CompletedAt   *time.Time                 `json:"completed_at"`
 	OrderID       uuid.UUID                  `json:"order_id"`
 }
 
@@ -95,6 +98,7 @@ func (q *Queries) UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTra
 		arg.Status,
 		arg.BuyerEntryID,
 		arg.SellerEntryID,
+		arg.CompletedAt,
 		arg.OrderID,
 	)
 	var i OrderTransaction

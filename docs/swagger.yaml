@@ -516,7 +516,7 @@ definitions:
     - order_transaction
     - refund_entry
     type: object
-  db.ConfirmOrderReceivedTxResult:
+  db.ConfirmOrderReceivedByBuyerTxResult:
     properties:
       order:
         $ref: '#/definitions/db.Order'
@@ -1296,6 +1296,8 @@ definitions:
         type: string
       code:
         type: string
+      completed_at:
+        type: string
       created_at:
         type: string
       delivery_fee:
@@ -1329,6 +1331,7 @@ definitions:
     - canceled_by
     - canceled_reason
     - code
+    - completed_at
     - created_at
     - delivery_fee
     - id
@@ -2506,9 +2509,10 @@ paths:
       - orders
   /orders/{orderID}/received:
     patch:
-      consumes:
-      - application/json
-      description: Confirm that the buyer has received the order
+      description: Confirm that the buyer has received the order. For regular orders,
+        it completes the transaction and transfers payment to seller. For exchange
+        orders, it updates exchange status and may complete the exchange if both parties
+        have confirmed.
       parameters:
       - description: Order ID
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -2522,7 +2526,7 @@ paths:
         "200":
           description: Order received successfully
           schema:
-            $ref: '#/definitions/db.ConfirmOrderReceivedTxResult'
+            $ref: '#/definitions/db.ConfirmOrderReceivedByBuyerTxResult'
       security:
       - accessToken: []
       summary: Confirm order received

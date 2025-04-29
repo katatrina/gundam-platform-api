@@ -16,5 +16,6 @@ SET amount          = COALESCE(sqlc.narg('amount'), amount),
     status          = COALESCE(sqlc.narg('status'), status),
     buyer_entry_id  = COALESCE(sqlc.narg('buyer_entry_id'), buyer_entry_id),
     seller_entry_id = COALESCE(sqlc.narg('seller_entry_id'), seller_entry_id),
+    completed_at    = COALESCE(sqlc.narg('completed_at'), completed_at),
     updated_at      = now()
 WHERE order_id = sqlc.arg('order_id') RETURNING *;

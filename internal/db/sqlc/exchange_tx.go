@@ -2,10 +2,12 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 	
 	"github.com/google/uuid"
 	"github.com/katatrina/gundam-BE/internal/util"
+	"github.com/rs/zerolog/log"
 )
 
 type ProvideDeliveryAddressesForExchangeTxParams struct {
@@ -337,6 +339,195 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 			result.Exchange = updatedExchange
 			result.PosterOrder = &posterOrder
 			result.OffererOrder = &offererOrder
+		}
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type ConfirmExchangeOrderReceivedTxParams struct {
+	Order          *Order
+	Exchange       *Exchange
+	ExchangeItems  []ExchangeItem
+	PartnerOrderID uuid.UUID
+}
+
+type ConfirmExchangeOrderReceivedTxResult struct {
+	Order         Order     `json:"order"`
+	Exchange      *Exchange `json:"exchange"`
+	BothConfirmed bool      `json:"both_confirmed"`
+	PartnerOrder  *Order    `json:"partner_order"`
+}
+
+// ConfirmExchangeOrderReceivedTx xử lý xác nhận đơn hàng trao đổi đã nhận
+func (store *SQLStore) ConfirmExchangeOrderReceivedTx(ctx context.Context, arg ConfirmExchangeOrderReceivedTxParams) (ConfirmExchangeOrderReceivedTxResult, error) {
+	var result ConfirmExchangeOrderReceivedTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Cập nhật trạng thái đơn hàng thành "completed"
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			OrderID: arg.Order.ID,
+			Status: NullOrderStatus{
+				OrderStatus: OrderStatusCompleted,
+				Valid:       true,
+			},
+			CompletedAt: util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update order status: %w", err)
+		}
+		result.Order = updatedOrder
+		
+		// 2. Lấy thông tin đơn hàng đối tác
+		partnerOrder, err := qTx.GetOrderByID(ctx, arg.PartnerOrderID)
+		if err != nil {
+			return fmt.Errorf("failed to get partner order: %w", err)
+		}
+		result.PartnerOrder = &partnerOrder
+		
+		// 3. Kiểm tra xem cả hai đơn hàng đã hoàn thành chưa
+		bothCompleted := updatedOrder.Status == OrderStatusCompleted &&
+			partnerOrder.Status == OrderStatusCompleted
+		result.BothConfirmed = bothCompleted
+		
+		// 4. Nếu cả hai đơn hàng đã hoàn thành, hoàn tất giao dịch trao đổi
+		if bothCompleted {
+			// 4.1. Cập nhật trạng thái exchange thành "completed"
+			updatedExchange, err := qTx.UpdateExchange(ctx, UpdateExchangeParams{
+				ID: arg.Exchange.ID,
+				Status: NullExchangeStatus{
+					ExchangeStatus: ExchangeStatusCompleted,
+					Valid:          true,
+				},
+				CompletedAt: util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update exchange status: %w", err)
+			}
+			result.Exchange = &updatedExchange
+			
+			// 4.2. Xử lý tiền bù (nếu có)
+			if arg.Exchange.PayerID != nil && arg.Exchange.CompensationAmount != nil {
+				// Xác định người nhận tiền bù
+				var receiverID string
+				if *arg.Exchange.PayerID == arg.Exchange.PosterID {
+					receiverID = arg.Exchange.OffererID
+				} else {
+					receiverID = arg.Exchange.PosterID
+				}
+				
+				// Chuyển tiền từ non_withdrawable_amount sang balance
+				_, err := qTx.TransferNonWithdrawableToBalance(ctx, TransferNonWithdrawableToBalanceParams{
+					UserID: receiverID,
+					Amount: *arg.Exchange.CompensationAmount,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to transfer compensation amount: %w", err)
+				}
+				
+				// Ghi lại giao dịch
+				_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+					WalletID:      receiverID,
+					ReferenceID:   util.StringPointer(arg.Exchange.ID.String()),
+					ReferenceType: WalletReferenceTypeExchange,
+					EntryType:     WalletEntryTypePaymentreceived,
+					Amount:        *arg.Exchange.CompensationAmount,
+					Status:        WalletEntryStatusCompleted,
+					CompletedAt:   util.TimePointer(time.Now()),
+				})
+				if err != nil {
+					return fmt.Errorf("failed to create wallet entry for compensation: %w", err)
+				}
+				
+				log.Info().
+					Str("exchange_id", arg.Exchange.ID.String()).
+					Str("receiver_id", receiverID).
+					Int64("amount", *arg.Exchange.CompensationAmount).
+					Msg("Compensation amount transferred to balance")
+			}
+			
+			// 4.3. Chuyển quyền sở hữu các Gundam trong giao dịch
+			for _, item := range arg.ExchangeItems {
+				if item.GundamID == nil {
+					log.Warn().
+						Str("exchange_id", arg.Exchange.ID.String()).
+						Str("item_name", item.Name).
+						Msg("Exchange item has no gundam_id, skipping ownership transfer")
+					continue
+				}
+				
+				// Xác định chủ sở hữu mới
+				var newOwnerID string
+				if item.IsFromPoster {
+					newOwnerID = arg.Exchange.OffererID
+				} else {
+					newOwnerID = arg.Exchange.PosterID
+				}
+				
+				// Cập nhật chủ sở hữu của Gundam
+				err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+					ID:      *item.GundamID,
+					OwnerID: &newOwnerID,
+					Status: NullGundamStatus{
+						GundamStatus: GundamStatusInstore,
+						Valid:        true,
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to update gundam ownership: %w", err)
+				}
+				
+				log.Info().
+					Str("exchange_id", arg.Exchange.ID.String()).
+					Int64("gundam_id", *item.GundamID).
+					Str("new_owner_id", newOwnerID).
+					Msg("Gundam ownership transferred")
+			}
+		} else {
+			// 5. Nếu chưa hoàn thành, cập nhật trạng thái exchange dựa trên trạng thái đơn hàng
+			lowestStatus := GetLowestOrderStatus(updatedOrder.Status, partnerOrder.Status)
+			
+			// Ánh xạ từ trạng thái đơn hàng sang trạng thái exchange
+			var exchangeStatus ExchangeStatus
+			switch lowestStatus {
+			case OrderStatusPending:
+				exchangeStatus = ExchangeStatusPending
+			case OrderStatusPackaging:
+				exchangeStatus = ExchangeStatusPackaging
+			case OrderStatusDelivering:
+				exchangeStatus = ExchangeStatusDelivering
+			case OrderStatusDelivered:
+				exchangeStatus = ExchangeStatusDelivered
+			case OrderStatusCompleted:
+				exchangeStatus = ExchangeStatusCompleted
+			case OrderStatusFailed:
+				exchangeStatus = ExchangeStatusFailed
+			case OrderStatusCanceled:
+				exchangeStatus = ExchangeStatusCanceled
+			default:
+				exchangeStatus = arg.Exchange.Status
+			}
+			
+			// Cập nhật trạng thái exchange nếu cần
+			if arg.Exchange.Status != exchangeStatus {
+				updatedExchange, err := qTx.UpdateExchange(ctx, UpdateExchangeParams{
+					ID: arg.Exchange.ID,
+					Status: NullExchangeStatus{
+						ExchangeStatus: exchangeStatus,
+						Valid:          true,
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to update exchange status: %w", err)
+				}
+				result.Exchange = &updatedExchange
+			} else {
+				result.Exchange = arg.Exchange
+			}
 		}
 		
 		return nil

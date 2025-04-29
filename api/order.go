@@ -283,7 +283,7 @@ func (req *listMemberOrdersRequest) validate() error {
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			status	query	string				false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
-//	@Success		200		array	db.MemberOrderInfo "List of orders"
+//	@Success		200		array	db.MemberOrderInfo	"List of orders"
 //	@Router			/orders [get]
 func (server *Server) listMemberOrders(ctx *gin.Context) {
 	userID := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Subject
@@ -347,18 +347,18 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 }
 
 //	@Summary		Confirm order received
-//	@Description	Confirm that the buyer has received the order
+//	@Description	Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.
 //	@Tags			orders
-//	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	db.ConfirmOrderReceivedTxResult	"Order received successfully"
+//	@Param			orderID	path		string									true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.ConfirmOrderReceivedByBuyerTxResult	"Order received successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/received [patch]
 func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
+	// Xác thực người dùng
 	_, err := server.dbStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -407,145 +407,32 @@ func (server *Server) confirmOrderReceived(ctx *gin.Context) {
 		return
 	}
 	
-	// Lấy thông tin giao dịch đơn hàng
-	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("transaction for order ID %s not found", orderID)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+	// Xử lý dựa trên loại đơn hàng
+	switch order.Type {
+	case db.OrderTypeRegular:
+		// Xử lý đơn hàng thông thường
+		result, err := server.handleRegularOrderConfirmation(ctx, order)
+		if err != nil {
+			log.Err(err).Msg("failed to confirm regular order received")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
-		
-		log.Err(err).Msg("failed to get order transaction by order ID")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
+		ctx.JSON(http.StatusOK, result)
 	
-	// Kiểm tra xem giao dịch đã có seller_entry_id chưa
-	if orderTransaction.SellerEntryID == nil {
-		err = fmt.Errorf("seller entry not found for order %s", order.Code)
+	case db.OrderTypeExchange:
+		// Xử lý đơn hàng trao đổi
+		result, err := server.handleExchangeOrderConfirmation(ctx, order)
+		if err != nil {
+			log.Err(err).Msg("failed to confirm exchange order received")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusOK, result)
+	
+	default:
+		err = fmt.Errorf("unsupported order type: %s", order.Type)
 		ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-		return
 	}
-	
-	// Lấy bút toán của người bán
-	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("seller entry not found for order %s", order.Code)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get wallet entry by ID")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// Lấy ví của người bán
-	sellerWallet, err := server.dbStore.GetWalletForUpdate(ctx, order.SellerID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("wallet not found for seller %s", order.SellerID)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get wallet for update")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// Lấy thông tin order items
-	orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order items not found for order %s", order.Code)
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get order items")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// Lấy thông tin gundam
-	var gundams []db.Gundam
-	for _, item := range orderItems {
-		if item.GundamID != nil {
-			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
-			if err != nil {
-				if errors.Is(err, db.ErrRecordNotFound) {
-					err = fmt.Errorf("gundam ID %d not found", item.GundamID)
-					ctx.JSON(http.StatusNotFound, errorResponse(err))
-					return
-				}
-				
-				log.Err(err).Msg("failed to get gundam by ID")
-				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-				return
-			}
-			
-			if gundam.Status != db.GundamStatusProcessing {
-				err = fmt.Errorf("gundam ID %d is not in processing status", item.GundamID)
-				ctx.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-				return
-			}
-			
-			gundams = append(gundams, gundam)
-			continue
-		}
-		
-		log.Warn().Msgf("gundam ID %d not found in order items", item.GundamID)
-	}
-	
-	// Thực hiện transaction xác nhận đơn hàng đã nhận
-	result, err := server.dbStore.ConfirmOrderReceivedByBuyerTx(ctx, db.ConfirmOrderReceivedTxParams{
-		Order:        &order,
-		OrderItems:   orderItems,
-		SellerEntry:  &sellerEntry,
-		SellerWallet: &sellerWallet,
-	})
-	if err != nil {
-		log.Err(err).Msg("failed to confirm order received")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// TODO: Hủy task "tự động xác nhận đơn hàng sau 7 ngày" vì người mua đã xác nhận đơn hàng
-	
-	// Gửi thông báo cho người mua và người bán
-	opts := []asynq.Option{
-		asynq.MaxRetry(3),
-		asynq.Queue(worker.QueueCritical),
-	}
-	
-	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
-		RecipientID: result.Order.BuyerID,
-		Title:       fmt.Sprintf("Bạn đã xác nhận hoàn tất đơn hàng %s thành công.", result.Order.Code),
-		Message:     fmt.Sprintf("Mô hình Gundam đã được thêm vào bộ sưu tập của bạn."),
-		Type:        "order",
-		ReferenceID: result.Order.Code,
-	}, opts...)
-	if err != nil {
-		log.Err(err).Msg("failed to send notification to buyer")
-	}
-	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
-	
-	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
-		RecipientID: result.Order.SellerID,
-		Title:       fmt.Sprintf("Đơn hàng #%s đã được người mua xác nhận hoàn tất.", result.Order.Code),
-		Message:     fmt.Sprintf("Quyền sở hữu mô hình Gundam đã được chuyển cho người mua. Số tiền khả dụng của bạn đã được cộng thêm %s.", util.FormatVND(result.SellerEntry.Amount)),
-		Type:        "order",
-		ReferenceID: result.Order.Code,
-	}, opts...)
-	if err != nil {
-		log.Err(err).Msg("failed to send notification to seller")
-	}
-	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
-	
-	ctx.JSON(http.StatusOK, result)
 }
 
 //	@Summary		Get order details for a member

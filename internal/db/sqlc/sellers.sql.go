@@ -34,7 +34,7 @@ func (q *Queries) CreateSellerProfile(ctx context.Context, arg CreateSellerProfi
 }
 
 const getSalesOrder = `-- name: GetSalesOrder :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
 WHERE id = $1
   AND seller_id = $2
@@ -67,6 +67,7 @@ func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (O
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -138,7 +139,7 @@ func (q *Queries) GetSellerDetailByID(ctx context.Context, id string) (GetSeller
 }
 
 const listSalesOrders = `-- name: ListSalesOrders :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
 WHERE seller_id = $1
   AND type != 'exchange'
@@ -178,6 +179,7 @@ func (q *Queries) ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams
 			&i.CanceledReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}

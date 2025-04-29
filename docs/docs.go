@@ -774,10 +774,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Confirm that the buyer has received the order",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.",
                 "produces": [
                     "application/json"
                 ],
@@ -799,7 +796,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Order received successfully",
                         "schema": {
-                            "$ref": "#/definitions/db.ConfirmOrderReceivedTxResult"
+                            "$ref": "#/definitions/db.ConfirmOrderReceivedByBuyerTxResult"
                         }
                     }
                 }
@@ -3385,7 +3382,7 @@ const docTemplate = `{
                 }
             }
         },
-        "db.ConfirmOrderReceivedTxResult": {
+        "db.ConfirmOrderReceivedByBuyerTxResult": {
             "type": "object",
             "required": [
                 "order",
@@ -4484,6 +4481,7 @@ const docTemplate = `{
                 "canceled_by",
                 "canceled_reason",
                 "code",
+                "completed_at",
                 "created_at",
                 "delivery_fee",
                 "id",
@@ -4509,6 +4507,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "code": {
+                    "type": "string"
+                },
+                "completed_at": {
                     "type": "string"
                 },
                 "created_at": {

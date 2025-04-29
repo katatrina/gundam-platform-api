@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +17,7 @@ UPDATE orders
 SET status     = 'packaging',
     updated_at = now()
 WHERE id = $1
-  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+  AND seller_id = $2 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
 
 type ConfirmOrderByIDParams struct {
@@ -45,6 +46,7 @@ func (q *Queries) ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDPara
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -61,7 +63,7 @@ INSERT INTO orders (id,
                     payment_method,
                     type,
                     note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
 
 type CreateOrderParams struct {
@@ -111,12 +113,13 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
 WHERE id = $1
 `
@@ -142,12 +145,13 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
 
 const listMemberOrders = `-- name: ListMemberOrders :many
-SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
 WHERE (buyer_id = $1 OR (type = 'exchange' AND seller_id = $1))
   AND status = COALESCE($2::order_status, status)
@@ -186,6 +190,7 @@ func (q *Queries) ListMemberOrders(ctx context.Context, arg ListMemberOrdersPara
 			&i.CanceledReason,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -204,8 +209,9 @@ SET is_packaged          = COALESCE($1, is_packaged),
     status               = COALESCE($3, status),
     canceled_by          = COALESCE($4, canceled_by),
     canceled_reason      = COALESCE($5, canceled_reason),
+    completed_at         = COALESCE($6, completed_at),
     updated_at           = now()
-WHERE id = $6 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at
+WHERE id = $7 RETURNING id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 `
 
 type UpdateOrderParams struct {
@@ -214,6 +220,7 @@ type UpdateOrderParams struct {
 	Status             NullOrderStatus `json:"status"`
 	CanceledBy         *string         `json:"canceled_by"`
 	CanceledReason     *string         `json:"canceled_reason"`
+	CompletedAt        *time.Time      `json:"completed_at"`
 	OrderID            uuid.UUID       `json:"order_id"`
 }
 
@@ -224,6 +231,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		arg.Status,
 		arg.CanceledBy,
 		arg.CanceledReason,
+		arg.CompletedAt,
 		arg.OrderID,
 	)
 	var i Order
@@ -245,6 +253,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 		&i.CanceledReason,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
