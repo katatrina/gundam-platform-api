@@ -638,54 +638,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/orders/:orderID/package": {
-            "patch": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Package an order for the specified user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "Package an order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Order ID",
-                        "name": "orderID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Package images",
-                        "name": "package_images",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully packaged order",
-                        "schema": {
-                            "$ref": "#/definitions/db.PackageOrderTxResult"
-                        }
-                    }
-                }
-            }
-        },
         "/orders/{orderID}": {
             "get": {
                 "security": [
@@ -766,6 +718,50 @@ const docTemplate = `{
                         "description": "Order canceled successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderByBuyerTxResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{orderID}/package": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Upload package images, create a delivery order, and update order status for a specified order.\nHandles packaging for regular orders, exchange orders, and auction orders (future).",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Package an order for delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID in UUID format",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Package images (at least one image required)",
+                        "name": "package_images",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully packaged order with delivery details",
+                        "schema": {
+                            "$ref": "#/definitions/db.PackageOrderTxResult"
                         }
                     }
                 }

@@ -110,6 +110,46 @@ func (q *Queries) GetExchangeByID(ctx context.Context, id uuid.UUID) (Exchange, 
 	return i, err
 }
 
+const getExchangeByOrderID = `-- name: GetExchangeByOrderID :one
+SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
+FROM exchanges
+WHERE poster_order_id = $1
+   OR offerer_order_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetExchangeByOrderID(ctx context.Context, posterOrderID *uuid.UUID) (Exchange, error) {
+	row := q.db.QueryRow(ctx, getExchangeByOrderID, posterOrderID)
+	var i Exchange
+	err := row.Scan(
+		&i.ID,
+		&i.PosterID,
+		&i.OffererID,
+		&i.PosterOrderID,
+		&i.OffererOrderID,
+		&i.PosterFromDeliveryID,
+		&i.PosterToDeliveryID,
+		&i.OffererFromDeliveryID,
+		&i.OffererToDeliveryID,
+		&i.PosterDeliveryFee,
+		&i.OffererDeliveryFee,
+		&i.PosterDeliveryFeePaid,
+		&i.OffererDeliveryFeePaid,
+		&i.PosterOrderExpectedDeliveryTime,
+		&i.OffererOrderExpectedDeliveryTime,
+		&i.PosterOrderNote,
+		&i.OffererOrderNote,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.Status,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const listUserExchanges = `-- name: ListUserExchanges :many
 SELECT id, poster_id, offerer_id, poster_order_id, offerer_order_id, poster_from_delivery_id, poster_to_delivery_id, offerer_from_delivery_id, offerer_to_delivery_id, poster_delivery_fee, offerer_delivery_fee, poster_delivery_fee_paid, offerer_delivery_fee_paid, poster_order_expected_delivery_time, offerer_order_expected_delivery_time, poster_order_note, offerer_order_note, payer_id, compensation_amount, status, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM exchanges

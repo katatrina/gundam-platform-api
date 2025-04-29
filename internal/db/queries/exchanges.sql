@@ -12,6 +12,12 @@ SELECT *
 FROM exchanges
 WHERE id = $1 LIMIT 1;
 
+-- name: GetExchangeByOrderID :one
+SELECT *
+FROM exchanges
+WHERE poster_order_id = $1
+   OR offerer_order_id = $1 LIMIT 1;
+
 -- name: ListUserExchanges :many
 SELECT *
 FROM exchanges

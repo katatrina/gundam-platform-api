@@ -50,6 +50,7 @@ type Querier interface {
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
 	GetExchangeByID(ctx context.Context, id uuid.UUID) (Exchange, error)
+	GetExchangeByOrderID(ctx context.Context, posterOrderID *uuid.UUID) (Exchange, error)
 	GetExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	GetExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	GetExchangePostItemByGundamID(ctx context.Context, arg GetExchangePostItemByGundamIDParams) (ExchangePostItem, error)

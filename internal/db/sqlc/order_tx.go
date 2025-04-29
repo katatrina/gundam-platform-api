@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"time"
@@ -207,6 +208,7 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 			return err
 		}
 		
+		// Cập nhật đơn hàng - chỉ đánh dấu đã đóng gói, không thay đổi trạng thái
 		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
 			IsPackaged:         util.BoolPointer(true),
 			PackagingImageURLs: packagingImageURLs,
@@ -244,7 +246,7 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 		// Chuyển đổi dữ liệu từ db sang ghn
 		createOrderRequest := ConvertToDeliveryCreateOrderRequest(updatedOrder, orderItems, senderAddress, receiverAddress)
 		
-		// 5. Gọi hàm tạo đơn hàng GHN
+		// 6. Gọi hàm tạo đơn hàng GHN
 		ghnResponse, err := arg.CreateDeliveryOrder(ctx, createOrderRequest)
 		if err != nil {
 			return fmt.Errorf("failed to create GHN order: %w", err)
@@ -259,7 +261,7 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 			log.Warn().Msgf("Expected delivery time mismatch: %v != %v", orderDelivery.ExpectedDeliveryTime, ghnResponse.Data.ExpectedDeliveryTime)
 		}
 		
-		// 6. Cập nhật thông tin giao hàng với mã đơn GHN
+		// 7. Cập nhật thông tin giao hàng với mã đơn GHN
 		updatedDelivery, err := qTx.UpdateOrderDelivery(ctx, UpdateOrderDeliveryParams{
 			ID:                   orderDelivery.ID,
 			DeliveryTrackingCode: &ghnResponse.Data.OrderCode,
@@ -275,7 +277,86 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 		}
 		result.OrderDelivery = updatedDelivery
 		
-		// TODO: Cần xử lý thêm nếu đơn hàng là đơn trao đổi hoặc đấu giá.
+		// Xử lý các loại đơn hàng đặc biệt (trao đổi, đấu giá)
+		switch updatedOrder.Type {
+		case OrderTypeRegular:
+			// Đơn hàng thông thường - không có xử lý đặc biệt
+			log.Info().Msgf("Regular order %s has been packaged", updatedOrder.ID)
+		
+		case OrderTypeExchange:
+			// Xử lý đơn hàng trao đổi
+			exchange, err := qTx.GetExchangeByOrderID(ctx, &updatedOrder.ID)
+			if err != nil {
+				if errors.Is(err, ErrRecordNotFound) {
+					return fmt.Errorf("cannot find exchange for order ID %s", updatedOrder.ID)
+				}
+				return fmt.Errorf("failed to get exchange by order ID: %w", err)
+			}
+			
+			// Lấy cả hai đơn hàng liên quan đến exchange
+			var posterOrder, offererOrder Order
+			var err1, err2 error
+			
+			if exchange.PosterOrderID != nil {
+				posterOrder, err1 = qTx.GetOrderByID(ctx, *exchange.PosterOrderID)
+			}
+			
+			if exchange.OffererOrderID != nil {
+				offererOrder, err2 = qTx.GetOrderByID(ctx, *exchange.OffererOrderID)
+			}
+			
+			if err1 != nil || err2 != nil {
+				return fmt.Errorf("failed to get exchange orders: %v, %v", err1, err2)
+			}
+			
+			// Xác định trạng thái thấp nhất giữa hai đơn hàng
+			lowestStatus := getLowestOrderStatus(posterOrder.Status, offererOrder.Status)
+			
+			// Ánh xạ từ trạng thái đơn hàng sang trạng thái exchange
+			var exchangeStatus ExchangeStatus
+			switch lowestStatus {
+			case OrderStatusPending:
+				exchangeStatus = ExchangeStatusPending
+			case OrderStatusPackaging:
+				exchangeStatus = ExchangeStatusPackaging
+			case OrderStatusDelivering:
+				exchangeStatus = ExchangeStatusDelivering
+			case OrderStatusDelivered:
+				exchangeStatus = ExchangeStatusDelivered
+			case OrderStatusCompleted:
+				exchangeStatus = ExchangeStatusCompleted
+			case OrderStatusFailed:
+				exchangeStatus = ExchangeStatusFailed
+			case OrderStatusCanceled:
+				exchangeStatus = ExchangeStatusCanceled
+			default:
+				exchangeStatus = exchange.Status
+			}
+			
+			// Cập nhật trạng thái exchange nếu khác với trạng thái hiện tại
+			if exchange.Status != exchangeStatus {
+				_, err = qTx.UpdateExchange(ctx, UpdateExchangeParams{
+					ID: exchange.ID,
+					Status: NullExchangeStatus{
+						ExchangeStatus: exchangeStatus,
+						Valid:          true,
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to update exchange status: %w", err)
+				}
+			}
+			
+			log.Info().Msgf("Exchange order %s has been packaged, exchange status: %s", updatedOrder.ID, exchangeStatus)
+		
+		case OrderTypeAuction:
+			// Xử lý đơn hàng đấu giá (sẽ triển khai trong tương lai)
+			log.Info().Msgf("Auction order %s has been packaged", updatedOrder.ID)
+			// TODO: Implement auction order handling
+		
+		default:
+			log.Warn().Msgf("Unknown order type %s for order ID %s", updatedOrder.Type, updatedOrder.ID)
+		}
 		
 		return nil
 	})

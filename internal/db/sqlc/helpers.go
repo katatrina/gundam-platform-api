@@ -74,3 +74,31 @@ func (store *SQLStore) GetGundamDetailsByID(ctx context.Context, q *Queries, gun
 	
 	return detail, nil
 }
+
+// Hàm hỗ trợ để xác định trạng thái thấp nhất
+func getLowestOrderStatus(status1, status2 OrderStatus) OrderStatus {
+	// Định nghĩa thứ tự các trạng thái từ thấp đến cao
+	statusOrder := map[OrderStatus]int{
+		OrderStatusPending:    1,
+		OrderStatusPackaging:  2,
+		OrderStatusDelivering: 3,
+		OrderStatusDelivered:  4,
+		OrderStatusCompleted:  5,
+		OrderStatusFailed:     0, // Các trạng thái đặc biệt
+		OrderStatusCanceled:   0,
+	}
+	
+	// Trường hợp đặc biệt: nếu một trong hai là failed hoặc canceled
+	if status1 == OrderStatusFailed || status1 == OrderStatusCanceled {
+		return status1
+	}
+	if status2 == OrderStatusFailed || status2 == OrderStatusCanceled {
+		return status2
+	}
+	
+	// So sánh thông thường
+	if statusOrder[status1] <= statusOrder[status2] {
+		return status1
+	}
+	return status2
+}

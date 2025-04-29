@@ -453,26 +453,22 @@ func (server *Server) confirmOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-type packageOrderRequestParams struct {
-	SellerID string `uri:"sellerID" binding:"required"`
-	OrderID  string `uri:"orderID" binding:"required"`
-}
-
 type packageOrderRequestBody struct {
 	PackageImages []*multipart.FileHeader `form:"package_images" binding:"required"`
 	// Lược bỏ package weight và package size (length, width, height)
 }
 
-//	@Summary		Package an order
-//	@Description	Package an order for the specified user.
+//	@Summary		Package an order for delivery
+//	@Description	Upload package images, create a delivery order, and update order status for a specified order.
+//	@Description	Handles packaging for regular orders, exchange orders, and auction orders (future).
 //	@Tags			orders
+//	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			orderID			path		string					true	"Order ID in UUID format"
+//	@Param			package_images	formData	file					true	"Package images (at least one image required)"
+//	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order with delivery details"
 //	@Security		accessToken
-//	@Param			package_images	formData	file					true	"Package images"
-//	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order"
-//	@Router			/orders/:orderID/package [patch]
+//	@Router			/orders/{orderID}/package [patch]
 func (server *Server) packageOrder(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
@@ -543,19 +539,38 @@ func (server *Server) packageOrder(c *gin.Context) {
 		return
 	}
 	
+	// Chuẩn bị nội dung thông báo cơ bản
+	title := fmt.Sprintf("Đơn hàng %s đã được đóng gói", result.Order.Code)
+	message := fmt.Sprintf("Đơn hàng %s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
+		result.Order.Code,
+		result.OrderDelivery.DeliveryTrackingCode,
+		result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006"))
+	
+	// Tùy chỉnh thông báo dựa trên loại đơn hàng
+	switch result.Order.Type {
+	case db.OrderTypeExchange:
+		title = fmt.Sprintf("Đơn hàng trao đổi %s đã được đóng gói", result.Order.Code)
+		// Các tùy chỉnh khác cho đơn hàng trao đổi nếu cần
+	
+	case db.OrderTypeAuction:
+		title = fmt.Sprintf("Đơn hàng đấu giá %s đã được đóng gói", result.Order.Code)
+		// Các tùy chỉnh khác cho đơn hàng đấu giá nếu cần
+	
+	case db.OrderTypeRegular:
+		// Đã là mặc định - không cần tùy chỉnh thêm
+	
+	default:
+		log.Warn().Msgf("Unknown order type %s for order ID %s", result.Order.Type, result.Order.ID)
+	}
+	
 	// Gửi thông báo cho người mua
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: result.Order.BuyerID,
-		Title:       fmt.Sprintf("Đơn hàng %s đã được đóng gói", result.Order.Code),
-		Message: fmt.Sprintf("Đơn hàng %s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
-			result.Order.Code,
-			result.OrderDelivery.DeliveryTrackingCode,
-			result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006")),
+		Title:       title,
+		Message:     message,
 		Type:        "order",
 		ReferenceID: result.Order.Code,
 	})
-	
-	// TODO: Có thể gửi thông báo cho người bán
 	
 	c.JSON(http.StatusOK, result)
 }

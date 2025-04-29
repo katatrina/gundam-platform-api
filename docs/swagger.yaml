@@ -2420,37 +2420,6 @@ paths:
       summary: Create a new order
       tags:
       - orders
-  /orders/:orderID/package:
-    patch:
-      description: Package an order for the specified user.
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: Order ID
-        in: path
-        name: orderID
-        required: true
-        type: string
-      - description: Package images
-        in: formData
-        name: package_images
-        required: true
-        type: file
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully packaged order
-          schema:
-            $ref: '#/definitions/db.PackageOrderTxResult'
-      security:
-      - accessToken: []
-      summary: Package an order
-      tags:
-      - orders
   /orders/{orderID}:
     get:
       consumes:
@@ -2503,6 +2472,36 @@ paths:
       security:
       - accessToken: []
       summary: Cancel order by buyer
+      tags:
+      - orders
+  /orders/{orderID}/package:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Upload package images, create a delivery order, and update order status for a specified order.
+        Handles packaging for regular orders, exchange orders, and auction orders (future).
+      parameters:
+      - description: Order ID in UUID format
+        in: path
+        name: orderID
+        required: true
+        type: string
+      - description: Package images (at least one image required)
+        in: formData
+        name: package_images
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully packaged order with delivery details
+          schema:
+            $ref: '#/definitions/db.PackageOrderTxResult'
+      security:
+      - accessToken: []
+      summary: Package an order for delivery
       tags:
       - orders
   /orders/{orderID}/received:
