@@ -328,6 +328,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/exchanges/{exchangeID}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Cancel an exchange transaction that is in pending or packaging status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Cancel an exchange",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "123e4567-e89b-12d3-a456-426614174000",
+                        "description": "Exchange ID",
+                        "name": "exchangeID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cancel exchange request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.cancelExchangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exchange canceled successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.CancelExchangeTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/exchanges/{exchangeID}/delivery-addresses": {
             "put": {
                 "security": [
@@ -2804,6 +2851,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.cancelExchangeRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "api.cancelOrderByBuyerRequest": {
             "type": "object",
             "required": [
@@ -3333,6 +3391,29 @@ const docTemplate = `{
                 },
                 "seller_name": {
                     "type": "string"
+                }
+            }
+        },
+        "db.CancelExchangeTxResult": {
+            "type": "object",
+            "required": [
+                "exchange",
+                "refunded_compensation",
+                "refunded_offerer_delivery_fee",
+                "refunded_poster_delivery_fee"
+            ],
+            "properties": {
+                "exchange": {
+                    "$ref": "#/definitions/db.Exchange"
+                },
+                "refunded_compensation": {
+                    "type": "boolean"
+                },
+                "refunded_offerer_delivery_fee": {
+                    "type": "boolean"
+                },
+                "refunded_poster_delivery_fee": {
+                    "type": "boolean"
                 }
             }
         },

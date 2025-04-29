@@ -1005,3 +1005,85 @@ func (server *Server) payExchangeDeliveryFee(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+type cancelExchangeRequest struct {
+	Reason *string `json:"reason"`
+}
+
+//	@Summary		Cancel an exchange
+//	@Description	Cancel an exchange transaction that is in pending or packaging status
+//	@Tags			exchanges
+//	@Accept			json
+//	@Produce		json
+//	@Param			exchangeID	path		string						true	"Exchange ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			request		body		cancelExchangeRequest		true	"Cancel exchange request"
+//	@Success		200			{object}	db.CancelExchangeTxResult	"Exchange canceled successfully"
+//	@Security		accessToken
+//	@Router			/exchanges/{exchangeID}/cancel [patch]
+func (server *Server) cancelExchange(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Parse exchange ID
+	exchangeIDStr := c.Param("exchangeID")
+	exchangeID, err := uuid.Parse(exchangeIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid exchange ID format: %s", exchangeIDStr)))
+		return
+	}
+	
+	// Parse request body
+	var req cancelExchangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Validate reason if provided
+	if req.Reason != nil && *req.Reason == "" {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("reason cannot be empty if provided")))
+		return
+	}
+	
+	// Get exchange
+	exchange, err := server.dbStore.GetExchangeByID(c, exchangeID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange ID %s not found", exchangeID)))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get exchange by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Check if user is part of the exchange
+	if exchange.PosterID != userID && exchange.OffererID != userID {
+		c.JSON(http.StatusForbidden, errorResponse(fmt.Errorf("exchange %s does not belong to user %s", exchangeID, userID)))
+		return
+	}
+	
+	// Check if exchange can be canceled (only in "pending" status)
+	if exchange.Status != db.ExchangeStatusPending {
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("exchange can only be canceled in 'pending' status, current status: %s", exchange.Status)))
+		return
+	}
+	
+	// Execute transaction to cancel the exchange
+	result, err := server.dbStore.CancelExchangeTx(c, db.CancelExchangeTxParams{
+		ExchangeID: exchangeID,
+		UserID:     userID,
+		Reason:     req.Reason,
+	})
+	if err != nil {
+		log.Err(err).Msg("failed to cancel exchange")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Send notifications to both parties
+	server.sendExchangeCancelNotifications(c, result, userID)
+	
+	c.JSON(http.StatusOK, result)
+}

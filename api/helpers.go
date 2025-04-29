@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -285,4 +286,98 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 	}
 	
 	return result, nil
+}
+
+// sendExchangeCancelNotifications sends notifications to both parties about the canceled exchange
+func (server *Server) sendExchangeCancelNotifications(ctx context.Context, result db.CancelExchangeTxResult, canceledByID string) {
+	exchange := result.Exchange
+	
+	// Get user who canceled
+	canceledBy, err := server.dbStore.GetUserByID(ctx, canceledByID)
+	if err != nil {
+		log.Err(err).Msg("failed to get user who canceled exchange")
+		return
+	}
+	
+	// Create notification options
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Create base notification content
+	baseTitle := "Giao dịch trao đổi đã bị hủy"
+	exchangeCode := exchange.ID.String()[:8] // First 8 characters of UUID for reference
+	baseMessage := fmt.Sprintf("Giao dịch trao đổi #%s đã bị hủy bởi %s.", exchangeCode, canceledBy.FullName)
+	
+	// Add reason if provided
+	if exchange.CanceledReason != nil && *exchange.CanceledReason != "" {
+		baseMessage += fmt.Sprintf(" Lý do: %s.", *exchange.CanceledReason)
+	}
+	
+	// Add refund information if applicable
+	var refundMessage string
+	if result.RefundedCompensation {
+		refundMessage = fmt.Sprintf(" Tiền bù %s đã được hoàn trả.", util.FormatVND(*exchange.CompensationAmount))
+	}
+	
+	if result.RefundedPosterDeliveryFee {
+		posterRefundMsg := fmt.Sprintf(" Phí vận chuyển %s đã được hoàn trả.", util.FormatVND(*exchange.PosterDeliveryFee))
+		if exchange.PosterID == canceledByID {
+			// Don't add refund message for the person who canceled
+		} else {
+			refundMessage += posterRefundMsg
+		}
+	}
+	
+	if result.RefundedOffererDeliveryFee {
+		offererRefundMsg := fmt.Sprintf(". Phí vận chuyển %s đã được hoàn trả.", util.FormatVND(*exchange.OffererDeliveryFee))
+		if exchange.OffererID == canceledByID {
+			// Don't add refund message for the person who canceled
+		} else {
+			refundMessage += offererRefundMsg
+		}
+	}
+	
+	// Send notification to poster
+	if exchange.PosterID != canceledByID {
+		posterMessage := baseMessage + refundMessage
+		err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+			RecipientID: exchange.PosterID,
+			Title:       baseTitle,
+			Message:     posterMessage,
+			Type:        "exchange",
+			ReferenceID: exchange.ID.String(),
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msg("failed to send notification to poster")
+		}
+	}
+	
+	// Send notification to offerer
+	if exchange.OffererID != canceledByID {
+		offererMessage := baseMessage + refundMessage
+		err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+			RecipientID: exchange.OffererID,
+			Title:       baseTitle,
+			Message:     offererMessage,
+			Type:        "exchange",
+			ReferenceID: exchange.ID.String(),
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msg("failed to send notification to offerer")
+		}
+	}
+	
+	// Send confirmation to the person who canceled
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+		RecipientID: canceledByID,
+		Title:       "Bạn đã hủy giao dịch trao đổi",
+		Message:     fmt.Sprintf("Bạn đã hủy giao dịch trao đổi #%s thành công.", exchangeCode),
+		Type:        "exchange",
+		ReferenceID: exchange.ID.String(),
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send confirmation to canceler")
+	}
 }

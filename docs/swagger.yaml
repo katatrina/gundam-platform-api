@@ -84,6 +84,13 @@ definitions:
     required:
     - gundam_id
     type: object
+  api.cancelExchangeRequest:
+    properties:
+      reason:
+        type: string
+    required:
+    - reason
+    type: object
   api.cancelOrderByBuyerRequest:
     properties:
       canceled_reason:
@@ -483,6 +490,22 @@ definitions:
     - seller_avatar_url
     - seller_id
     - seller_name
+    type: object
+  db.CancelExchangeTxResult:
+    properties:
+      exchange:
+        $ref: '#/definitions/db.Exchange'
+      refunded_compensation:
+        type: boolean
+      refunded_offerer_delivery_fee:
+        type: boolean
+      refunded_poster_delivery_fee:
+        type: boolean
+    required:
+    - exchange
+    - refunded_compensation
+    - refunded_offerer_delivery_fee
+    - refunded_poster_delivery_fee
     type: object
   db.CancelOrderByBuyerTxResult:
     properties:
@@ -2215,6 +2238,37 @@ paths:
       security:
       - accessToken: []
       summary: Get exchange details
+      tags:
+      - exchanges
+  /exchanges/{exchangeID}/cancel:
+    patch:
+      consumes:
+      - application/json
+      description: Cancel an exchange transaction that is in pending or packaging
+        status
+      parameters:
+      - description: Exchange ID
+        example: 123e4567-e89b-12d3-a456-426614174000
+        in: path
+        name: exchangeID
+        required: true
+        type: string
+      - description: Cancel exchange request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.cancelExchangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Exchange canceled successfully
+          schema:
+            $ref: '#/definitions/db.CancelExchangeTxResult'
+      security:
+      - accessToken: []
+      summary: Cancel an exchange
       tags:
       - exchanges
   /exchanges/{exchangeID}/delivery-addresses:

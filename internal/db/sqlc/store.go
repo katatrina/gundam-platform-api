@@ -40,6 +40,7 @@ type Store interface {
 	GetGundamDetailsByID(ctx context.Context, q *Queries, gundamID int64) (GundamDetails, error)
 	ProvideDeliveryAddressesForExchangeTx(ctx context.Context, arg ProvideDeliveryAddressesForExchangeTxParams) (ProvideDeliveryAddressesForExchangeTxResult, error)
 	PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExchangeDeliveryFeeTxParams) (PayExchangeDeliveryFeeTxResult, error)
+	CancelExchangeTx(ctx context.Context, arg CancelExchangeTxParams) (CancelExchangeTxResult, error)
 }
 
 type SQLStore struct {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 	
@@ -527,6 +528,246 @@ func (store *SQLStore) ConfirmExchangeOrderReceivedTx(ctx context.Context, arg C
 				result.Exchange = &updatedExchange
 			} else {
 				result.Exchange = arg.Exchange
+			}
+		}
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type CancelExchangeTxParams struct {
+	ExchangeID uuid.UUID
+	UserID     string
+	Reason     *string
+}
+
+type CancelExchangeTxResult struct {
+	Exchange                   Exchange `json:"exchange"`
+	RefundedCompensation       bool     `json:"refunded_compensation"`
+	RefundedPosterDeliveryFee  bool     `json:"refunded_poster_delivery_fee"`
+	RefundedOffererDeliveryFee bool     `json:"refunded_offerer_delivery_fee"`
+}
+
+// CancelExchangeTx xử lý việc hủy giao dịch trao đổi
+func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeTxParams) (CancelExchangeTxResult, error) {
+	var result CancelExchangeTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Cập nhật trạng thái exchange thành "canceled"
+		updatedExchange, err := qTx.UpdateExchange(ctx, UpdateExchangeParams{
+			ID: arg.ExchangeID,
+			Status: NullExchangeStatus{
+				ExchangeStatus: ExchangeStatusCanceled,
+				Valid:          true,
+			},
+			CanceledBy:     &arg.UserID,
+			CanceledReason: arg.Reason,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update exchange status: %w", err)
+		}
+		result.Exchange = updatedExchange
+		
+		// 2. Hoàn trả tiền bù (nếu có)
+		if updatedExchange.PayerID != nil && updatedExchange.CompensationAmount != nil {
+			// Lấy thông tin ví của người trả tiền bù
+			payerWallet, err := qTx.GetWalletByUserID(ctx, *updatedExchange.PayerID)
+			if err != nil {
+				return fmt.Errorf("failed to get payer wallet: %w", err)
+			}
+			
+			// Hoàn trả tiền từ non_withdrawable_amount của người nhận về balance của người trả
+			var receiverID string
+			if *updatedExchange.PayerID == updatedExchange.PosterID {
+				receiverID = updatedExchange.OffererID
+			} else {
+				receiverID = updatedExchange.PosterID
+			}
+			
+			// Lấy thông tin ví của người nhận tiền bù
+			receiverWallet, err := qTx.GetWalletForUpdate(ctx, receiverID)
+			if err != nil {
+				return fmt.Errorf("failed to get receiver wallet: %w", err)
+			}
+			
+			// Kiểm tra xem số tiền non_withdrawable_amount có đủ không
+			if receiverWallet.NonWithdrawableAmount < *updatedExchange.CompensationAmount {
+				return fmt.Errorf("receiver's non-withdrawable amount (%d) is less than compensation amount (%d)",
+					receiverWallet.NonWithdrawableAmount, *updatedExchange.CompensationAmount)
+			}
+			
+			// Trừ tiền từ non_withdrawable_amount của người nhận
+			err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
+				UserID: receiverID,
+				Amount: -*updatedExchange.CompensationAmount,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update receiver wallet: %w", err)
+			}
+			
+			// Tạo wallet entry cho việc trừ tiền từ non_withdrawable_amount của người nhận
+			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+				WalletID:      receiverID,
+				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
+				ReferenceType: WalletReferenceTypeExchange,
+				EntryType:     WalletEntryTypeRefunddeduction,       // Loại bút toán trừ tiền hoàn lại
+				Amount:        -*updatedExchange.CompensationAmount, // Số âm vì đây là khoản trừ
+				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create wallet entry for refund deduction: %w", err)
+			}
+			
+			// Cộng tiền vào balance của người trả
+			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+				UserID: payerWallet.UserID,
+				Amount: *updatedExchange.CompensationAmount,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to add balance to payer wallet: %w", err)
+			}
+			
+			// Tạo wallet entry cho giao dịch hoàn tiền
+			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+				WalletID:      *updatedExchange.PayerID,
+				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
+				ReferenceType: WalletReferenceTypeExchange,
+				EntryType:     WalletEntryTypeRefund,
+				Amount:        *updatedExchange.CompensationAmount,
+				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create wallet entry for refund: %w", err)
+			}
+			
+			result.RefundedCompensation = true
+			
+			log.Info().
+				Str("exchange_id", arg.ExchangeID.String()).
+				Str("payer_id", *updatedExchange.PayerID).
+				Int64("amount", *updatedExchange.CompensationAmount).
+				Msg("Compensation amount refunded to payer")
+		}
+		
+		// 3. Hoàn trả phí vận chuyển (nếu đã thanh toán)
+		// 3.1. Hoàn trả phí vận chuyển cho poster nếu đã thanh toán
+		if updatedExchange.PosterDeliveryFeePaid && updatedExchange.PosterDeliveryFee != nil {
+			// Cộng tiền vào ví của poster
+			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+				UserID: updatedExchange.PosterID,
+				Amount: *updatedExchange.PosterDeliveryFee,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to refund delivery fee to poster: %w", err)
+			}
+			
+			// Tạo wallet entry cho giao dịch hoàn tiền
+			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+				WalletID:      updatedExchange.PosterID,
+				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
+				ReferenceType: WalletReferenceTypeExchange,
+				EntryType:     WalletEntryTypeRefund,
+				Amount:        *updatedExchange.PosterDeliveryFee,
+				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create wallet entry for poster delivery fee refund: %w", err)
+			}
+			
+			result.RefundedPosterDeliveryFee = true
+			
+			log.Info().
+				Str("exchange_id", arg.ExchangeID.String()).
+				Str("poster_id", updatedExchange.PosterID).
+				Int64("amount", *updatedExchange.PosterDeliveryFee).
+				Msg("Delivery fee refunded to poster")
+		}
+		
+		// 3.2. Hoàn trả phí vận chuyển cho offerer nếu đã thanh toán
+		if updatedExchange.OffererDeliveryFeePaid && updatedExchange.OffererDeliveryFee != nil {
+			// Cộng tiền vào ví của offerer
+			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+				UserID: updatedExchange.OffererID,
+				Amount: *updatedExchange.OffererDeliveryFee,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to refund delivery fee to offerer: %w", err)
+			}
+			
+			// Tạo wallet entry cho giao dịch hoàn tiền
+			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+				WalletID:      updatedExchange.OffererID,
+				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
+				ReferenceType: WalletReferenceTypeExchange,
+				EntryType:     WalletEntryTypeRefund,
+				Amount:        *updatedExchange.OffererDeliveryFee,
+				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create wallet entry for offerer delivery fee refund: %w", err)
+			}
+			
+			result.RefundedOffererDeliveryFee = true
+			
+			log.Info().
+				Str("exchange_id", arg.ExchangeID.String()).
+				Str("offerer_id", updatedExchange.OffererID).
+				Int64("amount", *updatedExchange.OffererDeliveryFee).
+				Msg("Delivery fee refunded to offerer")
+		}
+		
+		// 4. Đặt lại trạng thái các Gundam từ "exchanging" về trạng thái trước đó
+		// Lấy danh sách các Gundam trong giao dịch trao đổi
+		exchangeItems, err := qTx.ListExchangeItems(ctx, ListExchangeItemsParams{
+			ExchangeID: arg.ExchangeID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get exchange items: %w", err)
+		}
+		
+		for _, item := range exchangeItems {
+			if item.GundamID == nil {
+				continue
+			}
+			
+			gundam, err := qTx.GetGundamByID(ctx, *item.GundamID)
+			if err != nil {
+				if errors.Is(err, ErrRecordNotFound) {
+					log.Warn().
+						Str("exchange_id", arg.ExchangeID.String()).
+						Int64("gundam_id", *item.GundamID).
+						Msg("Gundam not found, skipping status reset")
+					continue
+				}
+				return fmt.Errorf("failed to get gundam: %w", err)
+			}
+			
+			// Chỉ cập nhật trạng thái nếu đang ở trạng thái "exchanging"
+			if gundam.Status == GundamStatusExchanging {
+				// Đặt lại trạng thái về "in store" (trạng thái sẵn có)
+				err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+					ID: *item.GundamID,
+					Status: NullGundamStatus{
+						GundamStatus: GundamStatusInstore,
+						Valid:        true,
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("failed to reset gundam status: %w", err)
+				}
+				
+				log.Info().
+					Str("exchange_id", arg.ExchangeID.String()).
+					Int64("gundam_id", *item.GundamID).
+					Msg("Gundam status reset to 'in store'")
 			}
 		}
 		

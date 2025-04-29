@@ -52,5 +52,8 @@ SET poster_order_id                      = COALESCE(sqlc.narg('poster_order_id')
 
     completed_at                         = COALESCE(sqlc.narg('completed_at'), completed_at),
 
+    canceled_by                          = COALESCE(sqlc.narg('canceled_by'), canceled_by),
+    canceled_reason                      = COALESCE(sqlc.narg('canceled_reason'), canceled_reason),
+
     updated_at                           = now()
 WHERE id = $1 RETURNING *;

@@ -189,7 +189,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		exchangeGroup.GET(":exchangeID", server.getExchangeDetails)                                  // ✅ Lấy chi tiết giao dịch trao đổi
 		exchangeGroup.PUT(":exchangeID/delivery-addresses", server.provideExchangeDeliveryAddresses) // ✅ Cung cấp địa chỉ gửi và nhận hàng
 		exchangeGroup.POST(":exchangeID/pay-delivery-fee", server.payExchangeDeliveryFee)            // ✅ Thanh toán phí vận chuyển
-		// exchangeGroup.PATCH(":exchangeID/cancel", server.cancelExchange)   // Hủy giao dịch trao đổi
+		exchangeGroup.PATCH(":exchangeID/cancel", server.cancelExchange)                             // ✅ Hủy giao dịch trao đổi
 	}
 	
 	// API public cho bài đăng trao đổi - không cần đăng nhập
