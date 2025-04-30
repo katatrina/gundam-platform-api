@@ -53,3 +53,8 @@ SELECT *
 FROM exchange_offers
 WHERE offerer_id = $1
 ORDER BY created_at DESC, updated_at DESC;
+
+-- name: DeleteExchangeOffer :one
+DELETE
+FROM exchange_offers
+WHERE id = sqlc.arg(id) RETURNING *;

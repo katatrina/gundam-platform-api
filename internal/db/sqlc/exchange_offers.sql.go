@@ -80,6 +80,32 @@ func (q *Queries) CreateExchangeOffer(ctx context.Context, arg CreateExchangeOff
 	return i, err
 }
 
+const deleteExchangeOffer = `-- name: DeleteExchangeOffer :one
+DELETE
+FROM exchange_offers
+WHERE id = $1 RETURNING id, post_id, offerer_id, payer_id, compensation_amount, note, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
+`
+
+func (q *Queries) DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error) {
+	row := q.db.QueryRow(ctx, deleteExchangeOffer, id)
+	var i ExchangeOffer
+	err := row.Scan(
+		&i.ID,
+		&i.PostID,
+		&i.OffererID,
+		&i.PayerID,
+		&i.CompensationAmount,
+		&i.Note,
+		&i.NegotiationsCount,
+		&i.MaxNegotiations,
+		&i.NegotiationRequested,
+		&i.LastNegotiationAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getExchangeOffer = `-- name: GetExchangeOffer :one
 SELECT id, post_id, offerer_id, payer_id, compensation_amount, note, negotiations_count, max_negotiations, negotiation_requested, last_negotiation_at, created_at, updated_at
 FROM exchange_offers

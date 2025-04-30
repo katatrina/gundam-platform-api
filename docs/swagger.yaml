@@ -3555,6 +3555,26 @@ paths:
       tags:
       - exchanges
   /users/me/exchange-offers/{offerID}:
+    delete:
+      description: Delete an exchange offer created by the authenticated user.
+      parameters:
+      - description: Exchange Offer ID
+        in: path
+        name: offerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted offer response
+          schema:
+            $ref: '#/definitions/db.ExchangeOfferInfo'
+      security:
+      - accessToken: []
+      summary: Delete an exchange offer
+      tags:
+      - exchanges
     get:
       description: Retrieves detailed information about a specific exchange offer
         created by the authenticated user.

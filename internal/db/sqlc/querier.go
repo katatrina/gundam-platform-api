@@ -43,6 +43,7 @@ type Querier interface {
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
+	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)

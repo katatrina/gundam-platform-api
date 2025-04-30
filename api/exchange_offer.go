@@ -1162,3 +1162,104 @@ func (server *Server) getUserExchangeOffer(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, offerDetails)
 }
+
+//	@Summary		Delete an exchange offer
+//	@Description	Delete an exchange offer created by the authenticated user.
+//	@Tags			exchanges
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			offerID	path		string					true	"Exchange Offer ID"
+//	@Success		200		{object}	db.ExchangeOfferInfo	"Deleted offer response"
+//	@Router			/users/me/exchange-offers/{offerID} [delete]
+func (server *Server) deleteExchangeOffer(c *gin.Context) {
+	// Lấy thông tin người dùng đã đăng nhập
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Lấy ID của đề xuất từ URL
+	offerIDStr := c.Param("offerID")
+	offerID, err := uuid.Parse(offerIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid offer ID: %s", offerIDStr)))
+		return
+	}
+	
+	// Lấy thông tin đề xuất
+	offer, err := server.dbStore.GetExchangeOffer(c.Request.Context(), offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange offer ID %s not found", offerIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền truy cập - chỉ chủ đề xuất mới có thể xóa
+	if offer.OffererID != userID {
+		err = fmt.Errorf("offer ID %v does not belong to user ID %v", offerID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Thực hiện xóa cứng đề xuất
+	deletedOffer, err := server.dbStore.DeleteExchangeOffer(c.Request.Context(), offerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange offer ID %s not found", offerIDStr)))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Gửi thống báo cho người đăng bài về việc đề xuất đã bị xóa nếu đề xuất đang được thương lượng
+	if deletedOffer.NegotiationRequested {
+		// Lấy thông tin người đề xuất
+		offerer, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("user ID %s not found", userID)))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Lấy bài đăng của đề xuất
+		post, err := server.dbStore.GetExchangePost(c.Request.Context(), deletedOffer.PostID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, errorResponse(fmt.Errorf("exchange post ID %s not found", deletedOffer.PostID)))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		opts := []asynq.Option{
+			asynq.MaxRetry(3),
+			asynq.Queue(worker.QueueCritical),
+		}
+		
+		message := fmt.Sprintf("%s đã xóa đề xuất trao đổi của họ cho bài đăng \"%s\".", offerer.FullName, util.TruncateString(post.Content, 20))
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: post.UserID,
+			Title:       "Đề xuất trao đổi đã bị xóa",
+			Message:     message,
+			Type:        "exchange",
+			ReferenceID: deletedOffer.ID.String(),
+		}, opts...)
+		if err != nil {
+			log.Err(err).Msgf("failed to send notification to user ID %s", post.UserID)
+		}
+	}
+	
+	// Trả về thông tin đề xuất đã xóa
+	c.JSON(http.StatusOK, deletedOffer)
+}

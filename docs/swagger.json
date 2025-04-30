@@ -2038,6 +2038,38 @@
                     }
                 }
             },
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Delete an exchange offer created by the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exchanges"
+                ],
+                "summary": "Delete an exchange offer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exchange Offer ID",
+                        "name": "offerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted offer response",
+                        "schema": {
+                            "$ref": "#/definitions/db.ExchangeOfferInfo"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {

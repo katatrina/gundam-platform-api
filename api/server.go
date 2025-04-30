@@ -178,8 +178,8 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Thêm endpoint cập nhật đề xuất (phản hồi thương lượng)
 			userOffersGroup.PATCH("/:offerID", server.updateExchangeOffer) // ✅
 			
-			// Hủy đề xuất trao đổi
-			// userOffersGroup.PATCH("/:offerID/cancel", server.cancelExchangeOffer)
+			// Xóa đề xuất trao đổi
+			userOffersGroup.DELETE("/:offerID", server.deleteExchangeOffer)
 		}
 	}
 	
