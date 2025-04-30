@@ -193,7 +193,8 @@ func (q *Queries) ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams
 
 const updateSellerProfileByID = `-- name: UpdateSellerProfileByID :one
 UPDATE seller_profiles
-SET shop_name = COALESCE($2, shop_name)
+SET shop_name  = COALESCE($2, shop_name),
+    updated_at = now()
 WHERE seller_id = $1 RETURNING seller_id, shop_name, created_at, updated_at
 `
 

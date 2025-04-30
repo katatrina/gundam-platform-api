@@ -532,7 +532,7 @@ definitions:
     - order_transaction
     - refund_entry
     type: object
-  db.ConfirmOrderReceivedByBuyerTxResult:
+  db.CompleteRegularOrderTxResult:
     properties:
       order:
         $ref: '#/definitions/db.Order'
@@ -2523,6 +2523,31 @@ paths:
       summary: Cancel order by buyer
       tags:
       - orders
+  /orders/{orderID}/complete:
+    patch:
+      description: Confirm that the buyer has received the order. For regular orders,
+        it completes the transaction and transfers payment to seller. For exchange
+        orders, it updates exchange status and may complete the exchange if both parties
+        have confirmed.
+      parameters:
+      - description: Order ID
+        example: 123e4567-e89b-12d3-a456-426614174000
+        in: path
+        name: orderID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order completed successfully
+          schema:
+            $ref: '#/definitions/db.CompleteRegularOrderTxResult'
+      security:
+      - accessToken: []
+      summary: Confirm order received
+      tags:
+      - orders
   /orders/{orderID}/package:
     patch:
       consumes:
@@ -2551,31 +2576,6 @@ paths:
       security:
       - accessToken: []
       summary: Package an order for delivery
-      tags:
-      - orders
-  /orders/{orderID}/received:
-    patch:
-      description: Confirm that the buyer has received the order. For regular orders,
-        it completes the transaction and transfers payment to seller. For exchange
-        orders, it updates exchange status and may complete the exchange if both parties
-        have confirmed.
-      parameters:
-      - description: Order ID
-        example: 123e4567-e89b-12d3-a456-426614174000
-        in: path
-        name: orderID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Order received successfully
-          schema:
-            $ref: '#/definitions/db.ConfirmOrderReceivedByBuyerTxResult'
-      security:
-      - accessToken: []
-      summary: Confirm order received
       tags:
       - orders
   /otp/email/generate:

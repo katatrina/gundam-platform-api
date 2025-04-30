@@ -15,6 +15,7 @@ const (
 // Store provides all functions to execute db queries and transactions.
 type Store interface {
 	Querier
+	ExecTx(ctx context.Context, fn func(*Queries) error) error
 	CreateUserTx(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddressTx(ctx context.Context, arg CreateUserAddressTxParams) (UserAddress, error)
 	UpdateUserAddressTx(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
@@ -27,8 +28,8 @@ type Store interface {
 	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 	ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOrderTxParams) (ConfirmOrderTxResult, error)
 	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
-	ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedByBuyerTxParams) (ConfirmOrderReceivedByBuyerTxResult, error)
-	ConfirmExchangeOrderReceivedTx(ctx context.Context, arg ConfirmExchangeOrderReceivedTxParams) (ConfirmExchangeOrderReceivedTxResult, error)
+	CompleteRegularOrderTx(ctx context.Context, arg CompleteRegularOrderTxParams) (CompleteRegularOrderTxResult, error)
+	CompleteExchangeOrderTx(ctx context.Context, arg CompleteExchangeOrderTxParams) (CompleteExchangeOrderTxResult, error)
 	CancelOrderByBuyerTx(ctx context.Context, arg CancelOrderByBuyerTxParams) (CancelOrderByBuyerTxResult, error)
 	CancelOrderBySellerTx(ctx context.Context, arg CancelOrderBySellerTxParams) (CancelOrderBySellerTxResult, error)
 	CreateExchangePostTx(ctx context.Context, arg CreateExchangePostTxParams) (CreateExchangePostTxResult, error)

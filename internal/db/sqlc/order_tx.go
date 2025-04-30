@@ -395,22 +395,22 @@ func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxPara
 	return
 }
 
-type ConfirmOrderReceivedByBuyerTxParams struct {
+type CompleteRegularOrderTxParams struct {
 	Order        *Order
 	OrderItems   []OrderItem
 	SellerEntry  *WalletEntry
 	SellerWallet *Wallet
 }
 
-type ConfirmOrderReceivedByBuyerTxResult struct {
+type CompleteRegularOrderTxResult struct {
 	Order            Order            `json:"order"`
 	OrderTransaction OrderTransaction `json:"order_transaction"`
 	SellerWallet     Wallet           `json:"seller_wallet"`
 	SellerEntry      WalletEntry      `json:"seller_entry"`
 }
 
-func (store *SQLStore) ConfirmOrderReceivedByBuyerTx(ctx context.Context, arg ConfirmOrderReceivedByBuyerTxParams) (ConfirmOrderReceivedByBuyerTxResult, error) {
-	var result ConfirmOrderReceivedByBuyerTxResult
+func (store *SQLStore) CompleteRegularOrderTx(ctx context.Context, arg CompleteRegularOrderTxParams) (CompleteRegularOrderTxResult, error) {
+	var result CompleteRegularOrderTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		// 1. Chuyển tiền từ non_withdrawable_amount sang balance của người bán

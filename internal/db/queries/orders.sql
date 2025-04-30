@@ -41,3 +41,10 @@ SET is_packaged          = COALESCE(sqlc.narg('is_packaged'), is_packaged),
     completed_at         = COALESCE(sqlc.narg('completed_at'), completed_at),
     updated_at           = now()
 WHERE id = sqlc.arg('order_id') RETURNING *;
+
+-- name: GetOrdersToAutoComplete :many
+SELECT o.*
+FROM orders o
+WHERE o.status = 'delivered'
+  AND o.updated_at < $1
+ORDER BY o.updated_at ASC;

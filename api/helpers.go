@@ -50,43 +50,43 @@ func (server *Server) uploadFileToCloudinary(key string, value string, folder st
 }
 
 // handleRegularOrderConfirmation xử lý xác nhận nhận hàng cho đơn hàng thông thường
-func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.Order) (db.ConfirmOrderReceivedByBuyerTxResult, error) {
+func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.Order) (db.CompleteRegularOrderTxResult, error) {
 	// Lấy thông tin giao dịch đơn hàng
 	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("transaction for order ID %s not found", order.ID)
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("transaction for order ID %s not found", order.ID)
 		}
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
 	// Kiểm tra xem giao dịch đã có seller_entry_id chưa
 	if orderTransaction.SellerEntryID == nil {
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
+		return db.CompleteRegularOrderTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
 	}
 	
 	// Lấy bút toán của người bán
 	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
 		}
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
 	// Lấy ví của người bán
 	sellerWallet, err := server.dbStore.GetWalletForUpdate(ctx, order.SellerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("wallet not found for seller %s", order.SellerID)
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("wallet not found for seller %s", order.SellerID)
 		}
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
 	// Lấy thông tin order items
 	orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
 	if err != nil {
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
 	// Kiểm tra trạng thái của các Gundam liên quan
@@ -95,13 +95,13 @@ func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.
 			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("gundam ID %d not found", *item.GundamID)
+					return db.CompleteRegularOrderTxResult{}, fmt.Errorf("gundam ID %d not found", *item.GundamID)
 				}
-				return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+				return db.CompleteRegularOrderTxResult{}, err
 			}
 			
 			if gundam.Status != db.GundamStatusProcessing {
-				return db.ConfirmOrderReceivedByBuyerTxResult{}, fmt.Errorf("gundam ID %d is not in processing status", *item.GundamID)
+				return db.CompleteRegularOrderTxResult{}, fmt.Errorf("gundam ID %d is not in processing status", *item.GundamID)
 			}
 		} else {
 			log.Warn().Msg("gundam ID is nil in order item")
@@ -109,14 +109,14 @@ func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.
 	}
 	
 	// Thực hiện transaction xác nhận đơn hàng đã nhận
-	result, err := server.dbStore.ConfirmOrderReceivedByBuyerTx(ctx, db.ConfirmOrderReceivedByBuyerTxParams{
+	result, err := server.dbStore.CompleteRegularOrderTx(ctx, db.CompleteRegularOrderTxParams{
 		Order:        &order,
 		OrderItems:   orderItems,
 		SellerEntry:  &sellerEntry,
 		SellerWallet: &sellerWallet,
 	})
 	if err != nil {
-		return db.ConfirmOrderReceivedByBuyerTxResult{}, err
+		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
 	// TODO: Hủy task "tự động xác nhận đơn hàng sau 7 ngày" vì người mua đã xác nhận đơn hàng
@@ -156,14 +156,14 @@ func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.
 }
 
 // handleExchangeOrderConfirmation xử lý xác nhận nhận hàng cho đơn hàng trao đổi
-func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db.Order) (db.ConfirmExchangeOrderReceivedTxResult, error) {
+func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db.Order) (db.CompleteExchangeOrderTxResult, error) {
 	// Lấy thông tin exchange từ order
 	exchange, err := server.dbStore.GetExchangeByOrderID(ctx, &order.ID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			return db.ConfirmExchangeOrderReceivedTxResult{}, fmt.Errorf("exchange for order ID %s not found", order.ID)
+			return db.CompleteExchangeOrderTxResult{}, fmt.Errorf("exchange for order ID %s not found", order.ID)
 		}
-		return db.ConfirmExchangeOrderReceivedTxResult{}, err
+		return db.CompleteExchangeOrderTxResult{}, err
 	}
 	
 	// Xác định đơn hàng đối tác
@@ -176,13 +176,13 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 	} else if isOffererOrder && exchange.PosterOrderID != nil {
 		partnerOrderID = *exchange.PosterOrderID
 	} else {
-		return db.ConfirmExchangeOrderReceivedTxResult{}, fmt.Errorf("invalid exchange configuration")
+		return db.CompleteExchangeOrderTxResult{}, fmt.Errorf("invalid exchange configuration")
 	}
 	
 	// Lấy thông tin order items
 	orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
 	if err != nil {
-		return db.ConfirmExchangeOrderReceivedTxResult{}, err
+		return db.CompleteExchangeOrderTxResult{}, err
 	}
 	
 	// Kiểm tra trạng thái của các Gundam liên quan
@@ -191,13 +191,13 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
 			if err != nil {
 				if errors.Is(err, db.ErrRecordNotFound) {
-					return db.ConfirmExchangeOrderReceivedTxResult{}, fmt.Errorf("gundam ID %d not found", *item.GundamID)
+					return db.CompleteExchangeOrderTxResult{}, fmt.Errorf("gundam ID %d not found", *item.GundamID)
 				}
-				return db.ConfirmExchangeOrderReceivedTxResult{}, err
+				return db.CompleteExchangeOrderTxResult{}, err
 			}
 			
 			if gundam.Status != db.GundamStatusExchanging {
-				return db.ConfirmExchangeOrderReceivedTxResult{}, fmt.Errorf("gundam ID %d is not in exchanging status", *item.GundamID)
+				return db.CompleteExchangeOrderTxResult{}, fmt.Errorf("gundam ID %d is not in exchanging status", *item.GundamID)
 			}
 		}
 	}
@@ -207,18 +207,18 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 		ExchangeID: exchange.ID,
 	})
 	if err != nil {
-		return db.ConfirmExchangeOrderReceivedTxResult{}, err
+		return db.CompleteExchangeOrderTxResult{}, err
 	}
 	
 	// Thực hiện transaction xác nhận đơn hàng trao đổi đã nhận
-	result, err := server.dbStore.ConfirmExchangeOrderReceivedTx(ctx, db.ConfirmExchangeOrderReceivedTxParams{
+	result, err := server.dbStore.CompleteExchangeOrderTx(ctx, db.CompleteExchangeOrderTxParams{
 		Order:          &order,
 		Exchange:       &exchange,
 		ExchangeItems:  exchangeItems,
 		PartnerOrderID: partnerOrderID,
 	})
 	if err != nil {
-		return db.ConfirmExchangeOrderReceivedTxResult{}, err
+		return db.CompleteExchangeOrderTxResult{}, err
 	}
 	
 	// Gửi thông báo
@@ -252,10 +252,10 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 	currentUser, err := server.dbStore.GetUserByID(ctx, currentUserID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			return db.ConfirmExchangeOrderReceivedTxResult{}, fmt.Errorf("user ID %s not found for order %s", currentUserID, order.Code)
+			return db.CompleteExchangeOrderTxResult{}, fmt.Errorf("user ID %s not found for order %s", currentUserID, order.Code)
 		}
 		
-		return db.ConfirmExchangeOrderReceivedTxResult{}, err
+		return db.CompleteExchangeOrderTxResult{}, err
 	}
 	
 	message := fmt.Sprintf("%s đã xác nhận nhận hàng thành công cho đơn hàng trao đổi %s.", currentUser.FullName, order.Code)

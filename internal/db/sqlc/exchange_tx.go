@@ -348,14 +348,14 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 	return result, err
 }
 
-type ConfirmExchangeOrderReceivedTxParams struct {
+type CompleteExchangeOrderTxParams struct {
 	Order          *Order
 	Exchange       *Exchange
 	ExchangeItems  []ExchangeItem
 	PartnerOrderID uuid.UUID
 }
 
-type ConfirmExchangeOrderReceivedTxResult struct {
+type CompleteExchangeOrderTxResult struct {
 	Order         Order     `json:"order"`
 	Exchange      *Exchange `json:"exchange"`
 	BothConfirmed bool      `json:"both_confirmed"`
@@ -363,8 +363,8 @@ type ConfirmExchangeOrderReceivedTxResult struct {
 }
 
 // ConfirmExchangeOrderReceivedTx xử lý xác nhận đơn hàng trao đổi đã nhận
-func (store *SQLStore) ConfirmExchangeOrderReceivedTx(ctx context.Context, arg ConfirmExchangeOrderReceivedTxParams) (ConfirmExchangeOrderReceivedTxResult, error) {
-	var result ConfirmExchangeOrderReceivedTxResult
+func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg CompleteExchangeOrderTxParams) (CompleteExchangeOrderTxResult, error) {
+	var result CompleteExchangeOrderTxResult
 	
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
 		var err error

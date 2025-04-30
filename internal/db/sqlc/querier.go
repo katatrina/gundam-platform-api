@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -65,6 +66,7 @@ type Querier interface {
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
 	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
+	GetOrdersToAutoComplete(ctx context.Context, updatedAt time.Time) ([]Order, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
 	GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
