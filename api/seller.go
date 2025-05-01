@@ -176,8 +176,15 @@ func (server *Server) publishGundam(c *gin.Context) {
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
+	
 	if gundam.Status != db.GundamStatusInstore {
 		err = fmt.Errorf("gundam ID %d is not in store", gundam.ID)
+		c.JSON(http.StatusConflict, errorResponse(err))
+		return
+	}
+	
+	if gundam.Price == nil {
+		err = fmt.Errorf("gundam ID %d does not have a price", gundam.ID)
 		c.JSON(http.StatusConflict, errorResponse(err))
 		return
 	}

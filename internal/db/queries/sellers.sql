@@ -21,7 +21,8 @@ WHERE id = sqlc.arg('order_id')
 
 -- name: UpdateSellerProfileByID :one
 UPDATE seller_profiles
-SET shop_name = COALESCE(sqlc.narg('shop_name'), shop_name)
+SET shop_name  = COALESCE(sqlc.narg('shop_name'), shop_name),
+    updated_at = now()
 WHERE seller_id = $1 RETURNING *;
 
 -- name: GetSellerDetailByID :one

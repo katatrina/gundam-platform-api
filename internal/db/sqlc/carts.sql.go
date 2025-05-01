@@ -41,7 +41,7 @@ type AddCartItemRow struct {
 	CartItemID      string  `json:"cart_item_id"`
 	GundamID        int64   `json:"gundam_id"`
 	GundamName      string  `json:"gundam_name"`
-	GundamPrice     int64   `json:"gundam_price"`
+	GundamPrice     *int64  `json:"gundam_price"`
 	GundamImageUrl  string  `json:"gundam_image_url"`
 	SellerID        string  `json:"seller_id"`
 	SellerName      string  `json:"seller_name"`
@@ -134,7 +134,7 @@ type ListCartItemsWithDetailsRow struct {
 	CartItemID      string  `json:"cart_item_id"`
 	GundamID        int64   `json:"gundam_id"`
 	GundamName      string  `json:"gundam_name"`
-	GundamPrice     int64   `json:"gundam_price"`
+	GundamPrice     *int64  `json:"gundam_price"`
 	GundamImageUrl  string  `json:"gundam_image_url"`
 	SellerID        string  `json:"seller_id"`
 	SellerName      string  `json:"seller_name"`

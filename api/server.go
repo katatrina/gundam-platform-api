@@ -179,7 +179,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			userOffersGroup.PATCH("/:offerID", server.updateExchangeOffer) // ✅
 			
 			// Xóa đề xuất trao đổi
-			userOffersGroup.DELETE("/:offerID", server.deleteExchangeOffer)
+			userOffersGroup.DELETE("/:offerID", server.deleteExchangeOffer) // ✅
 		}
 	}
 	
@@ -207,12 +207,12 @@ func (server *Server) setupRouter() *gin.Engine {
 	{
 		// Tạo đơn hàng mua thông thường khi user thanh toán thành công
 		// Client cần gọi api này nhiều lần để tạo nhiều đơn hàng nếu có nhiều sản phẩm thuộc nhiều seller khác nhau trong giỏ hàng
-		orderGroup.POST("", server.createOrder)                            // ✅ Tạo đơn hàng thông thường
-		orderGroup.GET("", server.listMemberOrders)                        // ✅ Liệt kê tất cả đơn hàng thông thường và đơn hàng trao đổi trong tab "Đơn hàng" trong trang "Tài khoản của tôi"
-		orderGroup.GET(":orderID", server.getMemberOrderDetails)           // ✅ Lấy thông tin chi tiết của một đơn hàng thông thường hoặc đơn hàng trao đổi
-		orderGroup.PATCH(":orderID/package", server.packageOrder)          // ✅ Người gửi đóng gói đơn hàng
-		orderGroup.PATCH(":orderID/received", server.confirmOrderReceived) // ✅ Người nhận hàng xác nhận đã nhận hàng thành công
-		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer)     // ✅ Người mua hủy đơn hàng
+		orderGroup.POST("", server.createOrder)                        // ✅ Tạo đơn hàng thông thường
+		orderGroup.GET("", server.listMemberOrders)                    // ✅ Liệt kê tất cả đơn hàng thông thường và đơn hàng trao đổi trong tab "Đơn hàng" trong trang "Tài khoản của tôi"
+		orderGroup.GET(":orderID", server.getMemberOrderDetails)       // ✅ Lấy thông tin chi tiết của một đơn hàng thông thường hoặc đơn hàng trao đổi
+		orderGroup.PATCH(":orderID/package", server.packageOrder)      // ✅ Người gửi đóng gói đơn hàng
+		orderGroup.PATCH(":orderID/complete", server.completeOrder)    // ✅ Người nhận hàng xác nhận đã nhận hàng thành công
+		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer) // ✅ Người mua hủy đơn hàng
 	}
 	
 	// Nhóm các API chỉ dành cho seller

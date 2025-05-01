@@ -1184,7 +1184,6 @@ type ExchangeItem struct {
 	Grade        string    `json:"grade"`
 	Scale        string    `json:"scale"`
 	Quantity     int64     `json:"quantity"`
-	Price        int64     `json:"price"`
 	Weight       int64     `json:"weight"`
 	ImageURL     string    `json:"image_url"`
 	OwnerID      *string   `json:"owner_id"`
@@ -1257,7 +1256,7 @@ type Gundam struct {
 	Weight               int64           `json:"weight"`
 	Scale                GundamScale     `json:"scale"`
 	Description          string          `json:"description"`
-	Price                int64           `json:"price"`
+	Price                *int64          `json:"price"`
 	ReleaseYear          *int64          `json:"release_year"`
 	Status               GundamStatus    `json:"status"`
 	CreatedAt            time.Time       `json:"created_at"`

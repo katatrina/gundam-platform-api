@@ -769,6 +769,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/orders/{orderID}/complete": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Confirm order received",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "123e4567-e89b-12d3-a456-426614174000",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order completed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.CompleteRegularOrderTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/orders/{orderID}/package": {
             "patch": {
                 "security": [
@@ -808,41 +843,6 @@ const docTemplate = `{
                         "description": "Successfully packaged order with delivery details",
                         "schema": {
                             "$ref": "#/definitions/db.PackageOrderTxResult"
-                        }
-                    }
-                }
-            }
-        },
-        "/orders/{orderID}/received": {
-            "patch": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "Confirm order received",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order ID",
-                        "name": "orderID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Order received successfully",
-                        "schema": {
-                            "$ref": "#/definitions/db.ConfirmOrderReceivedByBuyerTxResult"
                         }
                     }
                 }
@@ -1750,8 +1750,7 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Price in VND",
                         "name": "price",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "integer",
@@ -3467,7 +3466,7 @@ const docTemplate = `{
                 }
             }
         },
-        "db.ConfirmOrderReceivedByBuyerTxResult": {
+        "db.CompleteRegularOrderTxResult": {
             "type": "object",
             "required": [
                 "order",
@@ -3803,7 +3802,6 @@ const docTemplate = `{
                 "is_from_poster",
                 "name",
                 "owner_id",
-                "price",
                 "quantity",
                 "scale",
                 "slug",
@@ -3836,9 +3834,6 @@ const docTemplate = `{
                 },
                 "owner_id": {
                     "type": "string"
-                },
-                "price": {
-                    "type": "integer"
                 },
                 "quantity": {
                     "type": "integer"

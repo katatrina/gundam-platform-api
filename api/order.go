@@ -145,7 +145,14 @@ func (server *Server) createOrder(c *gin.Context) {
 			return
 		}
 		
-		actualItemsSubtotal += gundam.Price
+		// Kiểm tra giá trị sản phẩm
+		if gundam.Price == nil {
+			err = fmt.Errorf("gundam ID %d has no price set", gundamID)
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+		
+		actualItemsSubtotal += *gundam.Price
 		gundams[i] = gundam
 	}
 	
@@ -350,11 +357,11 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 //	@Description	Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.
 //	@Tags			orders
 //	@Produce		json
-//	@Param			orderID	path		string									true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	db.ConfirmOrderReceivedByBuyerTxResult	"Order received successfully"
+//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.CompleteRegularOrderTxResult	"Order completed successfully"
 //	@Security		accessToken
-//	@Router			/orders/{orderID}/received [patch]
-func (server *Server) confirmOrderReceived(ctx *gin.Context) {
+//	@Router			/orders/{orderID}/complete [patch]
+func (server *Server) completeOrder(ctx *gin.Context) {
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
