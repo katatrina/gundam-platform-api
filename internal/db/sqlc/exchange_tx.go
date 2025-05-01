@@ -297,7 +297,7 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 					Grade:    item.Grade,
 					Scale:    item.Scale,
 					Quantity: item.Quantity,
-					Price:    item.Price,
+					Price:    0,
 					Weight:   item.Weight,
 					ImageURL: item.ImageURL,
 				})

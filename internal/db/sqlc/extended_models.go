@@ -23,7 +23,7 @@ type GundamDetails struct {
 	Weight               int64                `json:"weight"`
 	Scale                string               `json:"scale"`
 	Description          string               `json:"description"`
-	Price                int64                `json:"price"`
+	Price                *int64               `json:"price"`
 	ReleaseYear          *int64               `json:"release_year"`
 	Status               string               `json:"status"`
 	Accessories          []GundamAccessoryDTO `json:"accessories"`

@@ -145,7 +145,14 @@ func (server *Server) createOrder(c *gin.Context) {
 			return
 		}
 		
-		actualItemsSubtotal += gundam.Price
+		// Kiểm tra giá trị sản phẩm
+		if gundam.Price == nil {
+			err = fmt.Errorf("gundam ID %d has no price set", gundamID)
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+		
+		actualItemsSubtotal += *gundam.Price
 		gundams[i] = gundam
 	}
 	

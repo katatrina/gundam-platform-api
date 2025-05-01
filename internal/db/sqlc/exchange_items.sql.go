@@ -20,12 +20,11 @@ INSERT INTO exchange_items (id,
                             grade,
                             scale,
                             quantity,
-                            price,
                             weight,
                             image_url,
                             owner_id,
                             is_from_poster)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id, exchange_id, gundam_id, name, slug, grade, scale, quantity, price, weight, image_url, owner_id, is_from_poster, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id, exchange_id, gundam_id, name, slug, grade, scale, quantity, weight, image_url, owner_id, is_from_poster, created_at
 `
 
 type CreateExchangeItemParams struct {
@@ -37,7 +36,6 @@ type CreateExchangeItemParams struct {
 	Grade        string    `json:"grade"`
 	Scale        string    `json:"scale"`
 	Quantity     int64     `json:"quantity"`
-	Price        int64     `json:"price"`
 	Weight       int64     `json:"weight"`
 	ImageURL     string    `json:"image_url"`
 	OwnerID      *string   `json:"owner_id"`
@@ -54,7 +52,6 @@ func (q *Queries) CreateExchangeItem(ctx context.Context, arg CreateExchangeItem
 		arg.Grade,
 		arg.Scale,
 		arg.Quantity,
-		arg.Price,
 		arg.Weight,
 		arg.ImageURL,
 		arg.OwnerID,
@@ -70,7 +67,6 @@ func (q *Queries) CreateExchangeItem(ctx context.Context, arg CreateExchangeItem
 		&i.Grade,
 		&i.Scale,
 		&i.Quantity,
-		&i.Price,
 		&i.Weight,
 		&i.ImageURL,
 		&i.OwnerID,
@@ -81,7 +77,7 @@ func (q *Queries) CreateExchangeItem(ctx context.Context, arg CreateExchangeItem
 }
 
 const listExchangeItems = `-- name: ListExchangeItems :many
-SELECT id, exchange_id, gundam_id, name, slug, grade, scale, quantity, price, weight, image_url, owner_id, is_from_poster, created_at
+SELECT id, exchange_id, gundam_id, name, slug, grade, scale, quantity, weight, image_url, owner_id, is_from_poster, created_at
 FROM exchange_items
 WHERE exchange_id = $1
   AND ($2::boolean IS NULL OR is_from_poster = $2::boolean)
@@ -111,7 +107,6 @@ func (q *Queries) ListExchangeItems(ctx context.Context, arg ListExchangeItemsPa
 			&i.Grade,
 			&i.Scale,
 			&i.Quantity,
-			&i.Price,
 			&i.Weight,
 			&i.ImageURL,
 			&i.OwnerID,

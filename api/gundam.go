@@ -271,7 +271,7 @@ type createGundamRequest struct {
 	Scale                string                  `form:"scale" binding:"required"`
 	Weight               int64                   `form:"weight" binding:"required"`
 	Description          string                  `form:"description" binding:"required"`
-	Price                int64                   `form:"price" binding:"required"`
+	Price                *int64                  `form:"price"`
 	ReleaseYear          *int64                  `form:"release_year"`
 	PrimaryImage         *multipart.FileHeader   `form:"primary_image" binding:"required"`
 	SecondaryImages      []*multipart.FileHeader `form:"secondary_images" binding:"required"`
@@ -296,7 +296,7 @@ type createGundamRequest struct {
 //	@Param			scale					formData	string	true	"Gundam scale"	Enums(1/144, 1/100, 1/60)
 //	@Param			weight					formData	integer	true	"Weight in grams"
 //	@Param			description				formData	string	true	"Detailed description"
-//	@Param			price					formData	integer	true	"Price in VND"
+//	@Param			price					formData	integer	false	"Price in VND"
 //	@Param			release_year			formData	integer	false	"Release year"
 //	@Param			primary_image			formData	file	true	"Primary image of the Gundam"
 //	@Param			secondary_images		formData	file	true	"Secondary images of the Gundam"

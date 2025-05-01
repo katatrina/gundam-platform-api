@@ -123,7 +123,7 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 				Slug:     gundam.Slug,
 				Grade:    grade.DisplayName,
 				Scale:    string(gundam.Scale),
-				Price:    gundam.Price,
+				Price:    *gundam.Price,
 				Quantity: gundam.Quantity,
 				Weight:   gundam.Weight,
 				ImageURL: primaryImageURL,

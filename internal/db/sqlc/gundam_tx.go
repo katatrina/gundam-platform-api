@@ -23,7 +23,7 @@ type CreateGundamTxParams struct {
 	Weight               int64
 	Scale                GundamScale
 	Description          string
-	Price                int64
+	Price                *int64
 	ReleaseYear          *int64
 	Accessories          []GundamAccessoryDTO
 	PrimaryImage         *multipart.FileHeader

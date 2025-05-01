@@ -1750,8 +1750,7 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Price in VND",
                         "name": "price",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "integer",
@@ -3803,7 +3802,6 @@ const docTemplate = `{
                 "is_from_poster",
                 "name",
                 "owner_id",
-                "price",
                 "quantity",
                 "scale",
                 "slug",
@@ -3836,9 +3834,6 @@ const docTemplate = `{
                 },
                 "owner_id": {
                     "type": "string"
-                },
-                "price": {
-                    "type": "integer"
                 },
                 "quantity": {
                     "type": "integer"
