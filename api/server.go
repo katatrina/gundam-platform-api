@@ -127,6 +127,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		userGundamGroup := userGroup.Group(":id/gundams")
 		{
 			userGundamGroup.POST("", server.createGundam)
+			userGundamGroup.GET(":gundamID", server.getGundamDetails)
 			userGundamGroup.PATCH(":gundamID", server.updateGundamBasisInfo)
 			userGundamGroup.GET("", server.listGundamsByUser)
 		}

@@ -1806,6 +1806,45 @@
             }
         },
         "/users/:id/gundams/:gundamID": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves detailed information about a specific Gundam model",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Get Gundam details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved Gundam details",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {

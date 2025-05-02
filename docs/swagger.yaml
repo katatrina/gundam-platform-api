@@ -3214,6 +3214,31 @@ paths:
       tags:
       - users
   /users/:id/gundams/:gundamID:
+    get:
+      description: Retrieves detailed information about a specific Gundam model
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved Gundam details
+          schema:
+            $ref: '#/definitions/db.GundamDetails'
+      security:
+      - accessToken: []
+      summary: Get Gundam details
+      tags:
+      - gundams
     patch:
       consumes:
       - application/json

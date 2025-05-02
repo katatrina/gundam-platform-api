@@ -607,6 +607,12 @@ func (server *Server) updateGundamBasisInfo(c *gin.Context) {
 		return
 	}
 	
+	if gundam.Status != db.GundamStatusInstore {
+		err = fmt.Errorf("gundam ID %d is not in store", gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
 	var req updateGundamBasisInfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
@@ -658,4 +664,60 @@ func (server *Server) updateGundamBasisInfo(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, updatedGundam)
+}
+
+//	@Summary		Get Gundam details
+//	@Description	Retrieves detailed information about a specific Gundam model
+//	@Tags			gundams
+//	@Produce		json
+//	@Param			id			path		string				true	"User ID"
+//	@Param			gundamID	path		string				true	"Gundam ID"
+//	@Success		200			{object}	db.GundamDetails	"Successfully retrieved Gundam details"
+//	@Router			/users/:id/gundams/:gundamID [get]
+//	@Security		accessToken
+func (server *Server) getGundamDetails(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to view gundam details for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundamDetails, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam details")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, gundamDetails)
 }
