@@ -166,3 +166,9 @@ WHERE
     gundams.id = data.id
   AND gundams.status = 'for exchange'
   AND gundams.owner_id = sqlc.arg(owner_id);
+
+-- name: DeleteGundam :exec
+DELETE
+FROM gundams
+WHERE id = $1
+  AND owner_id = $2;

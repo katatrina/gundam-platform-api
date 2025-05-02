@@ -602,7 +602,7 @@ func (server *Server) updateGundamBasisInfo(c *gin.Context) {
 	}
 	
 	if gundam.OwnerID != userID {
-		err = fmt.Errorf("user ID %s is the owner of gundam ID %d", userID, gundamID)
+		err = fmt.Errorf("user ID %s is not the owner of gundam ID %d", userID, gundamID)
 		c.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}
@@ -719,5 +719,95 @@ func (server *Server) getGundamDetails(c *gin.Context) {
 		return
 	}
 	
+	if gundamDetails.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
 	c.JSON(http.StatusOK, gundamDetails)
+}
+
+//	@Summary		Hard delete Gundam
+//	@Description	Hard delete a Gundam model by its ID
+//	@Tags			gundams
+//	@Produce		json
+//	@Param			id			path	string	true	"User ID"
+//	@Param			gundamID	path	string	true	"Gundam ID"
+//	@Success		204			"Successfully deleted Gundam"
+//	@Router			/users/:id/gundams/:gundamID [delete]
+//	@Security		accessToken
+func (server *Server) hardDeleteGundam(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to delete gundam for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam by gundam ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundam.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	if gundam.Status != db.GundamStatusInstore {
+		err = fmt.Errorf("gundam ID %d is not in store", gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	err = server.dbStore.DeleteGundam(c.Request.Context(), db.DeleteGundamParams{
+		ID:      gundamID,
+		OwnerID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to delete gundam")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusNoContent, nil)
 }

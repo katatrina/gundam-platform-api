@@ -3214,6 +3214,29 @@ paths:
       tags:
       - users
   /users/:id/gundams/:gundamID:
+    delete:
+      description: Hard delete a Gundam model by its ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted Gundam
+      security:
+      - accessToken: []
+      summary: Hard delete Gundam
+      tags:
+      - gundams
     get:
       description: Retrieves detailed information about a specific Gundam model
       parameters:

@@ -46,6 +46,7 @@ type Querier interface {
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
 	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
+	DeleteGundam(ctx context.Context, arg DeleteGundamParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)

@@ -1847,6 +1847,42 @@ const docTemplate = `{
                     }
                 }
             },
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Hard delete a Gundam model by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Hard delete Gundam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted Gundam"
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {

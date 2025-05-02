@@ -205,6 +205,23 @@ func (q *Queries) CreateGundamAccessory(ctx context.Context, arg CreateGundamAcc
 	return i, err
 }
 
+const deleteGundam = `-- name: DeleteGundam :exec
+DELETE
+FROM gundams
+WHERE id = $1
+  AND owner_id = $2
+`
+
+type DeleteGundamParams struct {
+	ID      int64  `json:"id"`
+	OwnerID string `json:"owner_id"`
+}
+
+func (q *Queries) DeleteGundam(ctx context.Context, arg DeleteGundamParams) error {
+	_, err := q.db.Exec(ctx, deleteGundam, arg.ID, arg.OwnerID)
+	return err
+}
+
 const getGundamAccessories = `-- name: GetGundamAccessories :many
 SELECT id, name, gundam_id, quantity, created_at
 FROM gundam_accessories
