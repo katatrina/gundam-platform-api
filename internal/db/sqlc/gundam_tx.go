@@ -139,3 +139,34 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 	
 	return result, err
 }
+
+type UpdateGundamAccessoriesParams struct {
+	GundamID    int64
+	Accessories []GundamAccessoryDTO
+}
+
+func (store *SQLStore) UpdateGundamAccessoriesTx(ctx context.Context, arg UpdateGundamAccessoriesParams) error {
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Delete all existing accessories
+		err := qTx.DeleteAllGundamAccessories(ctx, arg.GundamID)
+		if err != nil {
+			return err
+		}
+		
+		// 2. Create new accessories
+		for _, accessory := range arg.Accessories {
+			_, err = qTx.CreateGundamAccessory(ctx, CreateGundamAccessoryParams{
+				GundamID: arg.GundamID,
+				Name:     accessory.Name,
+				Quantity: accessory.Quantity,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		
+		return nil
+	})
+	
+	return err
+}

@@ -2049,6 +2049,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/:id/gundams/:gundamID/accessories": {
+            "put": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Update the accessories of a Gundam model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Update Gundam accessories",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Array of Gundam accessories",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.GundamAccessoryDTO"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated Gundam details",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/users/:id/wallet": {
             "get": {
                 "security": [

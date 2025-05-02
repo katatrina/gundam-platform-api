@@ -804,10 +804,113 @@ func (server *Server) hardDeleteGundam(c *gin.Context) {
 			return
 		}
 		
+		// TODO: Thêm xử lý cho lỗi do ràng buộc khóa ngoại (foreign key constraint), đặc biệt từ các bảng exchange_post_items và exchange_offer_items.
+		
 		log.Error().Err(err).Msg("failed to delete gundam")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	
 	c.JSON(http.StatusNoContent, nil)
+}
+
+//	@Summary		Update Gundam accessories
+//	@Description	Update the accessories of a Gundam model
+//	@Tags			gundams
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path	string					true	"User ID"
+//	@Param			gundamID	path	string					true	"Gundam ID"	
+//	@Param			request		body	[]db.GundamAccessoryDTO	true	"Array of Gundam accessories"
+//	@Security		accessToken
+//	@Success		200	{object}	db.GundamDetails	"Successfully updated Gundam details"
+//	@Router			/users/:id/gundams/:gundamID/accessories [put]
+func (server *Server) updateGundamAccessories(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to update gundam for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam by gundam ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundam.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	if gundam.Status != db.GundamStatusInstore {
+		err = fmt.Errorf("gundam ID %d is not in store", gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	accessories := make([]db.GundamAccessoryDTO, 0)
+	if err = c.ShouldBindJSON(&accessories); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	arg := db.UpdateGundamAccessoriesParams{
+		GundamID:    gundamID,
+		Accessories: accessories,
+	}
+	
+	err = server.dbStore.UpdateGundamAccessoriesTx(c.Request.Context(), arg)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to update gundam accessories")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Return the updated Gundam details
+	updatedGundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get updated gundam details")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, updatedGundam)
 }

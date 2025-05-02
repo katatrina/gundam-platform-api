@@ -3368,6 +3368,42 @@ paths:
       summary: Update Gundam basis info
       tags:
       - gundams
+  /users/:id/gundams/:gundamID/accessories:
+    put:
+      consumes:
+      - application/json
+      description: Update the accessories of a Gundam model
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      - description: Array of Gundam accessories
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/db.GundamAccessoryDTO'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated Gundam details
+          schema:
+            $ref: '#/definitions/db.GundamDetails'
+      security:
+      - accessToken: []
+      summary: Update Gundam accessories
+      tags:
+      - gundams
   /users/:id/wallet:
     get:
       consumes:

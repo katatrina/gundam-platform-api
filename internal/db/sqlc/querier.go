@@ -44,6 +44,7 @@ type Querier interface {
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
+	DeleteAllGundamAccessories(ctx context.Context, gundamID int64) error
 	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	DeleteGundam(ctx context.Context, arg DeleteGundamParams) error
