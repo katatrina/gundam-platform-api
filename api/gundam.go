@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -497,4 +498,164 @@ func (server *Server) listGundamsByUser(ctx *gin.Context) {
 	}
 	
 	ctx.JSON(http.StatusOK, resp)
+}
+
+type updateGundamBasisInfoRequest struct {
+	Name                 *string `json:"name" binding:"omitempty,min=1,max=255"`
+	GradeID              *int64  `json:"grade_id" binding:"omitempty,gt=0"`
+	Series               *string `json:"series" binding:"omitempty,min=1,max=255"`
+	PartsTotal           *int64  `json:"parts_total" binding:"omitempty,gt=0"`
+	Material             *string `json:"material" binding:"omitempty,min=1,max=255"`
+	Version              *string `json:"version" binding:"omitempty,min=1,max=255"`
+	Condition            *string `json:"condition" binding:"omitempty,oneof=new 'open box' used"`
+	ConditionDescription *string `json:"condition_description" binding:"omitempty,max=1000"`
+	Manufacturer         *string `json:"manufacturer" binding:"omitempty,min=1,max=255"`
+	Weight               *int64  `json:"weight" binding:"omitempty,gt=0"`
+	Scale                *string `json:"scale" binding:"omitempty,oneof=1/144 1/100 1/60 1/48"`
+	Description          *string `json:"description" binding:"omitempty,min=1"`
+	Price                *int64  `json:"price" binding:"omitempty,gte=0"`
+	ReleaseYear          *int64  `json:"release_year" binding:"omitempty,gt=1900,lt=2100"`
+}
+
+func (req *updateGundamBasisInfoRequest) getCondition() string {
+	if req.Condition == nil {
+		return ""
+	}
+	
+	return *req.Condition
+}
+
+func (req *updateGundamBasisInfoRequest) getScale() string {
+	if req.Scale == nil {
+		return ""
+	}
+	
+	return *req.Scale
+}
+
+//	@Summary		Update Gundam basis info
+//	@Description	Update the basic information of a Gundam model
+//	@Tags			gundams
+//	@Accept			json
+//	@Produce		json
+//	@Param			id						path	string	true	"User ID"
+//	@Param			gundamID				path	string	true	"Gundam ID"
+//	@Param			name					body	string	false	"Gundam name"
+//	@Param			grade_id				body	integer	false	"Gundam grade ID"
+//	@Param			series					body	string	false	"Gundam series name"
+//	@Param			parts_total				body	integer	false	"Total number of parts"
+//	@Param			material				body	string	false	"Gundam material"
+//	@Param			version					body	string	false	"Gundam version"
+//	@Param			condition				body	string	false	"Condition of the Gundam"	Enums(new, open box, used)
+//	@Param			condition_description	body	string	false	"Additional details about condition"
+//	@Param			manufacturer			body	string	false	"Manufacturer name"
+//	@Param			weight					body	integer	false	"Weight in grams"
+//	@Param			scale					body	string	false	"Gundam scale"	Enums(1/144, 1/100, 1/60, 1/48)
+//	@Param			description				body	string	false	"Detailed description"
+//	@Param			price					body	integer	false	"Price in VND"
+//	@Param			release_year			body	integer	false	"Release year"
+//	@Security		accessToken
+//	@Success		200	{object}	db.GundamDetails	"Successfully updated Gundam"
+//	@Router			/users/:id/gundams/:gundamID [patch]
+func (server *Server) updateGundamBasisInfo(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to update gundam for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %s not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam by gundam ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundam.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	var req updateGundamBasisInfoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	arg := db.UpdateGundamParams{
+		ID:         gundamID,
+		Name:       req.Name,
+		GradeID:    req.GradeID,
+		Series:     req.Series,
+		PartsTotal: req.PartsTotal,
+		Material:   req.Material,
+		Version:    req.Version,
+		Condition: db.NullGundamCondition{
+			GundamCondition: db.GundamCondition(req.getCondition()),
+			Valid:           req.Condition != nil,
+		},
+		ConditionDescription: req.ConditionDescription,
+		Manufacturer:         req.Manufacturer,
+		Weight:               req.Weight,
+		Scale: db.NullGundamScale{
+			GundamScale: db.GundamScale(req.getScale()),
+			Valid:       req.Scale != nil,
+		},
+		Description: req.Description,
+		Price:       req.Price,
+		ReleaseYear: req.ReleaseYear,
+	}
+	
+	err = server.dbStore.UpdateGundam(c.Request.Context(), arg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Return the updated Gundam details
+	updatedGundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %s not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get updated gundam details")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, updatedGundam)
 }

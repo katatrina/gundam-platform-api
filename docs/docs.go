@@ -1807,6 +1807,173 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/:id/gundams/:gundamID": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Update the basic information of a Gundam model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Update Gundam basis info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Gundam name",
+                        "name": "name",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Gundam grade ID",
+                        "name": "grade_id",
+                        "in": "body",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Gundam series name",
+                        "name": "series",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Total number of parts",
+                        "name": "parts_total",
+                        "in": "body",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Gundam material",
+                        "name": "material",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Gundam version",
+                        "name": "version",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Condition of the Gundam",
+                        "name": "condition",
+                        "in": "body",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "new",
+                                "open box",
+                                "used"
+                            ]
+                        }
+                    },
+                    {
+                        "description": "Additional details about condition",
+                        "name": "condition_description",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Manufacturer name",
+                        "name": "manufacturer",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Weight in grams",
+                        "name": "weight",
+                        "in": "body",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Gundam scale",
+                        "name": "scale",
+                        "in": "body",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "1/144",
+                                "1/100",
+                                "1/60",
+                                "1/48"
+                            ]
+                        }
+                    },
+                    {
+                        "description": "Detailed description",
+                        "name": "description",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Price in VND",
+                        "name": "price",
+                        "in": "body",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Release year",
+                        "name": "release_year",
+                        "in": "body",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated Gundam",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/users/:id/wallet": {
             "get": {
                 "security": [

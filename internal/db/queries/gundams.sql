@@ -108,9 +108,24 @@ WHERE gundam_id = $1;
 
 -- name: UpdateGundam :exec
 UPDATE gundams
-SET owner_id   = coalesce(sqlc.narg('owner_id'), owner_id),
-    status     = coalesce(sqlc.narg('status'), status),
-    updated_at = now()
+SET owner_id              = coalesce(sqlc.narg('owner_id'), owner_id),
+    name                  = coalesce(sqlc.narg('name'), name),
+    grade_id              = coalesce(sqlc.narg('grade_id'), grade_id),
+    series                = coalesce(sqlc.narg('series'), series),
+    parts_total           = coalesce(sqlc.narg('parts_total'), parts_total),
+    material              = coalesce(sqlc.narg('material'), material),
+    version               = coalesce(sqlc.narg('version'), version),
+    quantity              = coalesce(sqlc.narg('quantity'), quantity),
+    condition             = coalesce(sqlc.narg('condition'), condition),
+    condition_description = coalesce(sqlc.narg('condition_description'), condition_description),
+    manufacturer          = coalesce(sqlc.narg('manufacturer'), manufacturer),
+    weight                = coalesce(sqlc.narg('weight'), weight),
+    scale                 = coalesce(sqlc.narg('scale'), scale),
+    description           = coalesce(sqlc.narg('description'), description),
+    price                 = coalesce(sqlc.narg('price'), price),
+    release_year          = coalesce(sqlc.narg('release_year'), release_year),
+    status                = coalesce(sqlc.narg('status'), status),
+    updated_at            = now()
 WHERE id = sqlc.arg('id');
 
 -- name: ListGundamsByUserID :many

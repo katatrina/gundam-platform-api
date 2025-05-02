@@ -594,19 +594,68 @@ func (q *Queries) StoreGundamImageURL(ctx context.Context, arg StoreGundamImageU
 
 const updateGundam = `-- name: UpdateGundam :exec
 UPDATE gundams
-SET owner_id   = coalesce($1, owner_id),
-    status     = coalesce($2, status),
-    updated_at = now()
-WHERE id = $3
+SET owner_id              = coalesce($1, owner_id),
+    name                  = coalesce($2, name),
+    grade_id              = coalesce($3, grade_id),
+    series                = coalesce($4, series),
+    parts_total           = coalesce($5, parts_total),
+    material              = coalesce($6, material),
+    version               = coalesce($7, version),
+    quantity              = coalesce($8, quantity),
+    condition             = coalesce($9, condition),
+    condition_description = coalesce($10, condition_description),
+    manufacturer          = coalesce($11, manufacturer),
+    weight                = coalesce($12, weight),
+    scale                 = coalesce($13, scale),
+    description           = coalesce($14, description),
+    price                 = coalesce($15, price),
+    release_year          = coalesce($16, release_year),
+    status                = coalesce($17, status),
+    updated_at            = now()
+WHERE id = $18
 `
 
 type UpdateGundamParams struct {
-	OwnerID *string          `json:"owner_id"`
-	Status  NullGundamStatus `json:"status"`
-	ID      int64            `json:"id"`
+	OwnerID              *string             `json:"owner_id"`
+	Name                 *string             `json:"name"`
+	GradeID              *int64              `json:"grade_id"`
+	Series               *string             `json:"series"`
+	PartsTotal           *int64              `json:"parts_total"`
+	Material             *string             `json:"material"`
+	Version              *string             `json:"version"`
+	Quantity             *int64              `json:"quantity"`
+	Condition            NullGundamCondition `json:"condition"`
+	ConditionDescription *string             `json:"condition_description"`
+	Manufacturer         *string             `json:"manufacturer"`
+	Weight               *int64              `json:"weight"`
+	Scale                NullGundamScale     `json:"scale"`
+	Description          *string             `json:"description"`
+	Price                *int64              `json:"price"`
+	ReleaseYear          *int64              `json:"release_year"`
+	Status               NullGundamStatus    `json:"status"`
+	ID                   int64               `json:"id"`
 }
 
 func (q *Queries) UpdateGundam(ctx context.Context, arg UpdateGundamParams) error {
-	_, err := q.db.Exec(ctx, updateGundam, arg.OwnerID, arg.Status, arg.ID)
+	_, err := q.db.Exec(ctx, updateGundam,
+		arg.OwnerID,
+		arg.Name,
+		arg.GradeID,
+		arg.Series,
+		arg.PartsTotal,
+		arg.Material,
+		arg.Version,
+		arg.Quantity,
+		arg.Condition,
+		arg.ConditionDescription,
+		arg.Manufacturer,
+		arg.Weight,
+		arg.Scale,
+		arg.Description,
+		arg.Price,
+		arg.ReleaseYear,
+		arg.Status,
+		arg.ID,
+	)
 	return err
 }

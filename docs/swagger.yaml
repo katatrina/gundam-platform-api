@@ -3213,6 +3213,113 @@ paths:
       summary: Create a new Gundam model
       tags:
       - users
+  /users/:id/gundams/:gundamID:
+    patch:
+      consumes:
+      - application/json
+      description: Update the basic information of a Gundam model
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      - description: Gundam name
+        in: body
+        name: name
+        schema:
+          type: string
+      - description: Gundam grade ID
+        in: body
+        name: grade_id
+        schema:
+          type: integer
+      - description: Gundam series name
+        in: body
+        name: series
+        schema:
+          type: string
+      - description: Total number of parts
+        in: body
+        name: parts_total
+        schema:
+          type: integer
+      - description: Gundam material
+        in: body
+        name: material
+        schema:
+          type: string
+      - description: Gundam version
+        in: body
+        name: version
+        schema:
+          type: string
+      - description: Condition of the Gundam
+        in: body
+        name: condition
+        schema:
+          enum:
+          - new
+          - open box
+          - used
+          type: string
+      - description: Additional details about condition
+        in: body
+        name: condition_description
+        schema:
+          type: string
+      - description: Manufacturer name
+        in: body
+        name: manufacturer
+        schema:
+          type: string
+      - description: Weight in grams
+        in: body
+        name: weight
+        schema:
+          type: integer
+      - description: Gundam scale
+        in: body
+        name: scale
+        schema:
+          enum:
+          - 1/144
+          - 1/100
+          - 1/60
+          - 1/48
+          type: string
+      - description: Detailed description
+        in: body
+        name: description
+        schema:
+          type: string
+      - description: Price in VND
+        in: body
+        name: price
+        schema:
+          type: integer
+      - description: Release year
+        in: body
+        name: release_year
+        schema:
+          type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated Gundam
+          schema:
+            $ref: '#/definitions/db.GundamDetails'
+      security:
+      - accessToken: []
+      summary: Update Gundam basis info
+      tags:
+      - gundams
   /users/:id/wallet:
     get:
       consumes:
