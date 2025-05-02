@@ -914,3 +914,155 @@ func (server *Server) updateGundamAccessories(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, updatedGundam)
 }
+
+type updateGundamPrimaryImageRequest struct {
+	PrimaryImage *multipart.FileHeader `form:"primary_image" binding:"required"`
+}
+
+//	@Summary		Update Gundam primary image
+//	@Description	Update the primary image of a Gundam model
+//	@Tags			gundams
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Param			id				path		string	true	"User ID"
+//	@Param			gundamID		path		string	true	"Gundam ID"
+//	@Param			primary_image	formData	file	true	"New primary image of the Gundam"
+//	@Security		accessToken
+//	@Success		200	{object}	db.GundamDetails	"Successfully updated Gundam details"
+//	@Failure		400	"Bad Request - Invalid input data"
+//	@Failure		404	"Not Found - User or Gundam with specified ID does not exist"
+//	@Failure		403	"Forbidden - User is not authorized to update Gundam for this user"
+//	@Failure		500	"Internal Server Error - Failed to update Gundam primary image"
+//	@Router			/users/:id/gundams/:gundamID/primary-image [patch]
+func (server *Server) updateGundamPrimaryImage(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to update gundam for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam by gundam ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundam.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	if gundam.Status != db.GundamStatusInstore {
+		err = fmt.Errorf("gundam ID %d is not in store", gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	var req updateGundamPrimaryImageRequest
+	if err := c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Upload the new primary image to Cloudinary
+	uploadedFileURLs, err := server.uploadFileToCloudinary("gundam", gundam.Slug, util.FolderGundams, req.PrimaryImage)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to upload primary image")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if len(uploadedFileURLs) == 0 {
+		err = fmt.Errorf("no primary image URL returned from Cloudinary")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	currentPrimaryImageURL, err := server.dbStore.GetGundamPrimaryImageURL(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d primary image not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get primary image")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	currentPrimaryImagePublicID, err := util.ExtractPublicIDFromURL(currentPrimaryImageURL)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to extract public ID from URL")
+	}
+	
+	primaryImageURL := uploadedFileURLs[0]
+	err = server.dbStore.UpdateGundamPrimaryImage(c.Request.Context(), db.UpdateGundamPrimaryImageParams{
+		GundamID: gundamID,
+		URL:      primaryImageURL,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to update gundam primary image")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Delete the old primary image from Cloudinary
+	err = server.fileStore.DeleteFile(currentPrimaryImagePublicID, "")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete old primary image from Cloudinary")
+	}
+	
+	// Return the updated Gundam details
+	updatedGundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get updated gundam details")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, updatedGundam)
+}

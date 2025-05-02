@@ -2103,6 +2103,69 @@
                 }
             }
         },
+        "/users/:id/gundams/:gundamID/primary-image": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Update the primary image of a Gundam model",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Update Gundam primary image",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "New primary image of the Gundam",
+                        "name": "primary_image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated Gundam details",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid input data"
+                    },
+                    "403": {
+                        "description": "Forbidden - User is not authorized to update Gundam for this user"
+                    },
+                    "404": {
+                        "description": "Not Found - User or Gundam with specified ID does not exist"
+                    },
+                    "500": {
+                        "description": "Internal Server Error - Failed to update Gundam primary image"
+                    }
+                }
+            }
+        },
         "/users/:id/wallet": {
             "get": {
                 "security": [

@@ -2,6 +2,8 @@ package util
 
 import (
 	"fmt"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -38,6 +40,37 @@ func TruncateString(title string, maxLength int) string {
 		return title
 	}
 	return title[:maxLength] + "..."
+}
+
+func ExtractPublicIDFromURL(url string) (string, error) {
+	// Kiểm tra URL hợp lệ
+	if !strings.Contains(url, "cloudinary.com") {
+		return "", fmt.Errorf("not a valid Cloudinary URL")
+	}
+	
+	// Tìm vị trí của phần version (vXXXXXXXXX)
+	parts := strings.Split(url, "/")
+	var startIdx int
+	for i, part := range parts {
+		if strings.HasPrefix(part, "v") && len(part) > 1 {
+			// Kiểm tra nếu phần còn lại toàn là số
+			if _, err := strconv.Atoi(part[1:]); err == nil {
+				startIdx = i + 1
+				break
+			}
+		}
+	}
+	
+	if startIdx == 0 || startIdx >= len(parts) {
+		return "", fmt.Errorf("cannot find version in URL")
+	}
+	
+	// Ghép tất cả các phần sau version, bỏ phần mở rộng file
+	result := strings.Join(parts[startIdx:], "/")
+	// Loại bỏ phần mở rộng file (.jpg, .png, v.v)
+	result = strings.TrimSuffix(result, filepath.Ext(result))
+	
+	return result, nil
 }
 
 func BoolPointer(b bool) *bool {

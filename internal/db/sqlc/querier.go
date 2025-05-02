@@ -112,6 +112,7 @@ type Querier interface {
 	UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error)
 	UpdateExchangePost(ctx context.Context, arg UpdateExchangePostParams) (ExchangePost, error)
 	UpdateGundam(ctx context.Context, arg UpdateGundamParams) error
+	UpdateGundamPrimaryImage(ctx context.Context, arg UpdateGundamPrimaryImageParams) error
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	UpdateOrderDelivery(ctx context.Context, arg UpdateOrderDeliveryParams) (OrderDelivery, error)
 	UpdateOrderTransaction(ctx context.Context, arg UpdateOrderTransactionParams) (OrderTransaction, error)

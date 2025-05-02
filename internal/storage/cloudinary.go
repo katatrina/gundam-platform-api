@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 	
 	"github.com/rs/zerolog/log"
 	
@@ -38,17 +39,23 @@ func (cld *CloudinaryStore) UploadFile(file []byte, filename string, folder stri
 }
 
 func (cld *CloudinaryStore) DeleteFile(publicID string, folder string) error {
+	if publicID == "" {
+		return fmt.Errorf("publicID cannot be empty")
+	}
+	
 	fullPublicID := publicID
 	if folder != "" {
 		fullPublicID = fmt.Sprintf("%s/%s", folder, publicID)
 	}
 	
-	_, err := cld.Upload.Destroy(context.Background(), uploader.DestroyParams{
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	
+	_, err := cld.Upload.Destroy(ctx, uploader.DestroyParams{
 		PublicID: fullPublicID,
 	})
 	if err != nil {
-		err = fmt.Errorf("failed to delete file from cloudinary: %w", err)
-		return err
+		return fmt.Errorf("failed to delete file from cloudinary (ID: %s): %w", fullPublicID, err)
 	}
 	
 	return nil

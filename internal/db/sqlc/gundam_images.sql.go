@@ -50,3 +50,20 @@ func (q *Queries) GetGundamSecondaryImageURLs(ctx context.Context, gundamID int6
 	}
 	return items, nil
 }
+
+const updateGundamPrimaryImage = `-- name: UpdateGundamPrimaryImage :exec
+UPDATE gundam_images
+SET url = $2
+WHERE gundam_id = $1
+  AND is_primary = true
+`
+
+type UpdateGundamPrimaryImageParams struct {
+	GundamID int64  `json:"gundam_id"`
+	URL      string `json:"url"`
+}
+
+func (q *Queries) UpdateGundamPrimaryImage(ctx context.Context, arg UpdateGundamPrimaryImageParams) error {
+	_, err := q.db.Exec(ctx, updateGundamPrimaryImage, arg.GundamID, arg.URL)
+	return err
+}
