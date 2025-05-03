@@ -131,6 +131,8 @@ func (server *Server) setupRouter() *gin.Engine {
 			userGundamGroup.PATCH(":gundamID", server.updateGundamBasisInfo)
 			userGundamGroup.PUT(":gundamID/accessories", server.updateGundamAccessories)
 			userGundamGroup.PATCH(":gundamID/primary-image", server.updateGundamPrimaryImage)
+			userGundamGroup.POST(":gundamID/images", server.addGundamSecondaryImages)
+			// userGundamGroup.DELETE(":gundamID/images/:imageURL", server.deleteGundamSecondaryImage)
 			userGundamGroup.DELETE(":gundamID", server.hardDeleteGundam)
 			userGundamGroup.GET("", server.listGundamsByUser)
 		}

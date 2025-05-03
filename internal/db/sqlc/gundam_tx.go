@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"mime/multipart"
 	
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -169,4 +170,43 @@ func (store *SQLStore) UpdateGundamAccessoriesTx(ctx context.Context, arg Update
 	})
 	
 	return err
+}
+
+type AddGundamSecondaryImagesTxParams struct {
+	Gundam           Gundam
+	Images           []*multipart.FileHeader
+	UploadImagesFunc func(key string, value string, folder string, files ...*multipart.FileHeader) ([]string, error)
+}
+
+type AddGundamSecondaryImagesTxResult struct {
+	ImageURLs []string `json:"image_urls"`
+}
+
+func (store *SQLStore) AddGundamSecondaryImagesTx(ctx context.Context, arg AddGundamSecondaryImagesTxParams) (AddGundamSecondaryImagesTxResult, error) {
+	var result AddGundamSecondaryImagesTxResult
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Upload secondary images and store the URLs
+		secondaryImageURLs, err := arg.UploadImagesFunc("gundam", arg.Gundam.Slug, util.FolderGundams, arg.Images...)
+		if err != nil {
+			return fmt.Errorf("failed to upload secondary images: %w", err)
+		}
+		
+		// 2. Store the URLs in the database
+		for _, url := range secondaryImageURLs {
+			err = qTx.StoreGundamImageURL(ctx, StoreGundamImageURLParams{
+				GundamID:  arg.Gundam.ID,
+				URL:       url,
+				IsPrimary: false,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to store secondary image URL: %w", err)
+			}
+		}
+		
+		result.ImageURLs = secondaryImageURLs
+		
+		return nil
+	})
+	
+	return result, err
 }

@@ -3404,6 +3404,37 @@ paths:
       summary: Update Gundam accessories
       tags:
       - gundams
+  /users/:id/gundams/:gundamID/images:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Add secondary images to a Gundam model
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      - description: Array of secondary images
+        in: formData
+        name: images
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully added secondary images
+      security:
+      - accessToken: []
+      summary: Add secondary images to Gundam
+      tags:
+      - gundams
   /users/:id/gundams/:gundamID/primary-image:
     patch:
       consumes:

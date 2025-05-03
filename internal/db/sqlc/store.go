@@ -22,6 +22,7 @@ type Store interface {
 	DeleteUserAddressTx(ctx context.Context, arg DeleteUserAddressParams) error
 	CreateGundamTx(ctx context.Context, arg CreateGundamTxParams) (GundamDetails, error)
 	UpdateGundamAccessoriesTx(ctx context.Context, arg UpdateGundamAccessoriesParams) error
+	AddGundamSecondaryImagesTx(ctx context.Context, arg AddGundamSecondaryImagesTxParams) (AddGundamSecondaryImagesTxResult, error)
 	BecomeSellerTx(ctx context.Context, userID string) (User, error)
 	PublishGundamTx(ctx context.Context, arg PublishGundamTxParams) error
 	UnpublishGundamTx(ctx context.Context, arg UnpublishGundamTxParams) error
