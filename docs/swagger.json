@@ -2149,6 +2149,54 @@
                         "description": "Successfully added secondary images"
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Delete a secondary image from a Gundam model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Delete secondary image from Gundam",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "URL of the secondary image to delete",
+                        "name": "image_url",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted secondary image"
+                    }
+                }
             }
         },
         "/users/:id/gundams/:gundamID/primary-image": {

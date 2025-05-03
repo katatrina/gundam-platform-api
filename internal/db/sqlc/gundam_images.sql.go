@@ -9,6 +9,23 @@ import (
 	"context"
 )
 
+const deleteGundamImage = `-- name: DeleteGundamImage :exec
+DELETE
+FROM gundam_images
+WHERE gundam_id = $1
+  AND url = $2
+`
+
+type DeleteGundamImageParams struct {
+	GundamID int64  `json:"gundam_id"`
+	URL      string `json:"url"`
+}
+
+func (q *Queries) DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error {
+	_, err := q.db.Exec(ctx, deleteGundamImage, arg.GundamID, arg.URL)
+	return err
+}
+
 const getGundamPrimaryImageURL = `-- name: GetGundamPrimaryImageURL :one
 SELECT url
 FROM gundam_images
@@ -49,6 +66,31 @@ func (q *Queries) GetGundamSecondaryImageURLs(ctx context.Context, gundamID int6
 		return nil, err
 	}
 	return items, nil
+}
+
+const getImageByURL = `-- name: GetImageByURL :one
+SELECT id, gundam_id, url, is_primary, created_at
+FROM gundam_images
+WHERE url = $1
+  AND gundam_id = $2 LIMIT 1
+`
+
+type GetImageByURLParams struct {
+	URL      string `json:"url"`
+	GundamID int64  `json:"gundam_id"`
+}
+
+func (q *Queries) GetImageByURL(ctx context.Context, arg GetImageByURLParams) (GundamImage, error) {
+	row := q.db.QueryRow(ctx, getImageByURL, arg.URL, arg.GundamID)
+	var i GundamImage
+	err := row.Scan(
+		&i.ID,
+		&i.GundamID,
+		&i.URL,
+		&i.IsPrimary,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const updateGundamPrimaryImage = `-- name: UpdateGundamPrimaryImage :exec

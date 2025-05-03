@@ -1160,3 +1160,128 @@ func (server *Server) addGundamSecondaryImages(c *gin.Context) {
 		"image_urls": result.ImageURLs,
 	})
 }
+
+type deleteGundamSecondaryImageRequest struct {
+	ImageURL string `json:"image_url" binding:"required"`
+}
+
+//	@Summary		Delete secondary image from Gundam
+//	@Description	Delete a secondary image from a Gundam model
+//	@Tags			gundams
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path	string	true	"User ID"
+//	@Param			gundamID	path	string	true	"Gundam ID"
+//	@Param			image_url	body	string	true	"URL of the secondary image to delete"
+//	@Security		accessToken
+//	@Success		204	"Successfully deleted secondary image"
+//	@Router			/users/:id/gundams/:gundamID/images [delete]
+func (server *Server) deleteGundamSecondaryImage(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	authenticatedUserID := authPayload.Subject
+	userID := c.Param("id")
+	
+	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get user by user ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if authenticatedUserID != userID {
+		err = fmt.Errorf("authenticated user ID %s is not authorized to update gundam for user ID %s", authenticatedUserID, userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	gundamID, err := strconv.ParseInt(c.Param("gundamID"), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", c.Param("gundamID"))
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam by gundam ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundam.OwnerID != userID {
+		err = fmt.Errorf("user ID %s is not the owner of gundam ID %d", userID, gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	if gundam.Status != db.GundamStatusInstore {
+		err = fmt.Errorf("gundam ID %d is not in store", gundamID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	var req deleteGundamSecondaryImageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundamImage, err := server.dbStore.GetImageByURL(c.Request.Context(), db.GetImageByURLParams{
+		URL:      req.ImageURL,
+		GundamID: gundamID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d image URL not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam image by URL")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if gundamImage.IsPrimary {
+		err = fmt.Errorf("cannot delete primary image")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	publicID, err := util.ExtractPublicIDFromURL(req.ImageURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("invalid image URL: %w", err)))
+		return
+	}
+	
+	err = server.dbStore.DeleteGundamSecondaryImageTx(c.Request.Context(), db.DeleteGundamSecondaryImageTxParams{
+		GundamImage:     gundamImage,
+		PublicID:        publicID,
+		DeleteImageFunc: server.fileStore.DeleteFile,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d image URL not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to delete gundam secondary image")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusNoContent, nil)
+}

@@ -3405,6 +3405,37 @@ paths:
       tags:
       - gundams
   /users/:id/gundams/:gundamID/images:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a secondary image from a Gundam model
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      - description: URL of the secondary image to delete
+        in: body
+        name: image_url
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted secondary image
+      security:
+      - accessToken: []
+      summary: Delete secondary image from Gundam
+      tags:
+      - gundams
     post:
       consumes:
       - multipart/form-data

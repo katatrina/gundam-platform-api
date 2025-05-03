@@ -210,3 +210,30 @@ func (store *SQLStore) AddGundamSecondaryImagesTx(ctx context.Context, arg AddGu
 	
 	return result, err
 }
+
+type DeleteGundamSecondaryImageTxParams struct {
+	GundamImage     GundamImage
+	PublicID        string
+	DeleteImageFunc func(publicID string, folder string) error
+}
+
+func (store *SQLStore) DeleteGundamSecondaryImageTx(ctx context.Context, arg DeleteGundamSecondaryImageTxParams) error {
+	return store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Delete the secondary image from the database
+		err := qTx.DeleteGundamImage(ctx, DeleteGundamImageParams{
+			GundamID: arg.GundamImage.GundamID,
+			URL:      arg.GundamImage.URL,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete secondary image from database: %w", err)
+		}
+		
+		// 2. Delete the image from Cloudinary
+		err = arg.DeleteImageFunc(arg.PublicID, "")
+		if err != nil {
+			return fmt.Errorf("failed to delete image from Cloudinary: %w", err)
+		}
+		
+		return nil
+	})
+}

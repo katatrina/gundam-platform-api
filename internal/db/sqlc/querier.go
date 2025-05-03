@@ -48,6 +48,7 @@ type Querier interface {
 	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	DeleteGundam(ctx context.Context, arg DeleteGundamParams) error
+	DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
@@ -64,6 +65,7 @@ type Querier interface {
 	GetGundamBySlug(ctx context.Context, arg GetGundamBySlugParams) (GetGundamBySlugRow, error)
 	GetGundamPrimaryImageURL(ctx context.Context, gundamID int64) (string, error)
 	GetGundamSecondaryImageURLs(ctx context.Context, gundamID int64) ([]string, error)
+	GetImageByURL(ctx context.Context, arg GetImageByURLParams) (GundamImage, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
