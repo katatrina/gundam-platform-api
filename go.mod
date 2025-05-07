@@ -27,6 +27,7 @@ require (
 	golang.ngrok.com/ngrok v1.13.0
 	golang.org/x/crypto v0.36.0
 	google.golang.org/api v0.227.0
+	resty.dev/v3 v3.0.0-beta.2
 )
 
 require (

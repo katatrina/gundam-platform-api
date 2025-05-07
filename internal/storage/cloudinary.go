@@ -20,14 +20,26 @@ type CloudinaryStore struct {
 }
 
 func (cld *CloudinaryStore) UploadFile(file []byte, filename string, folder string) (string, error) {
-	// Create upload parameters
+	// Kiểm tra extension của file
+	fileExt := filepath.Ext(filename)
+	fileBase := strings.TrimSuffix(filename, filepath.Ext(filename))
+	
+	// Tạo upload parameters mặc định
 	uploadParams := uploader.UploadParams{
 		Folder:         folder,
-		PublicID:       strings.TrimSuffix(filename, filepath.Ext(filename)),
+		PublicID:       fileBase,
 		UniqueFilename: api.Bool(false),
 		Overwrite:      api.Bool(true),
 	}
 	
+	// Xử lý đặc biệt cho file SVG
+	if strings.ToLower(fileExt) == ".svg" {
+		// Đặt resource_type là image và format là svg cho file SVG
+		uploadParams.ResourceType = "image"
+		uploadParams.Format = "svg"
+	}
+	
+	// Tiến hành upload
 	reader := bytes.NewReader(file)
 	result, err := cld.Upload.Upload(context.Background(), reader, uploadParams)
 	if err != nil {
@@ -35,7 +47,13 @@ func (cld *CloudinaryStore) UploadFile(file []byte, filename string, folder stri
 		return "", err
 	}
 	
-	return result.SecureURL, nil
+	// Đảm bảo URL cho SVG có extension đúng
+	secureURL := result.SecureURL
+	if strings.ToLower(fileExt) == ".svg" && !strings.HasSuffix(secureURL, ".svg") {
+		secureURL = secureURL + ".svg"
+	}
+	
+	return secureURL, nil
 }
 
 func (cld *CloudinaryStore) DeleteFile(publicID string, folder string) error {
