@@ -105,8 +105,6 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		
 		// Việc trừ tiền bù sẽ được thực hiện khi đề xuất được chấp nhận, không trừ ngay tại đây.
 		
-		// TODO: Có thể thực hiện việc trừ tiền bù nếu người đề xuất là người bù tiền ngay tại đây nếu có thay đổi trong tương lai.
-		
 		return nil
 	})
 	

@@ -119,8 +119,6 @@ func (server *Server) handleRegularOrderConfirmation(ctx *gin.Context, order db.
 		return db.CompleteRegularOrderTxResult{}, err
 	}
 	
-	// TODO: Hủy task "tự động xác nhận đơn hàng sau 7 ngày" vì người mua đã xác nhận đơn hàng
-	
 	opts := []asynq.Option{
 		asynq.MaxRetry(3),
 		asynq.Queue(worker.QueueCritical),

@@ -718,20 +718,6 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	}
 	resp.ToDeliveryInformation = deliveryInformation
 	
-	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(c.Request.Context(), order.ID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("order transaction not found for order ID %s", order.ID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get order transaction")
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	resp.OrderTransaction = orderTransaction
-	
 	c.JSON(http.StatusOK, resp)
 }
 

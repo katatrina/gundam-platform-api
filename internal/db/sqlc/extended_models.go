@@ -56,7 +56,6 @@ type MemberOrderDetails struct {
 	Order                 Order               `json:"order"`                   // Thông tin đơn hàng
 	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
 	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
-	OrderTransaction      OrderTransaction    `json:"order_transaction"`       // Thông tin giao dịch thanh toán của đơn hàng
 	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
 	// FromDeliveryInformation *DeliveryInformation `json:"from_delivery_information"` // Địa chỉ gửi hàng của người bán
 }
@@ -72,7 +71,6 @@ type SalesOrderDetails struct {
 	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
 	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
 	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
-	OrderTransaction      OrderTransaction    `json:"order_transaction"`       // Thông tin giao dịch thanh toán của đơn hàng
 }
 
 type SellerInfo struct {

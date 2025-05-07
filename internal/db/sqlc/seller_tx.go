@@ -181,8 +181,6 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 		}
 		result.OrderTransaction = orderTransaction
 		
-		// TODO: Cần xử lý thêm nếu đơn hàng là đơn hàng trao đổi, hoặc đơn hàng đấu giá
-		
 		return nil
 	})
 	

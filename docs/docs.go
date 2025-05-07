@@ -4877,7 +4877,6 @@ const docTemplate = `{
                 "order",
                 "order_delivery",
                 "order_items",
-                "order_transaction",
                 "seller_info",
                 "to_delivery_information"
             ],
@@ -4912,14 +4911,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
-                },
-                "order_transaction": {
-                    "description": "Thông tin giao dịch thanh toán của đơn hàng",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.OrderTransaction"
-                        }
-                    ]
                 },
                 "seller_info": {
                     "description": "Thông tin người gửi (null nếu là người gửi)",
@@ -5378,7 +5369,6 @@ const docTemplate = `{
                 "order",
                 "order_delivery",
                 "order_items",
-                "order_transaction",
                 "to_delivery_information"
             ],
             "properties": {
@@ -5412,14 +5402,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
-                },
-                "order_transaction": {
-                    "description": "Thông tin giao dịch thanh toán của đơn hàng",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/db.OrderTransaction"
-                        }
-                    ]
                 },
                 "to_delivery_information": {
                     "description": "Địa chỉ nhận hàng của người mua",

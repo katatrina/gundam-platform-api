@@ -1231,10 +1231,6 @@ definitions:
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
-      order_transaction:
-        allOf:
-        - $ref: '#/definitions/db.OrderTransaction'
-        description: Thông tin giao dịch thanh toán của đơn hàng
       seller_info:
         allOf:
         - $ref: '#/definitions/db.SellerInfo'
@@ -1248,7 +1244,6 @@ definitions:
     - order
     - order_delivery
     - order_items
-    - order_transaction
     - seller_info
     - to_delivery_information
     type: object
@@ -1579,10 +1574,6 @@ definitions:
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
-      order_transaction:
-        allOf:
-        - $ref: '#/definitions/db.OrderTransaction'
-        description: Thông tin giao dịch thanh toán của đơn hàng
       to_delivery_information:
         allOf:
         - $ref: '#/definitions/db.DeliveryInformation'
@@ -1592,7 +1583,6 @@ definitions:
     - order
     - order_delivery
     - order_items
-    - order_transaction
     - to_delivery_information
     type: object
   db.SalesOrderInfo:
