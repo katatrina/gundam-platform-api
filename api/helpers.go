@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	mathrand "math/rand"
 	"mime/multipart"
 	"time"
 	
@@ -433,4 +436,96 @@ func (server *Server) sendOrderCancelNotifications(ctx context.Context, result d
 	if err != nil {
 		log.Err(err).Msg("failed to send confirmation to buyer")
 	}
+}
+
+// generateRandomAvatar tự động tạo avatar ngẫu nhiên cho người dùng.
+func (server *Server) generateRandomAvatar(ctx context.Context, fullName string) (string, error) {
+	// Danh sách các style có sẵn trong DiceBear 9.x
+	styles := []string{
+		"adventurer", "adventurer-neutral", "avataaars", "avataaars-neutral",
+		"big-ears", "big-ears-neutral", "big-smile", "bottts", "bottts-neutral",
+		"croodles", "croodles-neutral", "fun-emoji", "icons", "identicon",
+		"initials", "lorelei", "lorelei-neutral", "micah", "miniavs",
+		"notionists", "notionists-neutral", "open-peeps", "personas",
+		"pixel-art", "pixel-art-neutral", "shapes", "thumbs",
+	}
+	
+	// Danh sách các màu nền cơ bản và an toàn (được hỗ trợ bởi tất cả các style)
+	// Sử dụng mã hex không có dấu #
+	backgroundColors := []string{
+		"b6e3f4",      // Xanh nhạt
+		"c0aede",      // Tím nhạt
+		"d1d4f9",      // Xanh dương nhạt
+		"ffd5dc",      // Hồng nhạt
+		"ffdfbf",      // Vàng nhạt
+		"transparent", // Trong suốt
+	}
+	
+	// Tạo số ngẫu nhiên an toàn
+	var seed int64
+	if err := binary.Read(rand.Reader, binary.BigEndian, &seed); err != nil {
+		// Fallback nếu crypto/rand thất bại
+		seed = time.Now().UnixNano()
+	}
+	
+	// Tạo nguồn ngẫu nhiên riêng
+	r := mathrand.New(mathrand.NewSource(seed))
+	
+	// Chọn một style ngẫu nhiên
+	randomStyleIndex := r.Intn(len(styles))
+	style := styles[randomStyleIndex]
+	
+	// Chọn một màu nền ngẫu nhiên
+	randomColorIndex := r.Intn(len(backgroundColors))
+	backgroundColor := backgroundColors[randomColorIndex]
+	
+	// Tạo URL API với định dạng SVG
+	url := fmt.Sprintf("https://api.dicebear.com/9.x/%s/svg", style)
+	
+	// Tạo context có timeout 5 giây
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel() // Đảm bảo hủy context để tránh memory leak
+	
+	// Thực hiện request đến DiceBear API
+	resp, err := server.restyClient.R().
+		SetContext(ctxWithTimeout).
+		SetQueryParams(map[string]string{
+			"seed":            fullName,        // Sử dụng full_name làm seed
+			"backgroundColor": backgroundColor, // Sử dụng màu nền ngẫu nhiên
+			"radius":          "0",             // Không bo góc
+			"scale":           "90",            // Tỷ lệ phần tử 100%
+			"translateX":      "0",             // Không dịch chuyển theo X
+			"translateY":      "0",             // Không dịch chuyển theo Y
+			"size":            "256",           // Kích thước cố định 256px
+			"flip":            "false",         // Không lật avatar
+			"rotate":          "0",             // Không xoay avatar
+			"randomizeIds":    "true",          // Ngẫu nhiên hóa ID trong SVG
+		}).
+		Get(url)
+	
+	if err != nil {
+		return "", fmt.Errorf("failed to get avatar from DiceBear: %w", err)
+	}
+	
+	// Kiểm tra status code
+	if resp.StatusCode() != 200 {
+		return "", fmt.Errorf("DiceBear API error, status code: %d", resp.StatusCode())
+	}
+	
+	// Tạo tên file duy nhất (chỉ để đặt tên, không tạo file thật)
+	fileName := fmt.Sprintf("avatar-%s.svg", uuid.New().String())
+	
+	// Lấy nội dung response body như một mảng byte
+	svgData := resp.Bytes()
+	if svgData == nil || len(svgData) == 0 {
+		return "", fmt.Errorf("empty SVG data received from DiceBear")
+	}
+	
+	// Tải lên Cloudinary trực tiếp từ dữ liệu trong bộ nhớ
+	uploadedAvatarURL, err := server.fileStore.UploadFile(svgData, fileName, "avatars")
+	if err != nil {
+		return "", fmt.Errorf("failed to upload avatar to Cloudinary: %w", err)
+	}
+	
+	return uploadedAvatarURL, nil
 }

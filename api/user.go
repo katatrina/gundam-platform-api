@@ -67,6 +67,14 @@ func (server *Server) createUser(ctx *gin.Context) {
 		Role:           db.UserRoleMember,
 	}
 	
+	// Tạo avatar ngẫu nhiên cho người dùng mới
+	avatarURL, err := server.generateRandomAvatar(ctx, req.FullName)
+	if err == nil {
+		arg.AvatarURL = &avatarURL
+	} else {
+		log.Err(err).Msg("failed to generate random avatar")
+	}
+	
 	user, err := server.dbStore.CreateUserTx(context.Background(), arg)
 	if err != nil {
 		if pgErr := db.ErrorDescription(err); pgErr != nil {

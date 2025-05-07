@@ -20,6 +20,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"google.golang.org/api/idtoken"
+	"resty.dev/v3"
 )
 
 type Server struct {
@@ -34,6 +35,7 @@ type Server struct {
 	taskDistributor        *worker.RedisTaskDistributor
 	zalopayService         *zalopay.ZalopayService
 	deliveryService        delivery.IDeliveryProvider
+	restyClient            *resty.Client // Thêm client resty
 }
 
 // NewServer creates a new HTTP server and set up routing.
@@ -66,6 +68,10 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 	zalopayService := zalopay.NewZalopayService(store, config)
 	log.Info().Msg("ZaloPay service created successfully ✅")
 	
+	// Khởi tạo resty client
+	restyClient := resty.New()
+	log.Info().Msg("Resty client created successfully ✅")
+	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -77,6 +83,7 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 		taskDistributor:        taskDistributor,
 		zalopayService:         zalopayService,
 		deliveryService:        deliveryService,
+		restyClient:            restyClient, // Thêm client resty vào struct
 	}
 	
 	server.setupRouter()
