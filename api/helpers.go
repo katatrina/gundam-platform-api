@@ -482,13 +482,8 @@ func (server *Server) generateRandomAvatar(ctx context.Context, fullName string)
 	// Tạo URL API với định dạng SVG
 	url := fmt.Sprintf("https://api.dicebear.com/9.x/%s/svg", style)
 	
-	// Tạo context có timeout 5 giây
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel() // Đảm bảo hủy context để tránh memory leak
-	
 	// Thực hiện request đến DiceBear API
 	resp, err := server.restyClient.R().
-		SetContext(ctxWithTimeout).
 		SetQueryParams(map[string]string{
 			"seed":            fullName,        // Sử dụng full_name làm seed
 			"backgroundColor": backgroundColor, // Sử dụng màu nền ngẫu nhiên
