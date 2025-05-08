@@ -488,7 +488,7 @@ func (server *Server) generateRandomAvatar(ctx context.Context, fullName string)
 			"seed":            fullName,        // Sử dụng full_name làm seed
 			"backgroundColor": backgroundColor, // Sử dụng màu nền ngẫu nhiên
 			"radius":          "0",             // Không bo góc
-			"scale":           "90",            // Tỷ lệ phần tử 100%
+			"scale":           "90",            // Tỷ lệ phần tử 90%
 			"translateX":      "0",             // Không dịch chuyển theo X
 			"translateY":      "0",             // Không dịch chuyển theo Y
 			"size":            "256",           // Kích thước cố định 256px

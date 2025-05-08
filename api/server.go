@@ -229,6 +229,35 @@ func (server *Server) setupRouter() *gin.Engine {
 		orderGroup.PATCH(":orderID/cancel", server.cancelOrderByBuyer) // ✅ Người mua hủy đơn hàng
 	}
 	
+	// API công khai cho phiên đấu giá (không cần đăng nhập)
+	// auctionPublicGroup := v1.Group("/auctions")
+	{
+		// Liệt kê các phiên đấu giá đang diễn ra
+		// auctionPublicGroup.GET("", optionalAuthMiddleware(server.tokenMaker), server.listActiveAuctions)
+		
+		// Xem chi tiết một phiên đấu giá
+		// auctionPublicGroup.GET(":auctionID", optionalAuthMiddleware(server.tokenMaker), server.getAuctionDetails)
+	}
+	
+	// API cho người dùng tham gia đấu giá (cần đăng nhập)
+	// userAuctionGroup := v1.Group("/users/me/auctions", authMiddleware(server.tokenMaker))
+	{
+		// Tham gia đấu giá (đặt cọc)
+		// userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction)
+		
+		// Đặt giá
+		// userAuctionGroup.POST("/:auctionID/bids", server.placeBid)
+		
+		// Thanh toán sau khi thắng
+		// userAuctionGroup.POST("/:auctionID/payment", server.payAuctionWinningBid)
+		
+		// Xem lịch sử tham gia đấu giá của bản thân
+		// userAuctionGroup.GET("/participations", server.listMyAuctionParticipations)
+		
+		// Xem lịch sử đặt giá của bản thân
+		// userAuctionGroup.GET("/bids", server.listMyAuctionBids)
+	}
+	
 	// Nhóm các API chỉ dành cho seller
 	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerRole(server.dbStore))
 	{
@@ -241,15 +270,46 @@ func (server *Server) setupRouter() *gin.Engine {
 			sellerOrderGroup.PATCH(":orderID/cancel", server.cancelOrderBySeller) // ✅ Người bán hủy đơn hàng
 		}
 		
+		// Nhóm các API liên quan đến việc quản lý sản phẩm của người bán
 		gundamGroup := sellerGroup.Group("gundams")
 		{
 			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)
 			gundamGroup.PATCH(":gundamID/unpublish", server.unpublishGundam)
 		}
 		
+		// Nhóm các API liên quan đến việc quản lý gói đăng ký của người bán
 		subscriptionGroup := sellerGroup.Group("subscriptions")
 		{
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
+		}
+		
+		// Nhóm các API cho yêu cầu đấu giá
+		auctionRequestGroup := sellerGroup.Group("auction-requests")
+		{
+			// Tạo yêu cầu đấu giá
+			auctionRequestGroup.POST("", server.createAuctionRequest)
+			
+			// Xem danh sách yêu cầu đấu giá của mình
+			// auctionRequestGroup.GET("", server.listSellerAuctionRequests)
+			
+			// Xem chi tiết yêu cầu đấu giá
+			// auctionRequestGroup.GET(":requestID", server.getAuctionRequestDetails)
+			
+			// Hủy yêu cầu đấu giá (khi chưa được duyệt)
+			// auctionRequestGroup.DELETE(":requestID", server.cancelAuctionRequest)
+		}
+		
+		// API cho phiên đấu giá của seller
+		// sellerAuctionGroup := sellerGroup.Group("auctions")
+		{
+			// Xem danh sách phiên đấu giá của mình
+			// sellerAuctionGroup.GET("", server.listSellerAuctions)
+			
+			// Xem chi tiết phiên đấu giá của mình
+			// sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails)
+			
+			// Hủy phiên đấu giá (khi chưa có người tham gia)
+			// sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuction)
 		}
 	}
 	
@@ -293,6 +353,26 @@ func (server *Server) setupRouter() *gin.Engine {
 	}
 	
 	v1.POST("/check-email", server.checkEmailExists)
+	
+	// API cho moderator (bảo toàn cấu trúc của router hiện tại)
+	// Thêm moderatorGroup nếu chưa có
+	// moderatorGroup := v1.Group("/moderators", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
+	{
+		// moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
+		{
+			// Xem danh sách yêu cầu đấu giá đang chờ duyệt
+			// moderatorAuctionGroup.GET("", server.listPendingAuctionRequests)
+			
+			// Xem chi tiết yêu cầu đấu giá
+			// moderatorAuctionGroup.GET(":requestID", server.getAuctionRequestDetails)
+			
+			// Phê duyệt yêu cầu đấu giá
+			// moderatorAuctionGroup.PATCH(":requestID/approve", server.approveAuctionRequest)
+			
+			// Từ chối yêu cầu đấu giá
+			// moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest)
+		}
+	}
 	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	

@@ -7,6 +7,7 @@ require (
 	firebase.google.com/go/v4 v4.15.2
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/cloudinary/cloudinary-go/v2 v2.9.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-contrib/cors v1.7.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-co-op/gocron/v2 v2.16.1
