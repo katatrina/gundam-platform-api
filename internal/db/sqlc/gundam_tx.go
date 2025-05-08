@@ -55,12 +55,12 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 			ReleaseYear:          arg.ReleaseYear,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create gundam: %w", err)
 		}
 		
-		grade, err := qTx.GetGradeByID(ctx, gundam.ID)
+		grade, err := qTx.GetGradeByID(ctx, gundam.GradeID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get grade by ID: %w", err)
 		}
 		
 		result.ID = gundam.ID
@@ -88,7 +88,7 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 		// Upload primary image and store the URL
 		primaryImageURLs, err := arg.UploadImagesFunc("gundam", gundam.Slug, util.FolderGundams, arg.PrimaryImage)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to upload primary image: %w", err)
 		}
 		err = qTx.StoreGundamImageURL(ctx, StoreGundamImageURLParams{
 			GundamID:  gundam.ID,
@@ -96,14 +96,14 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 			IsPrimary: true,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to store primary image URL: %w", err)
 		}
 		result.PrimaryImageURL = primaryImageURLs[0]
 		
 		// Upload secondary images and store the URLs
 		secondaryImageURLs, err := arg.UploadImagesFunc("gundam", gundam.Slug, util.FolderGundams, arg.SecondaryImages...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to upload secondary images: %w", err)
 		}
 		for _, url := range secondaryImageURLs {
 			err = qTx.StoreGundamImageURL(ctx, StoreGundamImageURLParams{
@@ -112,7 +112,7 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 				IsPrimary: false,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to store secondary image URL: %w", err)
 			}
 			
 			result.SecondaryImageURLs = append(result.SecondaryImageURLs, url)
@@ -126,7 +126,7 @@ func (store *SQLStore) CreateGundamTx(ctx context.Context, arg CreateGundamTxPar
 				Quantity: accessory.Quantity,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create gundam accessory: %w", err)
 			}
 			
 			result.Accessories = append(result.Accessories, GundamAccessoryDTO{
