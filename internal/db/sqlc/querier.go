@@ -21,7 +21,10 @@ type Querier interface {
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
+	CountExistingPendingAuctionRequest(ctx context.Context, gundamID *int64) (int64, error)
+	CountSellerActiveAuctions(ctx context.Context, sellerID string) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
+	CreateAuctionRequest(ctx context.Context, arg CreateAuctionRequestParams) (AuctionRequest, error)
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateExchange(ctx context.Context, arg CreateExchangeParams) (Exchange, error)
 	CreateExchangeItem(ctx context.Context, arg CreateExchangeItemParams) (ExchangeItem, error)

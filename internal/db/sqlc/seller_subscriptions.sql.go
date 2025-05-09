@@ -87,20 +87,27 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 
 const updateCurrentActiveSubscriptionForSeller = `-- name: UpdateCurrentActiveSubscriptionForSeller :exec
 UPDATE seller_subscriptions
-SET listings_used = COALESCE($1, listings_used),
-    updated_at    = now()
-WHERE id = $2
-  AND seller_id = $3
+SET listings_used      = COALESCE($1, listings_used),
+    open_auctions_used = COALESCE($2, open_auctions_used),
+    updated_at         = now()
+WHERE id = $3
+  AND seller_id = $4
   AND is_active = true
 `
 
 type UpdateCurrentActiveSubscriptionForSellerParams struct {
-	ListingsUsed   *int64 `json:"listings_used"`
-	SubscriptionID int64  `json:"subscription_id"`
-	SellerID       string `json:"seller_id"`
+	ListingsUsed     *int64 `json:"listings_used"`
+	OpenAuctionsUsed *int64 `json:"open_auctions_used"`
+	SubscriptionID   int64  `json:"subscription_id"`
+	SellerID         string `json:"seller_id"`
 }
 
 func (q *Queries) UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error {
-	_, err := q.db.Exec(ctx, updateCurrentActiveSubscriptionForSeller, arg.ListingsUsed, arg.SubscriptionID, arg.SellerID)
+	_, err := q.db.Exec(ctx, updateCurrentActiveSubscriptionForSeller,
+		arg.ListingsUsed,
+		arg.OpenAuctionsUsed,
+		arg.SubscriptionID,
+		arg.SellerID,
+	)
 	return err
 }

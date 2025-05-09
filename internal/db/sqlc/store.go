@@ -45,6 +45,7 @@ type Store interface {
 	ProvideDeliveryAddressesForExchangeTx(ctx context.Context, arg ProvideDeliveryAddressesForExchangeTxParams) (ProvideDeliveryAddressesForExchangeTxResult, error)
 	PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExchangeDeliveryFeeTxParams) (PayExchangeDeliveryFeeTxResult, error)
 	CancelExchangeTx(ctx context.Context, arg CancelExchangeTxParams) (CancelExchangeTxResult, error)
+	CreateAuctionRequestTx(ctx context.Context, arg CreateAuctionRequestTxParams) (AuctionRequest, error)
 }
 
 type SQLStore struct {

@@ -33,8 +33,9 @@ WHERE ss.seller_id = $1
 
 -- name: UpdateCurrentActiveSubscriptionForSeller :exec
 UPDATE seller_subscriptions
-SET listings_used = COALESCE(sqlc.narg('listings_used'), listings_used),
-    updated_at    = now()
+SET listings_used      = COALESCE(sqlc.narg('listings_used'), listings_used),
+    open_auctions_used = COALESCE(sqlc.narg('open_auctions_used'), open_auctions_used),
+    updated_at         = now()
 WHERE id = sqlc.arg('subscription_id')
   AND seller_id = sqlc.arg('seller_id')
   AND is_active = true;

@@ -287,7 +287,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		auctionRequestGroup := sellerGroup.Group("auction-requests")
 		{
 			// Tạo yêu cầu đấu giá
-			auctionRequestGroup.POST("", server.createAuctionRequest)
+			auctionRequestGroup.POST("", server.createAuctionRequest) // ✅
 			
 			// Xem danh sách yêu cầu đấu giá của mình
 			// auctionRequestGroup.GET("", server.listSellerAuctionRequests)
@@ -354,9 +354,8 @@ func (server *Server) setupRouter() *gin.Engine {
 	
 	v1.POST("/check-email", server.checkEmailExists)
 	
-	// API cho moderator (bảo toàn cấu trúc của router hiện tại)
-	// Thêm moderatorGroup nếu chưa có
-	// moderatorGroup := v1.Group("/moderators", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
+	// API cho moderator
+	// moderatorGroup := v1.Group("/mod", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
 	{
 		// moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
 		{

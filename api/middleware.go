@@ -16,6 +16,7 @@ const (
 	authorizationTypeBearer = "Bearer"
 	authorizationPayloadKey = "authPayload"
 	sellerPayloadKey        = "sellerPayload"
+	moderatorPayloadKey     = "moderatorPayload"
 )
 
 // authMiddleware authenticates the user.
@@ -102,15 +103,21 @@ func requiredSellerRole(dbStore db.Store) gin.HandlerFunc {
 		authenticatedUserID := authPayload.Subject
 		sellerID := ctx.Param("sellerID")
 		
-		seller, err := dbStore.GetSellerByID(ctx, sellerID)
+		seller, err := dbStore.GetUserByID(ctx, sellerID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("seller ID %s not found", sellerID)
+				err = fmt.Errorf("user ID %s not found", sellerID)
 				ctx.AbortWithStatusJSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if seller.Role != db.UserRoleSeller {
+			err = fmt.Errorf("user ID %s is not a seller", sellerID)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
 		
@@ -120,6 +127,34 @@ func requiredSellerRole(dbStore db.Store) gin.HandlerFunc {
 		}
 		
 		ctx.Set(sellerPayloadKey, &seller)
+		ctx.Next()
+	}
+}
+
+func requiredModeratorRole(dbStore db.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		authenticatedUserID := authPayload.Subject
+		
+		user, err := dbStore.GetUserByID(ctx, authenticatedUserID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("user ID %s not found", authenticatedUserID)
+				ctx.AbortWithStatusJSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if user.Role != db.UserRoleModerator {
+			err = fmt.Errorf("user ID %s is not a moderator", authenticatedUserID)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
+		
+		ctx.Set(moderatorPayloadKey, &user)
 		ctx.Next()
 	}
 }

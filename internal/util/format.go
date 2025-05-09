@@ -11,7 +11,7 @@ import (
 )
 
 // FormatVND chuyển đổi số tiền từ int64 sang chuỗi định dạng VND.
-// Ví dụ: 1000000 -> "1.000.000 ₫".
+// Ví dụ: 1000000 -> "1.000.000₫".
 func FormatVND(amount int64) string {
 	// Định dạng số với dấu phẩy phân cách hàng nghìn
 	formatted := fmt.Sprintf("%d", amount)
@@ -19,7 +19,7 @@ func FormatVND(amount int64) string {
 	// Thay thế dấu phẩy bằng dấu chấm để phù hợp với định dạng VND
 	length := len(formatted)
 	if length <= 3 {
-		return formatted + " ₫"
+		return formatted + "₫"
 	}
 	
 	var result strings.Builder
@@ -31,13 +31,20 @@ func FormatVND(amount int64) string {
 	}
 	
 	// Thêm ký hiệu tiền tệ VND
-	result.WriteString(" ₫")
+	result.WriteString("₫")
 	
 	return result.String()
 }
 
+// FormatMoney định dạng số tiền với dấu chấm phân cách hàng nghìn
 func FormatMoney(amount int64) string {
-	return humanize.Commaf(float64(amount))
+	// Sử dụng humanize.Comma để định dạng với dấu phẩy
+	formatted := humanize.Comma(amount)
+	
+	// Thay thế dấu phẩy bằng dấu chấm
+	formatted = strings.ReplaceAll(formatted, ",", ".")
+	
+	return formatted
 }
 
 // Hàm helper để rút gọn tiêu đề

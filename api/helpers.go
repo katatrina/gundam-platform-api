@@ -507,6 +507,9 @@ func (server *Server) generateRandomAvatar(ctx context.Context, fullName string)
 		return "", fmt.Errorf("DiceBear API error, status code: %d", resp.StatusCode())
 	}
 	
+	fmt.Println("Status code:", resp.StatusCode())
+	fmt.Println("Content-Type:", resp.Header().Get("Content-Type"))
+	
 	// Tạo tên file duy nhất (chỉ để đặt tên, không tạo file thật)
 	fileName := fmt.Sprintf("avatar-%s.svg", uuid.New().String())
 	

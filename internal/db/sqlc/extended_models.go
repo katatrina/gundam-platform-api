@@ -175,3 +175,14 @@ type ExchangeUserInfo struct {
 	
 	Items []ExchangeItem `json:"items"` // Danh sách Gundam
 }
+
+type GundamSnapshot struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	Grade    string `json:"grade"`
+	Scale    string `json:"scale"`
+	Quantity int64  `json:"quantity"`
+	Weight   int64  `json:"weight"`
+	ImageURL string `json:"image_url"`
+}

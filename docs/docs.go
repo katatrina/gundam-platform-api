@@ -1134,6 +1134,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/:sellerID/auction-requests": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Create a new auction request for a Gundam model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Create a new auction request",
+                "parameters": [
+                    {
+                        "description": "Auction request details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.createAuctionRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created auction request",
+                        "schema": {
+                            "$ref": "#/definitions/db.AuctionRequest"
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/:sellerID/orders": {
             "get": {
                 "security": [
@@ -3355,6 +3394,37 @@ const docTemplate = `{
                 }
             }
         },
+        "api.createAuctionRequestBody": {
+            "type": "object",
+            "required": [
+                "bid_increment",
+                "buy_now_price",
+                "end_time",
+                "gundam_id",
+                "start_time",
+                "starting_price"
+            ],
+            "properties": {
+                "bid_increment": {
+                    "type": "integer"
+                },
+                "buy_now_price": {
+                    "type": "integer"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "starting_price": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.createExchangeOfferRequest": {
             "type": "object",
             "required": [
@@ -3853,6 +3923,91 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "db.AuctionRequest": {
+            "type": "object",
+            "required": [
+                "bid_increment",
+                "buy_now_price",
+                "created_at",
+                "deposit_amount",
+                "deposit_rate",
+                "end_time",
+                "gundam_id",
+                "gundam_snapshot",
+                "id",
+                "rejected_reason",
+                "seller_id",
+                "start_time",
+                "starting_price",
+                "status",
+                "updated_at"
+            ],
+            "properties": {
+                "bid_increment": {
+                    "type": "integer"
+                },
+                "buy_now_price": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deposit_amount": {
+                    "type": "integer"
+                },
+                "deposit_rate": {
+                    "type": "number"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "gundam_id": {
+                    "type": "integer"
+                },
+                "gundam_snapshot": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "rejected_reason": {
+                    "type": "string"
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "starting_price": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.AuctionRequestStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.AuctionRequestStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "canceled"
+            ],
+            "x-enum-varnames": [
+                "AuctionRequestStatusPending",
+                "AuctionRequestStatusApproved",
+                "AuctionRequestStatusRejected",
+                "AuctionRequestStatusCanceled"
+            ]
         },
         "db.CancelExchangeTxResult": {
             "type": "object",
@@ -5908,10 +6063,11 @@ const docTemplate = `{
                 "non_withdrawable",
                 "refund",
                 "refund deduction",
-                "auction lock",
-                "auction release",
-                "auction payment",
-                "platform fee"
+                "auction_deposit",
+                "auction_deposit_refund",
+                "auction_compensation",
+                "auction_winner_payment",
+                "auction_seller_payment"
             ],
             "x-enum-varnames": [
                 "WalletEntryTypeDeposit",
@@ -5921,10 +6077,11 @@ const docTemplate = `{
                 "WalletEntryTypeNonWithdrawable",
                 "WalletEntryTypeRefund",
                 "WalletEntryTypeRefunddeduction",
-                "WalletEntryTypeAuctionlock",
-                "WalletEntryTypeAuctionrelease",
-                "WalletEntryTypeAuctionpayment",
-                "WalletEntryTypePlatformfee"
+                "WalletEntryTypeAuctionDeposit",
+                "WalletEntryTypeAuctionDepositRefund",
+                "WalletEntryTypeAuctionCompensation",
+                "WalletEntryTypeAuctionWinnerPayment",
+                "WalletEntryTypeAuctionSellerPayment"
             ]
         },
         "db.WalletReferenceType": {

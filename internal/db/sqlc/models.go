@@ -10,7 +10,142 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
+
+type AuctionRequestStatus string
+
+const (
+	AuctionRequestStatusPending  AuctionRequestStatus = "pending"
+	AuctionRequestStatusApproved AuctionRequestStatus = "approved"
+	AuctionRequestStatusRejected AuctionRequestStatus = "rejected"
+	AuctionRequestStatusCanceled AuctionRequestStatus = "canceled"
+)
+
+func (e *AuctionRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuctionRequestStatus(s)
+	case string:
+		*e = AuctionRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuctionRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAuctionRequestStatus struct {
+	AuctionRequestStatus AuctionRequestStatus `json:"auction_request_status"`
+	Valid                bool                 `json:"valid"` // Valid is true if AuctionRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuctionRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuctionRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuctionRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuctionRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuctionRequestStatus), nil
+}
+
+func (e AuctionRequestStatus) Valid() bool {
+	switch e {
+	case AuctionRequestStatusPending,
+		AuctionRequestStatusApproved,
+		AuctionRequestStatusRejected,
+		AuctionRequestStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func AllAuctionRequestStatusValues() []AuctionRequestStatus {
+	return []AuctionRequestStatus{
+		AuctionRequestStatusPending,
+		AuctionRequestStatusApproved,
+		AuctionRequestStatusRejected,
+		AuctionRequestStatusCanceled,
+	}
+}
+
+type AuctionStatus string
+
+const (
+	AuctionStatusScheduled AuctionStatus = "scheduled"
+	AuctionStatusActive    AuctionStatus = "active"
+	AuctionStatusEnded     AuctionStatus = "ended"
+	AuctionStatusCompleted AuctionStatus = "completed"
+	AuctionStatusCanceled  AuctionStatus = "canceled"
+	AuctionStatusFailed    AuctionStatus = "failed"
+)
+
+func (e *AuctionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuctionStatus(s)
+	case string:
+		*e = AuctionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuctionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAuctionStatus struct {
+	AuctionStatus AuctionStatus `json:"auction_status"`
+	Valid         bool          `json:"valid"` // Valid is true if AuctionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuctionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuctionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuctionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuctionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuctionStatus), nil
+}
+
+func (e AuctionStatus) Valid() bool {
+	switch e {
+	case AuctionStatusScheduled,
+		AuctionStatusActive,
+		AuctionStatusEnded,
+		AuctionStatusCompleted,
+		AuctionStatusCanceled,
+		AuctionStatusFailed:
+		return true
+	}
+	return false
+}
+
+func AllAuctionStatusValues() []AuctionStatus {
+	return []AuctionStatus{
+		AuctionStatusScheduled,
+		AuctionStatusActive,
+		AuctionStatusEnded,
+		AuctionStatusCompleted,
+		AuctionStatusCanceled,
+		AuctionStatusFailed,
+	}
+}
 
 type DeliveryOverralStatus string
 
@@ -341,7 +476,7 @@ const (
 	GundamStatusInstore                GundamStatus = "in store"
 	GundamStatusPublished              GundamStatus = "published"
 	GundamStatusProcessing             GundamStatus = "processing"
-	GundamStatusPendingauctionapproval GundamStatus = "pending auction approval"
+	GundamStatusPendingAuctionApproval GundamStatus = "pending_auction_approval"
 	GundamStatusAuctioning             GundamStatus = "auctioning"
 	GundamStatusForexchange            GundamStatus = "for exchange"
 	GundamStatusExchanging             GundamStatus = "exchanging"
@@ -387,7 +522,7 @@ func (e GundamStatus) Valid() bool {
 	case GundamStatusInstore,
 		GundamStatusPublished,
 		GundamStatusProcessing,
-		GundamStatusPendingauctionapproval,
+		GundamStatusPendingAuctionApproval,
 		GundamStatusAuctioning,
 		GundamStatusForexchange,
 		GundamStatusExchanging:
@@ -401,7 +536,7 @@ func AllGundamStatusValues() []GundamStatus {
 		GundamStatusInstore,
 		GundamStatusPublished,
 		GundamStatusProcessing,
-		GundamStatusPendingauctionapproval,
+		GundamStatusPendingAuctionApproval,
 		GundamStatusAuctioning,
 		GundamStatusForexchange,
 		GundamStatusExchanging,
@@ -966,17 +1101,18 @@ func AllWalletEntryStatusValues() []WalletEntryStatus {
 type WalletEntryType string
 
 const (
-	WalletEntryTypeDeposit         WalletEntryType = "deposit"
-	WalletEntryTypeWithdrawal      WalletEntryType = "withdrawal"
-	WalletEntryTypePayment         WalletEntryType = "payment"
-	WalletEntryTypePaymentreceived WalletEntryType = "payment received"
-	WalletEntryTypeNonWithdrawable WalletEntryType = "non_withdrawable"
-	WalletEntryTypeRefund          WalletEntryType = "refund"
-	WalletEntryTypeRefunddeduction WalletEntryType = "refund deduction"
-	WalletEntryTypeAuctionlock     WalletEntryType = "auction lock"
-	WalletEntryTypeAuctionrelease  WalletEntryType = "auction release"
-	WalletEntryTypeAuctionpayment  WalletEntryType = "auction payment"
-	WalletEntryTypePlatformfee     WalletEntryType = "platform fee"
+	WalletEntryTypeDeposit              WalletEntryType = "deposit"
+	WalletEntryTypeWithdrawal           WalletEntryType = "withdrawal"
+	WalletEntryTypePayment              WalletEntryType = "payment"
+	WalletEntryTypePaymentreceived      WalletEntryType = "payment received"
+	WalletEntryTypeNonWithdrawable      WalletEntryType = "non_withdrawable"
+	WalletEntryTypeRefund               WalletEntryType = "refund"
+	WalletEntryTypeRefunddeduction      WalletEntryType = "refund deduction"
+	WalletEntryTypeAuctionDeposit       WalletEntryType = "auction_deposit"
+	WalletEntryTypeAuctionDepositRefund WalletEntryType = "auction_deposit_refund"
+	WalletEntryTypeAuctionCompensation  WalletEntryType = "auction_compensation"
+	WalletEntryTypeAuctionWinnerPayment WalletEntryType = "auction_winner_payment"
+	WalletEntryTypeAuctionSellerPayment WalletEntryType = "auction_seller_payment"
 )
 
 func (e *WalletEntryType) Scan(src interface{}) error {
@@ -1023,10 +1159,11 @@ func (e WalletEntryType) Valid() bool {
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
 		WalletEntryTypeRefunddeduction,
-		WalletEntryTypeAuctionlock,
-		WalletEntryTypeAuctionrelease,
-		WalletEntryTypeAuctionpayment,
-		WalletEntryTypePlatformfee:
+		WalletEntryTypeAuctionDeposit,
+		WalletEntryTypeAuctionDepositRefund,
+		WalletEntryTypeAuctionCompensation,
+		WalletEntryTypeAuctionWinnerPayment,
+		WalletEntryTypeAuctionSellerPayment:
 		return true
 	}
 	return false
@@ -1041,10 +1178,11 @@ func AllWalletEntryTypeValues() []WalletEntryType {
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
 		WalletEntryTypeRefunddeduction,
-		WalletEntryTypeAuctionlock,
-		WalletEntryTypeAuctionrelease,
-		WalletEntryTypeAuctionpayment,
-		WalletEntryTypePlatformfee,
+		WalletEntryTypeAuctionDeposit,
+		WalletEntryTypeAuctionDepositRefund,
+		WalletEntryTypeAuctionCompensation,
+		WalletEntryTypeAuctionWinnerPayment,
+		WalletEntryTypeAuctionSellerPayment,
 	}
 }
 
@@ -1116,6 +1254,69 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 		WalletReferenceTypeZalopay,
 		WalletReferenceTypeExchange,
 	}
+}
+
+type Auction struct {
+	ID                    uuid.UUID       `json:"id"`
+	RequestID             *uuid.UUID      `json:"request_id"`
+	GundamID              *int64          `json:"gundam_id"`
+	SellerID              string          `json:"seller_id"`
+	GundamSnapshot        []byte          `json:"gundam_snapshot"`
+	StartingPrice         int64           `json:"starting_price"`
+	BidIncrement          int64           `json:"bid_increment"`
+	WinningBidID          *uuid.UUID      `json:"winning_bid_id"`
+	BuyNowPrice           *int64          `json:"buy_now_price"`
+	StartTime             time.Time       `json:"start_time"`
+	EndTime               time.Time       `json:"end_time"`
+	Status                AuctionStatus   `json:"status"`
+	CurrentPrice          int64           `json:"current_price"`
+	DepositRate           decimal.Decimal `json:"deposit_rate"`
+	DepositAmount         int64           `json:"deposit_amount"`
+	WinnerPaymentDeadline *time.Time      `json:"winner_payment_deadline"`
+	TotalParticipants     int32           `json:"total_participants"`
+	TotalBids             int32           `json:"total_bids"`
+	OrderID               *uuid.UUID      `json:"order_id"`
+	CanceledBy            *string         `json:"canceled_by"`
+	CanceledReason        *string         `json:"canceled_reason"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             time.Time       `json:"updated_at"`
+}
+
+type AuctionBid struct {
+	ID            uuid.UUID  `json:"id"`
+	AuctionID     *uuid.UUID `json:"auction_id"`
+	BidderID      *string    `json:"bidder_id"`
+	ParticipantID uuid.UUID  `json:"participant_id"`
+	Amount        int64      `json:"amount"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+type AuctionParticipant struct {
+	ID             uuid.UUID `json:"id"`
+	AuctionID      uuid.UUID `json:"auction_id"`
+	UserID         string    `json:"user_id"`
+	DepositAmount  int64     `json:"deposit_amount"`
+	DepositEntryID *int64    `json:"deposit_entry_id"`
+	IsRefunded     bool      `json:"is_refunded"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type AuctionRequest struct {
+	ID             uuid.UUID            `json:"id"`
+	GundamID       *int64               `json:"gundam_id"`
+	SellerID       string               `json:"seller_id"`
+	GundamSnapshot GundamSnapshot       `json:"gundam_snapshot"`
+	StartingPrice  int64                `json:"starting_price"`
+	BidIncrement   int64                `json:"bid_increment"`
+	BuyNowPrice    *int64               `json:"buy_now_price"`
+	DepositRate    decimal.Decimal      `json:"deposit_rate"`
+	DepositAmount  int64                `json:"deposit_amount"`
+	StartTime      time.Time            `json:"start_time"`
+	EndTime        time.Time            `json:"end_time"`
+	Status         AuctionRequestStatus `json:"status"`
+	RejectedReason *string              `json:"rejected_reason"`
+	CreatedAt      time.Time            `json:"created_at"`
+	UpdatedAt      time.Time            `json:"updated_at"`
 }
 
 type Cart struct {
