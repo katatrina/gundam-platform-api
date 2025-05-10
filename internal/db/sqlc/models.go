@@ -19,7 +19,6 @@ const (
 	AuctionRequestStatusPending  AuctionRequestStatus = "pending"
 	AuctionRequestStatusApproved AuctionRequestStatus = "approved"
 	AuctionRequestStatusRejected AuctionRequestStatus = "rejected"
-	AuctionRequestStatusCanceled AuctionRequestStatus = "canceled"
 )
 
 func (e *AuctionRequestStatus) Scan(src interface{}) error {
@@ -61,8 +60,7 @@ func (e AuctionRequestStatus) Valid() bool {
 	switch e {
 	case AuctionRequestStatusPending,
 		AuctionRequestStatusApproved,
-		AuctionRequestStatusRejected,
-		AuctionRequestStatusCanceled:
+		AuctionRequestStatusRejected:
 		return true
 	}
 	return false
@@ -73,7 +71,6 @@ func AllAuctionRequestStatusValues() []AuctionRequestStatus {
 		AuctionRequestStatusPending,
 		AuctionRequestStatusApproved,
 		AuctionRequestStatusRejected,
-		AuctionRequestStatusCanceled,
 	}
 }
 

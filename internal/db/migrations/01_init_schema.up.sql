@@ -127,8 +127,7 @@ CREATE TYPE "exchange_status" AS ENUM (
 CREATE TYPE "auction_request_status" AS ENUM (
   'pending',
   'approved',
-  'rejected',
-  'canceled'
+  'rejected'
 );
 
 CREATE TYPE "auction_status" AS ENUM (

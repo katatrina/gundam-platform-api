@@ -16,7 +16,8 @@ import (
 const countExistingPendingAuctionRequest = `-- name: CountExistingPendingAuctionRequest :one
 SELECT COUNT(*)
 FROM auction_requests
-WHERE gundam_id = $1 AND status = 'pending'
+WHERE gundam_id = $1
+  AND status = 'pending'
 `
 
 func (q *Queries) CountExistingPendingAuctionRequest(ctx context.Context, gundamID *int64) (int64, error) {
@@ -88,4 +89,53 @@ func (q *Queries) CreateAuctionRequest(ctx context.Context, arg CreateAuctionReq
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listSellerAuctionRequests = `-- name: ListSellerAuctionRequests :many
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_reason, created_at, updated_at
+FROM auction_requests
+WHERE seller_id = $1
+  AND status = COALESCE($2, status)
+ORDER BY created_at DESC
+`
+
+type ListSellerAuctionRequestsParams struct {
+	SellerID string                   `json:"seller_id"`
+	Status   NullAuctionRequestStatus `json:"status"`
+}
+
+func (q *Queries) ListSellerAuctionRequests(ctx context.Context, arg ListSellerAuctionRequestsParams) ([]AuctionRequest, error) {
+	rows, err := q.db.Query(ctx, listSellerAuctionRequests, arg.SellerID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuctionRequest{}
+	for rows.Next() {
+		var i AuctionRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.GundamID,
+			&i.SellerID,
+			&i.GundamSnapshot,
+			&i.StartingPrice,
+			&i.BidIncrement,
+			&i.BuyNowPrice,
+			&i.DepositRate,
+			&i.DepositAmount,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Status,
+			&i.RejectedReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

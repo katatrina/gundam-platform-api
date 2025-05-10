@@ -290,7 +290,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			auctionRequestGroup.POST("", server.createAuctionRequest) // ✅
 			
 			// Xem danh sách yêu cầu đấu giá của mình
-			// auctionRequestGroup.GET("", server.listSellerAuctionRequests)
+			auctionRequestGroup.GET("", server.listSellerAuctionRequests)
 			
 			// Xem chi tiết yêu cầu đấu giá
 			// auctionRequestGroup.GET(":requestID", server.getAuctionRequestDetails)

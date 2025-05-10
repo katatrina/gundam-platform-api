@@ -15,4 +15,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *;
 -- name: CountExistingPendingAuctionRequest :one
 SELECT COUNT(*)
 FROM auction_requests
-WHERE gundam_id = $1 AND status = 'pending';
+WHERE gundam_id = $1
+  AND status = 'pending';
+
+-- name: ListSellerAuctionRequests :many
+SELECT *
+FROM auction_requests
+WHERE seller_id = $1
+  AND status = COALESCE(sqlc.narg('status'), status)
+ORDER BY created_at DESC;

@@ -826,3 +826,38 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+//	@Summary		List auction requests for a seller
+//	@Description	List all auction requests that belong to the specified seller, optionally filtered by status
+//	@Tags			auctions
+//	@Produce		json
+//	@Param			status	query	string				false	"Filter by status"	Enums(pending,approved,rejected)
+//	@Success		200		{array}	db.AuctionRequest	"List of auction requests"
+//	@Security		accessToken
+//	@Router			/sellers/:sellerID/auction-requests [get]
+func (server *Server) listSellerAuctionRequests(c *gin.Context) {
+	user := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	status := c.Query("status")
+	if status != "" {
+		if err := db.IsValidAuctionRequestStatus(status); err != nil {
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	auctionRequests, err := server.dbStore.ListSellerAuctionRequests(c.Request.Context(), db.ListSellerAuctionRequestsParams{
+		SellerID: user.ID,
+		Status: db.NullAuctionRequestStatus{
+			AuctionRequestStatus: db.AuctionRequestStatus(status),
+			Valid:                status != "",
+		},
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list auction requests")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, auctionRequests)
+}

@@ -1133,6 +1133,45 @@
             }
         },
         "/sellers/:sellerID/auction-requests": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List all auction requests that belong to the specified seller, optionally filtered by status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "List auction requests for a seller",
+                "parameters": [
+                    {
+                        "enum": [
+                            "pending",
+                            "approved",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of auction requests",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.AuctionRequest"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -3964,10 +4003,7 @@
                     "type": "integer"
                 },
                 "gundam_snapshot": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                    "$ref": "#/definitions/db.GundamSnapshot"
                 },
                 "id": {
                     "type": "string"
@@ -3997,14 +4033,12 @@
             "enum": [
                 "pending",
                 "approved",
-                "rejected",
-                "canceled"
+                "rejected"
             ],
             "x-enum-varnames": [
                 "AuctionRequestStatusPending",
                 "AuctionRequestStatusApproved",
-                "AuctionRequestStatusRejected",
-                "AuctionRequestStatusCanceled"
+                "AuctionRequestStatusRejected"
             ]
         },
         "db.CancelExchangeTxResult": {
@@ -4981,6 +5015,45 @@
                 },
                 "slug": {
                     "type": "string"
+                }
+            }
+        },
+        "db.GundamSnapshot": {
+            "type": "object",
+            "required": [
+                "grade",
+                "id",
+                "image_url",
+                "name",
+                "quantity",
+                "scale",
+                "slug",
+                "weight"
+            ],
+            "properties": {
+                "grade": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "scale": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
                 }
             }
         },

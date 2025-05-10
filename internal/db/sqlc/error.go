@@ -87,3 +87,12 @@ func IsValidExchangeStatus(status string) error {
 	
 	return nil
 }
+
+func IsValidAuctionRequestStatus(status string) error {
+	if !AuctionRequestStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllAuctionRequestStatusValues())
+		return err
+	}
+	
+	return nil
+}

@@ -523,9 +523,7 @@ definitions:
       gundam_id:
         type: integer
       gundam_snapshot:
-        items:
-          type: integer
-        type: array
+        $ref: '#/definitions/db.GundamSnapshot'
       id:
         type: string
       rejected_reason:
@@ -562,13 +560,11 @@ definitions:
     - pending
     - approved
     - rejected
-    - canceled
     type: string
     x-enum-varnames:
     - AuctionRequestStatusPending
     - AuctionRequestStatusApproved
     - AuctionRequestStatusRejected
-    - AuctionRequestStatusCanceled
   db.CancelExchangeTxResult:
     properties:
       exchange:
@@ -1268,6 +1264,34 @@ definitions:
     - id
     - name
     - slug
+    type: object
+  db.GundamSnapshot:
+    properties:
+      grade:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      scale:
+        type: string
+      slug:
+        type: string
+      weight:
+        type: integer
+    required:
+    - grade
+    - id
+    - image_url
+    - name
+    - quantity
+    - scale
+    - slug
+    - weight
     type: object
   db.ListCartItemsWithDetailsRow:
     properties:
@@ -2843,6 +2867,32 @@ paths:
       tags:
       - seller profile
   /sellers/:sellerID/auction-requests:
+    get:
+      description: List all auction requests that belong to the specified seller,
+        optionally filtered by status
+      parameters:
+      - description: Filter by status
+        enum:
+        - pending
+        - approved
+        - rejected
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of auction requests
+          schema:
+            items:
+              $ref: '#/definitions/db.AuctionRequest'
+            type: array
+      security:
+      - accessToken: []
+      summary: List auction requests for a seller
+      tags:
+      - auctions
     post:
       consumes:
       - application/json
