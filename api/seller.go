@@ -888,9 +888,11 @@ func (server *Server) deleteAuctionRequest(c *gin.Context) {
 	request, err := server.dbStore.GetAuctionRequestByID(c, requestID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction request ID %s not found", requestID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
+		
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -902,7 +904,7 @@ func (server *Server) deleteAuctionRequest(c *gin.Context) {
 		return
 	}
 	
-	// Chỉ cho phép xóa nếu đang pending hoặc rejected
+	// Chỉ cho phép xóa nếu yêu cầu có status pending hoặc rejected
 	if request.Status != db.AuctionRequestStatusPending && request.Status != db.AuctionRequestStatusRejected {
 		err = fmt.Errorf("only 'pending' or 'rejected' requests can be deleted, current: %s", request.Status)
 		c.JSON(http.StatusConflict, errorResponse(err))

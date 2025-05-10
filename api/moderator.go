@@ -32,7 +32,7 @@ func (server *Server) listAuctionRequestsForModerator(c *gin.Context) {
 	
 	auctionRequests, err := server.dbStore.ListAuctionRequests(c.Request.Context(), db.NullAuctionRequestStatus{
 		AuctionRequestStatus: db.AuctionRequestStatus(status),
-		Valid:                true,
+		Valid:                status != "",
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list auction requests")
@@ -111,23 +111,10 @@ func (server *Server) rejectAuctionRequest(c *gin.Context) {
 		asynq.Queue(worker.QueueCritical),
 	}
 	
-	// Lấy thông tin gudam đấu giá
-	gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), *rejectedRequest.GundamID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d not found", *rejectedRequest.GundamID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: rejectedRequest.SellerID,
 		Title:       "Yêu cầu đấu giá bị từ chối",
-		Message:     fmt.Sprintf("Yêu cầu đấu giá của bạn cho gundam \"%s\" đã bị từ chối. Lý do: %s.", gundam.Name, req.Reason),
+		Message:     fmt.Sprintf("Yêu cầu đấu giá của bạn cho gundam \"%s\" đã bị từ chối. Lý do: %s.", rejectedRequest.GundamSnapshot.Name, req.Reason),
 		Type:        "auction_request",
 		ReferenceID: rejectedRequest.ID.String(),
 	}, opts...)

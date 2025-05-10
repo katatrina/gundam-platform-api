@@ -295,7 +295,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Xem chi tiết yêu cầu đấu giá
 			// auctionRequestGroup.GET(":requestID", server.getAuctionRequestDetails)
 			
-			// Hủy yêu cầu đấu giá (khi chưa được duyệt)
+			// Xóa yêu cầu đấu giá (pending hoặc rejected)
 			auctionRequestGroup.DELETE(":requestID", server.deleteAuctionRequest) // ✅
 		}
 		

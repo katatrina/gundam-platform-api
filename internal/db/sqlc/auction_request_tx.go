@@ -92,33 +92,46 @@ func (store *SQLStore) DeleteAuctionRequestTx(ctx context.Context, request Aucti
 			return err
 		}
 		
-		// 2. Cập nhật Gundam về trạng thái "in store"
+		// 2. Kiểm tra thông tin và cập nhật trạng thái Gundam
 		if request.GundamID != nil {
-			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
-				ID: *request.GundamID,
-				Status: NullGundamStatus{
-					GundamStatus: GundamStatusInstore,
-					Valid:        true,
-				},
-			})
+			gundam, err := qTx.GetGundamByID(ctx, *request.GundamID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get gundam by ID: %w", err)
+			}
+			
+			// Chỉ cập nhật status nếu gundam đang pending_auction_approval
+			if gundam.Status == GundamStatusPendingAuctionApproval {
+				err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+					ID: *request.GundamID,
+					Status: NullGundamStatus{
+						GundamStatus: GundamStatusInstore,
+						Valid:        true,
+					},
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 		
-		// 3. Giảm open_auctions_used trong subscription
-		subscription, err := qTx.GetCurrentActiveSubscriptionDetailsForSeller(ctx, request.SellerID)
-		if err != nil {
-			return err
-		}
-		
-		err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
-			SubscriptionID:   subscription.ID,
-			SellerID:         request.SellerID,
-			OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),
-		})
-		if err != nil {
-			return err
+		// 3. Chỉ giảm open_auctions_used nếu request có status "pending"
+		// Nếu request có status "rejected" thì đã hoàn trả từ lúc reject rồi
+		if request.Status == AuctionRequestStatusPending {
+			subscription, err := qTx.GetCurrentActiveSubscriptionDetailsForSeller(ctx, request.SellerID)
+			if err != nil {
+				return err
+			}
+			
+			if subscription.OpenAuctionsUsed > 0 {
+				err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+					SubscriptionID:   subscription.ID,
+					SellerID:         request.SellerID,
+					OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),
+				})
+				if err != nil {
+					return err
+				}
+			}
 		}
 		
 		return nil
@@ -141,6 +154,7 @@ func (store *SQLStore) RejectAuctionRequestTx(ctx context.Context, arg RejectAuc
 				AuctionRequestStatus: AuctionRequestStatusRejected,
 				Valid:                true,
 			},
+			RejectedBy:     &arg.RejectedBy,
 			RejectedReason: &arg.RejectedReason,
 		})
 		if err != nil {
