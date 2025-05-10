@@ -1148,8 +1148,15 @@ const docTemplate = `{
                 "tags": [
                     "auctions"
                 ],
-                "summary": "List auction requests for a seller",
+                "summary": "List auction requests of a seller",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "enum": [
                             "pending",
@@ -1190,8 +1197,15 @@ const docTemplate = `{
                 "tags": [
                     "auctions"
                 ],
-                "summary": "Create a new auction request",
+                "summary": "Create a new auction request by seller",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "Auction request details",
                         "name": "request",
@@ -1388,6 +1402,44 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/auction-requests/{requestID}": {
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Delete an auction request. Only requests with 'pending' or 'rejected' status can be deleted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Delete an auction request by seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auction Request ID (UUID format)",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted auction request"
                     }
                 }
             }

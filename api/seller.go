@@ -827,12 +827,13 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-//	@Summary		List auction requests for a seller
+//	@Summary		List auction requests of a seller
 //	@Description	List all auction requests that belong to the specified seller, optionally filtered by status
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			status	query	string				false	"Filter by status"	Enums(pending,approved,rejected)
-//	@Success		200		{array}	db.AuctionRequest	"List of auction requests"
+//	@Param			sellerID	path	string				true	"Seller ID"
+//	@Param			status		query	string				false	"Filter by status"	Enums(pending,approved,rejected)
+//	@Success		200			{array}	db.AuctionRequest	"List of auction requests"
 //	@Security		accessToken
 //	@Router			/sellers/:sellerID/auction-requests [get]
 func (server *Server) listSellerAuctionRequests(c *gin.Context) {
@@ -860,4 +861,59 @@ func (server *Server) listSellerAuctionRequests(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, auctionRequests)
+}
+
+//	@Summary		Delete an auction request by seller
+//	@Description	Delete an auction request. Only requests with 'pending' or 'rejected' status can be deleted.
+//	@Tags			auctions
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			sellerID	path	string	true	"Seller ID"
+//	@Param			requestID	path	string	true	"Auction Request ID (UUID format)"
+//	@Success		204			"Successfully deleted auction request"
+//	@Router			/sellers/{sellerID}/auction-requests/{requestID} [delete]
+func (server *Server) deleteAuctionRequest(c *gin.Context) {
+	user := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	requestID, err := uuid.Parse(c.Param("requestID"))
+	if err != nil {
+		err = fmt.Errorf("failed to parse auction request ID: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Lấy thông tin yêu cầu để kiểm tra
+	request, err := server.dbStore.GetAuctionRequestByID(c, requestID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền sở hữu yêu cầu
+	if request.SellerID != user.ID {
+		err = fmt.Errorf("auction request ID %s does not belong to seller ID %s", request.ID, user.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Chỉ cho phép xóa nếu đang pending hoặc rejected
+	if request.Status != db.AuctionRequestStatusPending && request.Status != db.AuctionRequestStatusRejected {
+		err = fmt.Errorf("only 'pending' or 'rejected' requests can be deleted, current: %s", request.Status)
+		c.JSON(http.StatusConflict, errorResponse(err))
+		return
+	}
+	
+	// Thực hiện xóa trong transaction
+	err = server.dbStore.DeleteAuctionRequestTx(c.Request.Context(), request)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete auction request")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.Status(http.StatusNoContent)
 }

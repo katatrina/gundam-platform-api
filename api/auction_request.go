@@ -101,14 +101,15 @@ func (req *createAuctionRequestBody) validate() error {
 	return nil
 }
 
-//	@Summary		Create a new auction request
+//	@Summary		Create a new auction request by seller
 //	@Description	Create a new auction request for a Gundam model
 //	@Tags			auctions
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
-//	@Param			request	body		createAuctionRequestBody	true	"Auction request details"
-//	@Success		201		{object}	db.AuctionRequest			"Successfully created auction request"
+//	@Param			sellerID	path		string						true	"Seller ID"
+//	@Param			request		body		createAuctionRequestBody	true	"Auction request details"
+//	@Success		201			{object}	db.AuctionRequest			"Successfully created auction request"
 //	@Router			/sellers/:sellerID/auction-requests [post]
 func (server *Server) createAuctionRequest(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)

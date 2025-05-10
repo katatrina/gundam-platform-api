@@ -83,3 +83,44 @@ func (store *SQLStore) CreateAuctionRequestTx(ctx context.Context, arg CreateAuc
 	
 	return request, err
 }
+
+func (store *SQLStore) DeleteAuctionRequestTx(ctx context.Context, request AuctionRequest) error {
+	return store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Xóa yêu cầu đấu giá
+		err := qTx.DeleteAuctionRequest(ctx, request.ID)
+		if err != nil {
+			return err
+		}
+		
+		// 2. Cập nhật Gundam về trạng thái "in store"
+		if request.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *request.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusInstore,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+		
+		// 3. Giảm open_auctions_used trong subscription
+		subscription, err := qTx.GetCurrentActiveSubscriptionDetailsForSeller(ctx, request.SellerID)
+		if err != nil {
+			return err
+		}
+		
+		err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+			SubscriptionID:   subscription.ID,
+			SellerID:         request.SellerID,
+			OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),
+		})
+		if err != nil {
+			return err
+		}
+		
+		return nil
+	})
+}

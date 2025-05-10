@@ -91,6 +91,46 @@ func (q *Queries) CreateAuctionRequest(ctx context.Context, arg CreateAuctionReq
 	return i, err
 }
 
+const deleteAuctionRequest = `-- name: DeleteAuctionRequest :exec
+DELETE
+FROM auction_requests
+WHERE id = $1
+`
+
+func (q *Queries) DeleteAuctionRequest(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAuctionRequest, id)
+	return err
+}
+
+const getAuctionRequestByID = `-- name: GetAuctionRequestByID :one
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_reason, created_at, updated_at
+FROM auction_requests
+WHERE id = $1
+`
+
+func (q *Queries) GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error) {
+	row := q.db.QueryRow(ctx, getAuctionRequestByID, id)
+	var i AuctionRequest
+	err := row.Scan(
+		&i.ID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.BuyNowPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.RejectedReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listSellerAuctionRequests = `-- name: ListSellerAuctionRequests :many
 SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_reason, created_at, updated_at
 FROM auction_requests

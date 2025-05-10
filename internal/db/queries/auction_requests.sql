@@ -24,3 +24,13 @@ FROM auction_requests
 WHERE seller_id = $1
   AND status = COALESCE(sqlc.narg('status'), status)
 ORDER BY created_at DESC;
+
+-- name: GetAuctionRequestByID :one
+SELECT *
+FROM auction_requests
+WHERE id = $1;
+
+-- name: DeleteAuctionRequest :exec
+DELETE
+FROM auction_requests
+WHERE id = $1;

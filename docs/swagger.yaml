@@ -2871,6 +2871,11 @@ paths:
       description: List all auction requests that belong to the specified seller,
         optionally filtered by status
       parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
       - description: Filter by status
         enum:
         - pending
@@ -2890,7 +2895,7 @@ paths:
             type: array
       security:
       - accessToken: []
-      summary: List auction requests for a seller
+      summary: List auction requests of a seller
       tags:
       - auctions
     post:
@@ -2898,6 +2903,11 @@ paths:
       - application/json
       description: Create a new auction request for a Gundam model
       parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
       - description: Auction request details
         in: body
         name: request
@@ -2913,7 +2923,7 @@ paths:
             $ref: '#/definitions/db.AuctionRequest'
       security:
       - accessToken: []
-      summary: Create a new auction request
+      summary: Create a new auction request by seller
       tags:
       - auctions
   /sellers/:sellerID/orders:
@@ -3033,6 +3043,31 @@ paths:
       summary: Get current active subscription
       tags:
       - sellers
+  /sellers/{sellerID}/auction-requests/{requestID}:
+    delete:
+      description: Delete an auction request. Only requests with 'pending' or 'rejected'
+        status can be deleted.
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Auction Request ID (UUID format)
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted auction request
+      security:
+      - accessToken: []
+      summary: Delete an auction request by seller
+      tags:
+      - auctions
   /sellers/{sellerID}/gundams/{gundamID}/publish:
     patch:
       consumes:

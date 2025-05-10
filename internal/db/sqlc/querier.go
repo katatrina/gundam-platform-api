@@ -48,12 +48,14 @@ type Querier interface {
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
 	DeleteAllGundamAccessories(ctx context.Context, gundamID int64) error
+	DeleteAuctionRequest(ctx context.Context, id uuid.UUID) error
 	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
 	DeleteExchangePost(ctx context.Context, id uuid.UUID) (ExchangePost, error)
 	DeleteGundam(ctx context.Context, arg DeleteGundamParams) error
 	DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
+	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)

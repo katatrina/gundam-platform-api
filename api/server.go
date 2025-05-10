@@ -296,7 +296,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			// auctionRequestGroup.GET(":requestID", server.getAuctionRequestDetails)
 			
 			// Hủy yêu cầu đấu giá (khi chưa được duyệt)
-			// auctionRequestGroup.DELETE(":requestID", server.cancelAuctionRequest)
+			auctionRequestGroup.DELETE(":requestID", server.deleteAuctionRequest)
 		}
 		
 		// API cho phiên đấu giá của seller
