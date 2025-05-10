@@ -369,7 +369,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			// moderatorAuctionGroup.PATCH(":requestID/approve", server.approveAuctionRequest)
 			
 			// Từ chối yêu cầu đấu giá
-			// moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest)
+			moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest)
 		}
 	}
 	

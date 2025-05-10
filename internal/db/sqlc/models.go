@@ -1311,6 +1311,7 @@ type AuctionRequest struct {
 	StartTime      time.Time            `json:"start_time"`
 	EndTime        time.Time            `json:"end_time"`
 	Status         AuctionRequestStatus `json:"status"`
+	RejectedBy     *string              `json:"rejected_by"`
 	RejectedReason *string              `json:"rejected_reason"`
 	CreatedAt      time.Time            `json:"created_at"`
 	UpdatedAt      time.Time            `json:"updated_at"`

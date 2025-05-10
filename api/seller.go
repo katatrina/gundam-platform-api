@@ -577,7 +577,9 @@ func (server *Server) packageOrder(c *gin.Context) {
 		Message:     message,
 		Type:        "order",
 		ReferenceID: result.Order.Code,
-	})
+	}, []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical)}...)
 	
 	c.JSON(http.StatusOK, result)
 }

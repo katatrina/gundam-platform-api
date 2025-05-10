@@ -602,6 +602,11 @@ const docTemplate = `{
         },
         "/mod/auction-requests": {
             "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
                 "description": "Get a list of all auction requests with optional status filter.",
                 "produces": [
                     "application/json"
@@ -631,6 +636,52 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/db.AuctionRequest"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/mod/auction-requests/{requestID}/reject": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Moderator rejects an auction request with a reason.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "Reject an auction request by moderator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction Request ID (UUID format)",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rejection reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.rejectAuctionRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rejected auction request",
+                        "schema": {
+                            "$ref": "#/definitions/db.AuctionRequest"
                         }
                     }
                 }
@@ -3867,6 +3918,17 @@ const docTemplate = `{
                 }
             }
         },
+        "api.rejectAuctionRequestBody": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "api.requestNegotiationForOfferRequest": {
             "type": "object",
             "required": [
@@ -4063,6 +4125,7 @@ const docTemplate = `{
                 "gundam_id",
                 "gundam_snapshot",
                 "id",
+                "rejected_by",
                 "rejected_reason",
                 "seller_id",
                 "start_time",
@@ -4096,6 +4159,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.GundamSnapshot"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "rejected_by": {
                     "type": "string"
                 },
                 "rejected_reason": {

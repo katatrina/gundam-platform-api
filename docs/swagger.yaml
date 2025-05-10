@@ -378,6 +378,13 @@ definitions:
     - from_address_id
     - to_address_id
     type: object
+  api.rejectAuctionRequestBody:
+    properties:
+      reason:
+        type: string
+    required:
+    - reason
+    type: object
   api.requestNegotiationForOfferRequest:
     properties:
       note:
@@ -526,6 +533,8 @@ definitions:
         $ref: '#/definitions/db.GundamSnapshot'
       id:
         type: string
+      rejected_by:
+        type: string
       rejected_reason:
         type: string
       seller_id:
@@ -548,6 +557,7 @@ definitions:
     - gundam_id
     - gundam_snapshot
     - id
+    - rejected_by
     - rejected_reason
     - seller_id
     - start_time
@@ -2534,7 +2544,38 @@ paths:
             items:
               $ref: '#/definitions/db.AuctionRequest'
             type: array
+      security:
+      - accessToken: []
       summary: List all auction requests for moderator
+      tags:
+      - moderator
+  /mod/auction-requests/{requestID}/reject:
+    patch:
+      consumes:
+      - application/json
+      description: Moderator rejects an auction request with a reason.
+      parameters:
+      - description: Auction Request ID (UUID format)
+        in: path
+        name: requestID
+        required: true
+        type: string
+      - description: Rejection reason
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.rejectAuctionRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rejected auction request
+          schema:
+            $ref: '#/definitions/db.AuctionRequest'
+      security:
+      - accessToken: []
+      summary: Reject an auction request by moderator
       tags:
       - moderator
   /orders:

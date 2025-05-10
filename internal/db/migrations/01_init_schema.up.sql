@@ -508,6 +508,7 @@ CREATE TABLE "auction_requests"
     "start_time"      timestamptz            NOT NULL,
     "end_time"        timestamptz            NOT NULL,
     "status"          auction_request_status NOT NULL DEFAULT 'pending',
+    "rejected_by"     text,
     "rejected_reason" text,
     "created_at"      timestamptz            NOT NULL DEFAULT (now()),
     "updated_at"      timestamptz            NOT NULL DEFAULT (now())
@@ -789,6 +790,9 @@ ALTER TABLE "auction_requests"
 
 ALTER TABLE "auction_requests"
     ADD FOREIGN KEY ("seller_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+
+ALTER TABLE "auction_requests"
+    ADD FOREIGN KEY ("rejected_by") REFERENCES "users" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "auctions"
     ADD FOREIGN KEY ("winning_bid_id") REFERENCES "auction_bids" ("id");

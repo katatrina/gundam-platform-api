@@ -116,6 +116,7 @@ type Querier interface {
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
+	UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionRequestParams) (AuctionRequest, error)
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error)
 	UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error)

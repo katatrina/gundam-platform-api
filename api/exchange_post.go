@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/token"
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -638,7 +639,9 @@ func (server *Server) deleteExchangePost(c *gin.Context) {
 			Message:     "Bài đăng trao đổi mà bạn đề xuất đã bị xóa. Gundam của bạn đã được đưa trở lại trạng thái sẵn có.",
 			Type:        "exchange",
 			ReferenceID: offer.ID.String(),
-		})
+		}, []asynq.Option{
+			asynq.MaxRetry(3),
+			asynq.Queue(worker.QueueCritical)}...)
 		if err != nil {
 			log.Info().Msgf("failed to send notification to user %s: %v", offer.OffererID, err)
 		}

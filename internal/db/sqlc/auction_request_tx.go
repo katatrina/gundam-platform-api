@@ -124,3 +124,64 @@ func (store *SQLStore) DeleteAuctionRequestTx(ctx context.Context, request Aucti
 		return nil
 	})
 }
+
+type RejectAuctionRequestTxParams struct {
+	RequestID      uuid.UUID
+	RejectedBy     string
+	RejectedReason string
+}
+
+func (store *SQLStore) RejectAuctionRequestTx(ctx context.Context, arg RejectAuctionRequestTxParams) (AuctionRequest, error) {
+	var request AuctionRequest
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Cập nhật trạng thái yêu cầu đấu giá thành "rejected"
+		rejectedRequest, err := qTx.UpdateAuctionRequest(ctx, UpdateAuctionRequestParams{
+			ID: arg.RequestID,
+			Status: NullAuctionRequestStatus{
+				AuctionRequestStatus: AuctionRequestStatusRejected,
+				Valid:                true,
+			},
+			RejectedReason: &arg.RejectedReason,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update auction request status: %w", err)
+		}
+		request = rejectedRequest
+		
+		// 2. Cập nhật trạng thái Gundam về "in store"
+		if rejectedRequest.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *rejectedRequest.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusInstore,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam status: %w", err)
+			}
+		}
+		
+		// 3. Lấy thông tin subscription của người bán
+		subscription, err := qTx.GetCurrentActiveSubscriptionDetailsForSeller(ctx, rejectedRequest.SellerID)
+		if err != nil {
+			return fmt.Errorf("failed to get subscription details: %w", err)
+		}
+		
+		// 4. Giảm open_auctions_used trong subscription
+		if subscription.OpenAuctionsUsed > 0 {
+			err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+				SubscriptionID:   subscription.ID,
+				SellerID:         rejectedRequest.SellerID,
+				OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update open auctions used: %w", err)
+			}
+		}
+		
+		return nil
+	})
+	
+	return request, err
+}

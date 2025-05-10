@@ -40,3 +40,11 @@ WHERE id = $1;
 DELETE
 FROM auction_requests
 WHERE id = $1;
+
+-- name: UpdateAuctionRequest :one
+UPDATE auction_requests
+SET status          = COALESCE(sqlc.narg('status'), status),
+    rejected_by     = COALESCE(sqlc.narg('rejected_by'), rejected_by),
+    rejected_reason = COALESCE(sqlc.narg('rejected_reason'), rejected_reason),
+    updated_at      = now()
+WHERE id = $1 RETURNING *;

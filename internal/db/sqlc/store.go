@@ -47,6 +47,7 @@ type Store interface {
 	CancelExchangeTx(ctx context.Context, arg CancelExchangeTxParams) (CancelExchangeTxResult, error)
 	CreateAuctionRequestTx(ctx context.Context, arg CreateAuctionRequestTxParams) (AuctionRequest, error)
 	DeleteAuctionRequestTx(ctx context.Context, request AuctionRequest) error
+	RejectAuctionRequestTx(ctx context.Context, arg RejectAuctionRequestTxParams) (AuctionRequest, error)
 }
 
 type SQLStore struct {
