@@ -273,14 +273,14 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Nhóm các API liên quan đến việc quản lý sản phẩm của người bán
 		gundamGroup := sellerGroup.Group("gundams")
 		{
-			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)
-			gundamGroup.PATCH(":gundamID/unpublish", server.unpublishGundam)
+			gundamGroup.PATCH(":gundamID/publish", server.publishGundam)     // ✅
+			gundamGroup.PATCH(":gundamID/unpublish", server.unpublishGundam) // ✅
 		}
 		
 		// Nhóm các API liên quan đến việc quản lý gói đăng ký của người bán
 		subscriptionGroup := sellerGroup.Group("subscriptions")
 		{
-			subscriptionGroup.GET("active", server.getCurrentActiveSubscription)
+			subscriptionGroup.GET("active", server.getCurrentActiveSubscription) // ✅
 		}
 		
 		// Nhóm các API cho yêu cầu đấu giá
@@ -290,13 +290,13 @@ func (server *Server) setupRouter() *gin.Engine {
 			auctionRequestGroup.POST("", server.createAuctionRequest) // ✅
 			
 			// Xem danh sách yêu cầu đấu giá của mình
-			auctionRequestGroup.GET("", server.listSellerAuctionRequests)
+			auctionRequestGroup.GET("", server.listSellerAuctionRequests) // ✅
 			
 			// Xem chi tiết yêu cầu đấu giá
 			// auctionRequestGroup.GET(":requestID", server.getAuctionRequestDetails)
 			
 			// Hủy yêu cầu đấu giá (khi chưa được duyệt)
-			auctionRequestGroup.DELETE(":requestID", server.deleteAuctionRequest)
+			auctionRequestGroup.DELETE(":requestID", server.deleteAuctionRequest) // ✅
 		}
 		
 		// API cho phiên đấu giá của seller
@@ -355,12 +355,12 @@ func (server *Server) setupRouter() *gin.Engine {
 	v1.POST("/check-email", server.checkEmailExists)
 	
 	// API cho moderator
-	// moderatorGroup := v1.Group("/mod", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
+	moderatorGroup := v1.Group("/mod", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
 	{
-		// moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
+		moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
 		{
-			// Xem danh sách yêu cầu đấu giá đang chờ duyệt
-			// moderatorAuctionGroup.GET("", server.listPendingAuctionRequests)
+			// Xem tất cả yêu cầu đấu giá (pending, approved, rejected)
+			moderatorAuctionGroup.GET("", server.listAuctionRequestsForModerator)
 			
 			// Xem chi tiết yêu cầu đấu giá
 			// moderatorAuctionGroup.GET(":requestID", server.getAuctionRequestDetails)

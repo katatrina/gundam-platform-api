@@ -131,6 +131,49 @@ func (q *Queries) GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (Auct
 	return i, err
 }
 
+const listAuctionRequests = `-- name: ListAuctionRequests :many
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_reason, created_at, updated_at
+FROM auction_requests
+WHERE status = COALESCE($1, status)
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAuctionRequests(ctx context.Context, status NullAuctionRequestStatus) ([]AuctionRequest, error) {
+	rows, err := q.db.Query(ctx, listAuctionRequests, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuctionRequest{}
+	for rows.Next() {
+		var i AuctionRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.GundamID,
+			&i.SellerID,
+			&i.GundamSnapshot,
+			&i.StartingPrice,
+			&i.BidIncrement,
+			&i.BuyNowPrice,
+			&i.DepositRate,
+			&i.DepositAmount,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Status,
+			&i.RejectedReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSellerAuctionRequests = `-- name: ListSellerAuctionRequests :many
 SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_reason, created_at, updated_at
 FROM auction_requests

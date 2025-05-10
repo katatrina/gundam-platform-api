@@ -2513,6 +2513,30 @@ paths:
       summary: Get Gundam by Slug
       tags:
       - gundams
+  /mod/auction-requests:
+    get:
+      description: Get a list of all auction requests with optional status filter.
+      parameters:
+      - description: Filter by auction request status
+        enum:
+        - pending
+        - approved
+        - rejected
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of auction requests
+          schema:
+            items:
+              $ref: '#/definitions/db.AuctionRequest'
+            type: array
+      summary: List all auction requests for moderator
+      tags:
+      - moderator
   /orders:
     get:
       consumes:
