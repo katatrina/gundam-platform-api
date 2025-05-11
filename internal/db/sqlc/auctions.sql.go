@@ -142,6 +142,65 @@ func (q *Queries) GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, er
 	return i, err
 }
 
+const listAuctions = `-- name: ListAuctions :many
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+FROM auctions
+WHERE status = COALESCE($1, status)
+ORDER BY CASE status
+             -- Phiên đang diễn ra: ưu tiên theo thời gian kết thúc gần nhất
+             WHEN 'active' THEN EXTRACT(EPOCH FROM end_time)
+             -- Phiên sắp diễn ra: ưu tiên theo thời gian bắt đầu sớm nhất
+             WHEN 'scheduled' THEN EXTRACT(EPOCH FROM start_time)
+             -- Các trạng thái khác: sắp xếp theo thời gian tạo mới nhất
+             ELSE EXTRACT(EPOCH FROM created_at) * -1
+             END ASC,
+         created_at DESC
+`
+
+func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([]Auction, error) {
+	rows, err := q.db.Query(ctx, listAuctions, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Auction{}
+	for rows.Next() {
+		var i Auction
+		if err := rows.Scan(
+			&i.ID,
+			&i.RequestID,
+			&i.GundamID,
+			&i.SellerID,
+			&i.GundamSnapshot,
+			&i.StartingPrice,
+			&i.BidIncrement,
+			&i.WinningBidID,
+			&i.BuyNowPrice,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Status,
+			&i.CurrentPrice,
+			&i.DepositRate,
+			&i.DepositAmount,
+			&i.WinnerPaymentDeadline,
+			&i.TotalParticipants,
+			&i.TotalBids,
+			&i.OrderID,
+			&i.CanceledBy,
+			&i.CanceledReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAuction = `-- name: UpdateAuction :one
 UPDATE auctions
 SET status     = COALESCE($2, status),

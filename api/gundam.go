@@ -675,7 +675,7 @@ func (server *Server) updateGundamBasisInfo(c *gin.Context) {
 //	@Success		200			{object}	db.GundamDetails	"Successfully retrieved Gundam details"
 //	@Router			/users/:id/gundams/:gundamID [get]
 //	@Security		accessToken
-func (server *Server) getGundamDetails(c *gin.Context) {
+func (server *Server) getUserGundamDetails(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	authenticatedUserID := authPayload.Subject
 	userID := c.Param("id")

@@ -94,6 +94,7 @@ type Querier interface {
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	ListAuctionRequests(ctx context.Context, status NullAuctionRequestStatus) ([]AuctionRequest, error)
+	ListAuctions(ctx context.Context, status NullAuctionStatus) ([]Auction, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
 	ListExchangeItems(ctx context.Context, arg ListExchangeItemsParams) ([]ExchangeItem, error)
 	ListExchangeOfferItems(ctx context.Context, arg ListExchangeOfferItemsParams) ([]ExchangeOfferItem, error)

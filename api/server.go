@@ -136,7 +136,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		userGundamGroup := userGroup.Group(":id/gundams")
 		{
 			userGundamGroup.POST("", server.createGundam)
-			userGundamGroup.GET(":gundamID", server.getGundamDetails)
+			userGundamGroup.GET(":gundamID", server.getUserGundamDetails)
 			userGundamGroup.PATCH(":gundamID", server.updateGundamBasisInfo)
 			userGundamGroup.PUT(":gundamID/accessories", server.updateGundamAccessories)
 			userGundamGroup.PATCH(":gundamID/primary-image", server.updateGundamPrimaryImage)
@@ -232,10 +232,10 @@ func (server *Server) setupRouter() *gin.Engine {
 	}
 	
 	// API công khai cho phiên đấu giá (không cần đăng nhập)
-	// auctionPublicGroup := v1.Group("/auctions")
+	auctionPublicGroup := v1.Group("/auctions")
 	{
-		// Liệt kê các phiên đấu giá đang diễn ra
-		// auctionPublicGroup.GET("", optionalAuthMiddleware(server.tokenMaker), server.listActiveAuctions)
+		// Liệt kê các phiên đấu giá (sắp diễn ra, đang diễn ra)
+		auctionPublicGroup.GET("", server.listAuctions) // ✅
 		
 		// Xem chi tiết một phiên đấu giá
 		// auctionPublicGroup.GET(":auctionID", optionalAuthMiddleware(server.tokenMaker), server.getAuctionDetails)
@@ -335,6 +335,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	gundamGroup := v1.Group("/gundams")
 	{
 		gundamGroup.GET("", server.listGundams)
+		// gundamGroup.GET(":gundamID", server.getGundamDetails)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
 	}
 	

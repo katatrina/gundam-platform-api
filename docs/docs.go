@@ -15,6 +15,41 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auctions": {
+            "get": {
+                "description": "Retrieves upcoming and ongoing auctions from the platform.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Get platform auctions",
+                "parameters": [
+                    {
+                        "enum": [
+                            "scheduled",
+                            "active"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of auctions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Auction"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/google-login": {
             "post": {
                 "description": "Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.",
