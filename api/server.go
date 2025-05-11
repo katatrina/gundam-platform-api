@@ -237,8 +237,8 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Liệt kê các phiên đấu giá (sắp diễn ra, đang diễn ra)
 		auctionPublicGroup.GET("", server.listAuctions) // ✅
 		
-		// Xem chi tiết một phiên đấu giá
-		// auctionPublicGroup.GET(":auctionID", optionalAuthMiddleware(server.tokenMaker), server.getAuctionDetails)
+		// Lấy thông tin chi tiết của một phiên đấu giá
+		auctionPublicGroup.GET(":auctionID", server.getAuctionDetails) // ✅
 	}
 	
 	// API cho người dùng tham gia đấu giá (cần đăng nhập)

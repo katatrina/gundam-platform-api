@@ -2265,6 +2265,25 @@ paths:
       summary: Get platform auctions
       tags:
       - auctions
+  /auctions/{auctionID}:
+    get:
+      description: Retrieves details of a specific auction by its ID.
+      parameters:
+      - description: ID of the auction
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Details of the auction
+          schema:
+            $ref: '#/definitions/db.Auction'
+      summary: Get auction details
+      tags:
+      - auctions
   /auth/google-login:
     post:
       consumes:

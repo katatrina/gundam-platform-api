@@ -48,6 +48,35 @@
                 }
             }
         },
+        "/auctions/{auctionID}": {
+            "get": {
+                "description": "Retrieves details of a specific auction by its ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Get auction details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of the auction",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Details of the auction",
+                        "schema": {
+                            "$ref": "#/definitions/db.Auction"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/google-login": {
             "post": {
                 "description": "Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.",
