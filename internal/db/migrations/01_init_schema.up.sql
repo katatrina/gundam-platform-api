@@ -795,6 +795,9 @@ ALTER TABLE "auction_requests"
 ALTER TABLE "auction_requests"
     ADD FOREIGN KEY ("rejected_by") REFERENCES "users" ("id") ON DELETE SET NULL;
 
+ALTER TABLE "auction_requests"
+    ADD FOREIGN KEY ("approved_by") REFERENCES "users" ("id") ON DELETE SET NULL;
+
 ALTER TABLE "auctions"
     ADD FOREIGN KEY ("winning_bid_id") REFERENCES "auction_bids" ("id");
 

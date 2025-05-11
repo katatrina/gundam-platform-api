@@ -19,6 +19,7 @@ require (
 	github.com/lithammer/shortuuid/v4 v4.2.0
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/rs/zerolog v1.33.0
+	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.19.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
@@ -102,7 +103,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
