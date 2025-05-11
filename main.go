@@ -95,7 +95,8 @@ func main() {
 		}
 	}
 	
-	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+	taskDistributor := worker.NewTaskDistributor(redisOpt)
+	taskInspector := worker.NewTaskInspector(redisOpt)
 	
 	// Tạo GHN service
 	ghnService := delivery.NewGHNService(appConfig.GHNToken, appConfig.GHNShopID)
@@ -113,11 +114,11 @@ func main() {
 	log.Info().Msg("order tracking service started ✅")
 	
 	go runRedisTaskProcessor(redisOpt, store, firebaseApp)
-	runHTTPServer(&appConfig, store, redisDb, taskDistributor, mailService, ghnService)
+	runHTTPServer(&appConfig, store, redisDb, taskDistributor, taskInspector, mailService, ghnService)
 }
 
-func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) {
-	server, err := api.NewServer(store, redisDb, taskDistributor, appConfig, mailer, deliveryService)
+func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) {
+	server, err := api.NewServer(store, redisDb, taskDistributor, taskInspector, appConfig, mailer, deliveryService)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}

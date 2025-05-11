@@ -7,6 +7,10 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const countSellerActiveAuctions = `-- name: CountSellerActiveAuctions :one
@@ -21,4 +25,162 @@ func (q *Queries) CountSellerActiveAuctions(ctx context.Context, sellerID string
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const createAuction = `-- name: CreateAuction :one
+INSERT INTO auctions (id,
+                      request_id,
+                      gundam_id,
+                      seller_id,
+                      gundam_snapshot,
+                      starting_price,
+                      bid_increment,
+                      buy_now_price,
+                      current_price,
+                      deposit_rate,
+                      deposit_amount,
+                      start_time,
+                      end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+`
+
+type CreateAuctionParams struct {
+	ID             uuid.UUID       `json:"id"`
+	RequestID      *uuid.UUID      `json:"request_id"`
+	GundamID       *int64          `json:"gundam_id"`
+	SellerID       string          `json:"seller_id"`
+	GundamSnapshot GundamSnapshot  `json:"gundam_snapshot"`
+	StartingPrice  int64           `json:"starting_price"`
+	BidIncrement   int64           `json:"bid_increment"`
+	BuyNowPrice    *int64          `json:"buy_now_price"`
+	CurrentPrice   int64           `json:"current_price"`
+	DepositRate    decimal.Decimal `json:"deposit_rate"`
+	DepositAmount  int64           `json:"deposit_amount"`
+	StartTime      time.Time       `json:"start_time"`
+	EndTime        time.Time       `json:"end_time"`
+}
+
+func (q *Queries) CreateAuction(ctx context.Context, arg CreateAuctionParams) (Auction, error) {
+	row := q.db.QueryRow(ctx, createAuction,
+		arg.ID,
+		arg.RequestID,
+		arg.GundamID,
+		arg.SellerID,
+		arg.GundamSnapshot,
+		arg.StartingPrice,
+		arg.BidIncrement,
+		arg.BuyNowPrice,
+		arg.CurrentPrice,
+		arg.DepositRate,
+		arg.DepositAmount,
+		arg.StartTime,
+		arg.EndTime,
+	)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAuctionByID = `-- name: GetAuctionByID :one
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+FROM auctions
+WHERE id = $1
+`
+
+func (q *Queries) GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error) {
+	row := q.db.QueryRow(ctx, getAuctionByID, id)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateAuction = `-- name: UpdateAuction :one
+UPDATE auctions
+SET status     = COALESCE($2, status),
+    updated_at = now()
+WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+`
+
+type UpdateAuctionParams struct {
+	ID     uuid.UUID         `json:"id"`
+	Status NullAuctionStatus `json:"status"`
+}
+
+func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error) {
+	row := q.db.QueryRow(ctx, updateAuction, arg.ID, arg.Status)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

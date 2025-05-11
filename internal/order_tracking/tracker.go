@@ -13,13 +13,13 @@ import (
 // OrderTracker là một struct để theo dõi trạng thái đơn hàng trên GHN.
 type OrderTracker struct {
 	store           db.Store
-	taskDistributor *worker.RedisTaskDistributor
+	taskDistributor worker.TaskDistributor
 	ghnService      delivery.IDeliveryProvider
 	scheduler       gocron.Scheduler
 }
 
 // NewOrderTracker tạo một tracker mới để theo dõi trạng thái đơn hàng trên GHN.
-func NewOrderTracker(store db.Store, deliveryService delivery.IDeliveryProvider, taskDistributor *worker.RedisTaskDistributor) (*OrderTracker, error) {
+func NewOrderTracker(store db.Store, deliveryService delivery.IDeliveryProvider, taskDistributor worker.TaskDistributor) (*OrderTracker, error) {
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, err

@@ -510,6 +510,7 @@ CREATE TABLE "auction_requests"
     "status"          auction_request_status NOT NULL DEFAULT 'pending',
     "rejected_by"     text,
     "rejected_reason" text,
+    "approved_by"     text,
     "created_at"      timestamptz            NOT NULL DEFAULT (now()),
     "updated_at"      timestamptz            NOT NULL DEFAULT (now())
 );

@@ -39,6 +39,10 @@ sql:
             go_type:
               type: "GundamSnapshot"
 
+          - column: "auctions.gundam_snapshot"
+            go_type:
+              type: "GundamSnapshot"
+
           - db_type: "pg_catalog.numeric"
             go_type:
               import: "github.com/shopspring/decimal"

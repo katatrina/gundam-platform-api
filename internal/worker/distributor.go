@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"context"
+	
 	"github.com/hibiken/asynq"
 )
 
@@ -8,11 +10,17 @@ import (
 This file will contain the codes to create tasks and distributes them to the Redis queue.
 */
 
+type TaskDistributor interface {
+	DistributeTaskSendNotification(ctx context.Context, payload *PayloadSendNotification, opts ...asynq.Option) error
+	DistributeTaskStartAuction(ctx context.Context, payload *PayloadStartAuction, opts ...asynq.Option) error
+	DistributeTaskEndAuction(ctx context.Context, payload *PayloadEndAuction, opts ...asynq.Option) error
+}
+
 type RedisTaskDistributor struct {
 	client *asynq.Client // client sends tasks to redis queue.
 }
 
-func NewRedisTaskDistributor(redisOpt asynq.RedisClientOpt) *RedisTaskDistributor {
+func NewTaskDistributor(redisOpt asynq.RedisClientOpt) TaskDistributor {
 	client := asynq.NewClient(redisOpt)
 	
 	return &RedisTaskDistributor{

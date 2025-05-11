@@ -39,7 +39,7 @@ INSERT INTO auction_requests (id,
                               deposit_amount,
                               start_time,
                               end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, approved_by, created_at, updated_at
 `
 
 type CreateAuctionRequestParams struct {
@@ -86,6 +86,7 @@ func (q *Queries) CreateAuctionRequest(ctx context.Context, arg CreateAuctionReq
 		&i.Status,
 		&i.RejectedBy,
 		&i.RejectedReason,
+		&i.ApprovedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -104,7 +105,7 @@ func (q *Queries) DeleteAuctionRequest(ctx context.Context, id uuid.UUID) error 
 }
 
 const getAuctionRequestByID = `-- name: GetAuctionRequestByID :one
-SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, created_at, updated_at
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, approved_by, created_at, updated_at
 FROM auction_requests
 WHERE id = $1
 `
@@ -127,6 +128,7 @@ func (q *Queries) GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (Auct
 		&i.Status,
 		&i.RejectedBy,
 		&i.RejectedReason,
+		&i.ApprovedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -134,7 +136,7 @@ func (q *Queries) GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (Auct
 }
 
 const listAuctionRequests = `-- name: ListAuctionRequests :many
-SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, created_at, updated_at
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, approved_by, created_at, updated_at
 FROM auction_requests
 WHERE status = COALESCE($1, status)
 ORDER BY created_at DESC
@@ -164,6 +166,7 @@ func (q *Queries) ListAuctionRequests(ctx context.Context, status NullAuctionReq
 			&i.Status,
 			&i.RejectedBy,
 			&i.RejectedReason,
+			&i.ApprovedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -178,7 +181,7 @@ func (q *Queries) ListAuctionRequests(ctx context.Context, status NullAuctionReq
 }
 
 const listSellerAuctionRequests = `-- name: ListSellerAuctionRequests :many
-SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, created_at, updated_at
+SELECT id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, approved_by, created_at, updated_at
 FROM auction_requests
 WHERE seller_id = $1
   AND status = COALESCE($2, status)
@@ -214,6 +217,7 @@ func (q *Queries) ListSellerAuctionRequests(ctx context.Context, arg ListSellerA
 			&i.Status,
 			&i.RejectedBy,
 			&i.RejectedReason,
+			&i.ApprovedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -232,8 +236,9 @@ UPDATE auction_requests
 SET status          = COALESCE($2, status),
     rejected_by     = COALESCE($3, rejected_by),
     rejected_reason = COALESCE($4, rejected_reason),
+    approved_by     = COALESCE($5, approved_by),
     updated_at      = now()
-WHERE id = $1 RETURNING id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, created_at, updated_at
+WHERE id = $1 RETURNING id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, buy_now_price, deposit_rate, deposit_amount, start_time, end_time, status, rejected_by, rejected_reason, approved_by, created_at, updated_at
 `
 
 type UpdateAuctionRequestParams struct {
@@ -241,6 +246,7 @@ type UpdateAuctionRequestParams struct {
 	Status         NullAuctionRequestStatus `json:"status"`
 	RejectedBy     *string                  `json:"rejected_by"`
 	RejectedReason *string                  `json:"rejected_reason"`
+	ApprovedBy     *string                  `json:"approved_by"`
 }
 
 func (q *Queries) UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionRequestParams) (AuctionRequest, error) {
@@ -249,6 +255,7 @@ func (q *Queries) UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionReq
 		arg.Status,
 		arg.RejectedBy,
 		arg.RejectedReason,
+		arg.ApprovedBy,
 	)
 	var i AuctionRequest
 	err := row.Scan(
@@ -266,6 +273,7 @@ func (q *Queries) UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionReq
 		&i.Status,
 		&i.RejectedBy,
 		&i.RejectedReason,
+		&i.ApprovedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -24,6 +24,7 @@ type Querier interface {
 	CountExistingPendingAuctionRequest(ctx context.Context, gundamID *int64) (int64, error)
 	CountSellerActiveAuctions(ctx context.Context, sellerID string) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
+	CreateAuction(ctx context.Context, arg CreateAuctionParams) (Auction, error)
 	CreateAuctionRequest(ctx context.Context, arg CreateAuctionRequestParams) (AuctionRequest, error)
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateExchange(ctx context.Context, arg CreateExchangeParams) (Exchange, error)
@@ -55,6 +56,7 @@ type Querier interface {
 	DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
+	GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error)
 	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
@@ -116,6 +118,7 @@ type Querier interface {
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
+	UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error)
 	UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionRequestParams) (AuctionRequest, error)
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error)

@@ -1,5 +1,7 @@
 package validator
 
+// file: internal/validator/validator.go
+
 import (
 	"errors"
 	"fmt"

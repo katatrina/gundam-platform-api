@@ -46,5 +46,6 @@ UPDATE auction_requests
 SET status          = COALESCE(sqlc.narg('status'), status),
     rejected_by     = COALESCE(sqlc.narg('rejected_by'), rejected_by),
     rejected_reason = COALESCE(sqlc.narg('rejected_reason'), rejected_reason),
+    approved_by     = COALESCE(sqlc.narg('approved_by'), approved_by),
     updated_at      = now()
 WHERE id = $1 RETURNING *;

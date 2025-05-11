@@ -60,6 +60,7 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
 	
 	mux.HandleFunc(TaskSendNotification, processor.ProcessTaskSendNotification)
+	mux.HandleFunc(TaskStartAuction, processor.ProcessTaskStartAuction)
 	
 	return processor.server.Start(mux)
 }

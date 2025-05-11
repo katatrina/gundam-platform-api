@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/validator"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
 )
@@ -123,4 +125,159 @@ func (server *Server) rejectAuctionRequest(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, rejectedRequest)
+}
+
+//	@Summary		Approve an auction request by moderator
+//	@Description	Moderator approves an auction request and schedules the auction.
+//	@Tags			moderator
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			requestID	path		string								true	"Auction Request ID (UUID format)"
+//	@Success		200			{object}	db.ApproveAuctionRequestTxResult	"Result of the approval transaction"
+//	@Router			/mod/auction-requests/{requestID}/approve [patch]
+func (server *Server) approveAuctionRequest(c *gin.Context) {
+	user := c.MustGet(moderatorPayloadKey).(*db.User)
+	
+	requestID, err := uuid.Parse(c.Param("requestID"))
+	if err != nil {
+		err = fmt.Errorf("invalid request ID format: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Get auction request to validate
+	auctionRequest, err := server.dbStore.GetAuctionRequestByID(c.Request.Context(), requestID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction request ID %s not found", requestID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Business validation
+	// 1. Check status
+	if auctionRequest.Status != db.AuctionRequestStatusPending {
+		err = fmt.Errorf("cannot approve auction request with status '%s'. Only 'pending' requests can be approved", auctionRequest.Status)
+		c.JSON(http.StatusConflict, errorResponse(err))
+		return
+	}
+	
+	// 2. Validate timing
+	if err = validator.ValidateAuctionTimesForApproval(auctionRequest.StartTime); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// 3. Validate gundam if needed
+	if auctionRequest.GundamID != nil {
+		gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), *auctionRequest.GundamID)
+		if err != nil && !errors.Is(err, db.ErrRecordNotFound) {
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if err == nil {
+			if gundam.Status != db.GundamStatusPendingAuctionApproval {
+				err = fmt.Errorf("gundam status is %s, expected %s",
+					gundam.Status, db.GundamStatusPendingAuctionApproval)
+				c.JSON(http.StatusConflict, errorResponse(err))
+				return
+			}
+			
+			if gundam.OwnerID != auctionRequest.SellerID {
+				err = fmt.Errorf("gundam owner mismatch")
+				c.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+		}
+	}
+	
+	// Now transaction only does data manipulation
+	result, err := server.dbStore.ApproveAuctionRequestTx(c.Request.Context(), db.ApproveAuctionRequestTxParams{
+		RequestID:  requestID,
+		ApprovedBy: user.ID,
+		AfterAuctionCreated: func(auction db.Auction) error {
+			// 1. Schedule start auction task với custom task ID
+			startTaskPayload := &worker.PayloadStartAuction{
+				AuctionID: auction.ID,
+			}
+			
+			startTaskID := fmt.Sprintf("auction:start:%s", auction.ID)
+			startOpts := []asynq.Option{
+				asynq.ProcessAt(auction.StartTime),
+				asynq.TaskID(startTaskID),
+				asynq.MaxRetry(3),
+				asynq.Queue(worker.QueueCritical),
+			}
+			
+			if err = server.taskDistributor.DistributeTaskStartAuction(c.Request.Context(), startTaskPayload, startOpts...); err != nil {
+				return fmt.Errorf("failed to schedule start auction task: %w", err)
+			}
+			
+			// 2. Schedule end auction task với custom task ID
+			endTaskPayload := &worker.PayloadEndAuction{
+				AuctionID: auction.ID,
+			}
+			
+			endTaskID := fmt.Sprintf("auction:end:%s", auction.ID)
+			endOpts := []asynq.Option{
+				asynq.ProcessAt(auction.EndTime),
+				asynq.TaskID(endTaskID),
+				asynq.MaxRetry(3),
+				asynq.Queue(worker.QueueCritical),
+			}
+			
+			if err = server.taskDistributor.DistributeTaskEndAuction(c.Request.Context(), endTaskPayload, endOpts...); err != nil {
+				return fmt.Errorf("failed to schedule end auction task: %w", err)
+			}
+			
+			return nil
+		},
+	})
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("request_id", requestID.String()).
+			Str("moderator_id", user.ID).
+			Msg("failed to approve auction request")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Send notification to the seller about approval
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Nên handle error khi load timezone
+	var message string
+	gundamName := result.CreatedAuction.GundamSnapshot.Name
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		// Fallback to UTC or default format
+		message = fmt.Sprintf("Yêu cầu đấu giá cho gundam \"%s\" của bạn đã được chấp thuận. Đấu giá sẽ bắt đầu vào lúc %s.",
+			gundamName, result.CreatedAuction.StartTime.Format("15:04 02/01/2006"))
+	} else {
+		auctionStartTimeVN := result.CreatedAuction.StartTime.In(loc)
+		message = fmt.Sprintf("Yêu cầu đấu giá cho gundam \"%s\" của bạn đã được chấp thuận. Đấu giá sẽ bắt đầu vào lúc %s (giờ Việt Nam).",
+			gundamName, auctionStartTimeVN.Format("15:04 02/01/2006"))
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.CreatedAuction.SellerID,
+		Title:       "Yêu cầu đấu giá đã được chấp thuận",
+		Message:     message,
+		Type:        "auction_request",
+		ReferenceID: result.UpdatedRequest.ID.String(),
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msgf("failed to send notification to user ID %s", result.CreatedAuction.SellerID)
+	}
+	
+	c.JSON(http.StatusOK, result)
 }

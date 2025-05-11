@@ -1258,7 +1258,7 @@ type Auction struct {
 	RequestID             *uuid.UUID      `json:"request_id"`
 	GundamID              *int64          `json:"gundam_id"`
 	SellerID              string          `json:"seller_id"`
-	GundamSnapshot        []byte          `json:"gundam_snapshot"`
+	GundamSnapshot        GundamSnapshot  `json:"gundam_snapshot"`
 	StartingPrice         int64           `json:"starting_price"`
 	BidIncrement          int64           `json:"bid_increment"`
 	WinningBidID          *uuid.UUID      `json:"winning_bid_id"`
@@ -1313,6 +1313,7 @@ type AuctionRequest struct {
 	Status         AuctionRequestStatus `json:"status"`
 	RejectedBy     *string              `json:"rejected_by"`
 	RejectedReason *string              `json:"rejected_reason"`
+	ApprovedBy     *string              `json:"approved_by"`
 	CreatedAt      time.Time            `json:"created_at"`
 	UpdatedAt      time.Time            `json:"updated_at"`
 }

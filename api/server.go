@@ -32,14 +32,15 @@ type Server struct {
 	googleIDTokenValidator *idtoken.Validator
 	phoneNumberService     *phone_number.PhoneNumberService
 	mailService            *mailer.GmailSender
-	taskDistributor        *worker.RedisTaskDistributor
+	taskDistributor        worker.TaskDistributor
+	taskInspector          worker.TaskInspector
 	zalopayService         *zalopay.ZalopayService
 	deliveryService        delivery.IDeliveryProvider
-	restyClient            *resty.Client // Thêm client resty
+	restyClient            *resty.Client
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.RedisTaskDistributor, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
+func NewServer(store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -81,9 +82,10 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor *worker.Re
 		phoneNumberService:     phoneNumberService,
 		mailService:            mailer,
 		taskDistributor:        taskDistributor,
+		taskInspector:          taskInspector,
 		zalopayService:         zalopayService,
 		deliveryService:        deliveryService,
-		restyClient:            restyClient, // Thêm client resty vào struct
+		restyClient:            restyClient,
 	}
 	
 	server.setupRouter()
@@ -360,16 +362,16 @@ func (server *Server) setupRouter() *gin.Engine {
 		moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
 		{
 			// Xem tất cả yêu cầu đấu giá (pending, approved, rejected)
-			moderatorAuctionGroup.GET("", server.listAuctionRequestsForModerator)
+			moderatorAuctionGroup.GET("", server.listAuctionRequestsForModerator) // ✅
 			
 			// Xem chi tiết yêu cầu đấu giá
 			// moderatorAuctionGroup.GET(":requestID", server.getAuctionRequestDetails)
 			
 			// Phê duyệt yêu cầu đấu giá
-			// moderatorAuctionGroup.PATCH(":requestID/approve", server.approveAuctionRequest)
+			moderatorAuctionGroup.PATCH(":requestID/approve", server.approveAuctionRequest) // ✅
 			
 			// Từ chối yêu cầu đấu giá
-			moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest)
+			moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest) // ✅
 		}
 	}
 	

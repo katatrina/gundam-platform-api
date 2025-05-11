@@ -199,3 +199,80 @@ func (store *SQLStore) RejectAuctionRequestTx(ctx context.Context, arg RejectAuc
 	
 	return request, err
 }
+
+type ApproveAuctionRequestTxParams struct {
+	RequestID           uuid.UUID
+	ApprovedBy          string
+	AfterAuctionCreated func(auction Auction) error
+}
+
+type ApproveAuctionRequestTxResult struct {
+	UpdatedRequest AuctionRequest `json:"updated_request"`
+	CreatedAuction Auction        `json:"created_auction"`
+}
+
+func (store *SQLStore) ApproveAuctionRequestTx(ctx context.Context, arg ApproveAuctionRequestTxParams) (ApproveAuctionRequestTxResult, error) {
+	var result ApproveAuctionRequestTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Update auction request status to "approved"
+		result.UpdatedRequest, err = qTx.UpdateAuctionRequest(ctx, UpdateAuctionRequestParams{
+			ID: arg.RequestID,
+			Status: NullAuctionRequestStatus{
+				AuctionRequestStatus: AuctionRequestStatusApproved,
+				Valid:                true,
+			},
+			ApprovedBy: &arg.ApprovedBy,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update auction request status: %w", err)
+		}
+		
+		auctionID, err := uuid.NewV7()
+		if err != nil {
+			return fmt.Errorf("failed to generate auction ID: %w", err)
+		}
+		
+		// 2. Create auction from the approved request
+		result.CreatedAuction, err = qTx.CreateAuction(ctx, CreateAuctionParams{
+			ID:             auctionID,
+			RequestID:      &result.UpdatedRequest.ID,
+			GundamID:       result.UpdatedRequest.GundamID,
+			SellerID:       result.UpdatedRequest.SellerID,
+			GundamSnapshot: result.UpdatedRequest.GundamSnapshot,
+			StartingPrice:  result.UpdatedRequest.StartingPrice,
+			BidIncrement:   result.UpdatedRequest.BidIncrement,
+			BuyNowPrice:    result.UpdatedRequest.BuyNowPrice,
+			CurrentPrice:   result.UpdatedRequest.StartingPrice,
+			DepositRate:    result.UpdatedRequest.DepositRate,
+			DepositAmount:  result.UpdatedRequest.DepositAmount,
+			StartTime:      result.UpdatedRequest.StartTime,
+			EndTime:        result.UpdatedRequest.EndTime,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create auction: %w", err)
+		}
+		
+		// 3. Update Gundam status to "auctioning" (if gundam_id is not null)
+		if result.UpdatedRequest.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *result.UpdatedRequest.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusAuctioning,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam status: %w", err)
+			}
+		}
+		
+		// 4. Schedule tasks for auction lifecycle
+		// Schedule task to start auction at start_time and end auction at end_time
+		return arg.AfterAuctionCreated(result.CreatedAuction)
+	})
+	
+	return result, err
+}
