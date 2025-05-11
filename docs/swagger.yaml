@@ -2614,6 +2614,25 @@ paths:
       summary: List Gundams
       tags:
       - gundams
+  /gundams/:gundamID:
+    get:
+      description: Retrieves detailed information about a specific Gundam model
+      parameters:
+      - description: Gundam ID
+        in: path
+        name: gundamID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved Gundam details
+          schema:
+            $ref: '#/definitions/db.GundamDetails'
+      summary: Get Gundam details
+      tags:
+      - gundams
   /gundams/{slug}:
     get:
       description: Retrieves a specific Gundam model by its unique slug

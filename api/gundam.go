@@ -1285,3 +1285,35 @@ func (server *Server) deleteGundamSecondaryImage(c *gin.Context) {
 	
 	c.JSON(http.StatusNoContent, nil)
 }
+
+//	@Summary		Get Gundam details
+//	@Description	Retrieves detailed information about a specific Gundam model
+//	@Tags			gundams
+//	@Produce		json
+//	@Param			gundamID	path		string				true	"Gundam ID"
+//	@Success		200			{object}	db.GundamDetails	"Successfully retrieved Gundam details"
+//	@Router			/gundams/:gundamID [get]
+func (server *Server) getGundamDetails(c *gin.Context) {
+	gundamIDStr := c.Param("gundamID")
+	gundamID, err := strconv.ParseInt(gundamIDStr, 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid gundam ID %s", gundamIDStr)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	gundam, err := server.dbStore.GetGundamDetailsByID(c.Request.Context(), nil, gundamID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("gundam ID %d not found", gundamID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get gundam details")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, gundam)
+}

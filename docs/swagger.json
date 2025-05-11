@@ -584,6 +584,35 @@
                 }
             }
         },
+        "/gundams/:gundamID": {
+            "get": {
+                "description": "Retrieves detailed information about a specific Gundam model",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gundams"
+                ],
+                "summary": "Get Gundam details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gundam ID",
+                        "name": "gundamID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved Gundam details",
+                        "schema": {
+                            "$ref": "#/definitions/db.GundamDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/gundams/{slug}": {
             "get": {
                 "description": "Retrieves a specific Gundam model by its unique slug",

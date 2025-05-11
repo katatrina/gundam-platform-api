@@ -335,7 +335,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	gundamGroup := v1.Group("/gundams")
 	{
 		gundamGroup.GET("", server.listGundams)
-		// gundamGroup.GET(":gundamID", server.getGundamDetails)
+		gundamGroup.GET(":gundamID", server.getGundamDetails)
 		gundamGroup.GET(":slug", server.getGundamBySlug)
 	}
 	
