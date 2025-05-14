@@ -642,7 +642,7 @@
                 }
             }
         },
-        "/gundams/{slug}": {
+        "/gundams/by-slug/{slug}": {
             "get": {
                 "description": "Retrieves a specific Gundam model by its unique slug",
                 "produces": [
@@ -2720,6 +2720,37 @@
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/users/me/auctions/{auctionID}/participate": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "User deposits money to participate in an active auction.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Participate in an auction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     }
                 }
             }

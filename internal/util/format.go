@@ -37,6 +37,7 @@ func FormatVND(amount int64) string {
 }
 
 // FormatMoney định dạng số tiền với dấu chấm phân cách hàng nghìn
+// VD: 1000000 -> "1.000.000"
 func FormatMoney(amount int64) string {
 	// Sử dụng humanize.Comma để định dạng với dấu phẩy
 	formatted := humanize.Comma(amount)
@@ -92,6 +93,10 @@ func BoolPointer(b bool) *bool {
 
 func StringPointer(s string) *string {
 	return &s
+}
+
+func Int32Pointer(i int32) *int32 {
+	return &i
 }
 
 func Int64Pointer(i int64) *int64 {

@@ -2652,7 +2652,7 @@ paths:
       summary: Get Gundam details
       tags:
       - gundams
-  /gundams/{slug}:
+  /gundams/by-slug/{slug}:
     get:
       description: Retrieves a specific Gundam model by its unique slug
       parameters:
@@ -4239,6 +4239,25 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /users/me/auctions/{auctionID}/participate:
+    post:
+      description: User deposits money to participate in an active auction.
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - accessToken: []
+      summary: Participate in an auction
+      tags:
+      - auctions
   /users/me/exchange-offers:
     get:
       description: Get a list of all exchange offers created by the authenticated

@@ -19,12 +19,14 @@ type Querier interface {
 	BulkUpdateGundamsForExchange(ctx context.Context, arg BulkUpdateGundamsForExchangeParams) error
 	BulkUpdateGundamsInStore(ctx context.Context, arg BulkUpdateGundamsInStoreParams) error
 	CheckCartItemExists(ctx context.Context, arg CheckCartItemExistsParams) (bool, error)
+	CheckUserParticipation(ctx context.Context, arg CheckUserParticipationParams) (bool, error)
 	ConfirmOrderByID(ctx context.Context, arg ConfirmOrderByIDParams) (Order, error)
 	CountExchangeOffers(ctx context.Context, postID uuid.UUID) (int64, error)
 	CountExistingPendingAuctionRequest(ctx context.Context, gundamID *int64) (int64, error)
 	CountSellerActiveAuctions(ctx context.Context, sellerID string) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateAuction(ctx context.Context, arg CreateAuctionParams) (Auction, error)
+	CreateAuctionParticipant(ctx context.Context, arg CreateAuctionParticipantParams) (AuctionParticipant, error)
 	CreateAuctionRequest(ctx context.Context, arg CreateAuctionRequestParams) (AuctionRequest, error)
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
 	CreateExchange(ctx context.Context, arg CreateExchangeParams) (Exchange, error)
@@ -93,6 +95,7 @@ type Querier interface {
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
+	IncrementAuctionParticipants(ctx context.Context, id uuid.UUID) (Auction, error)
 	ListAuctionRequests(ctx context.Context, status NullAuctionRequestStatus) ([]AuctionRequest, error)
 	ListAuctions(ctx context.Context, status NullAuctionStatus) ([]Auction, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)

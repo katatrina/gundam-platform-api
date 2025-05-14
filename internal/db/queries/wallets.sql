@@ -27,7 +27,7 @@ WHERE user_id = sqlc.arg(user_id);
 
 -- name: TransferNonWithdrawableToBalance :one
 UPDATE wallets
-SET balance = balance + sqlc.arg(amount),
+SET balance                 = balance + sqlc.arg(amount),
     non_withdrawable_amount = non_withdrawable_amount - sqlc.arg(amount),
-    updated_at = now()
+    updated_at              = now()
 WHERE user_id = sqlc.arg(user_id) RETURNING *;

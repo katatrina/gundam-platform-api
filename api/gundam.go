@@ -170,7 +170,7 @@ func (req *getGundamBySlugQuery) validate() error {
 //	@Success		200		{object}	db.GundamDetails	"Successfully retrieved Gundam details"
 //	@Failure		404		"Not Found - Gundam with specified slug does not exist"
 //	@Failure		500		"Internal Server Error - Failed to retrieve Gundam"
-//	@Router			/gundams/{slug} [get]
+//	@Router			/gundams/by-slug/{slug} [get]
 func (server *Server) getGundamBySlug(ctx *gin.Context) {
 	slug := ctx.Param("slug")
 	

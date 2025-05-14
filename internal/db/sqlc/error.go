@@ -28,6 +28,8 @@ var (
 	ErrSubscriptionExpired       = errors.New("subscription has expired")
 	ErrCartItemExists            = errors.New("item already exists in cart")
 	ErrExchangeOfferUnique       = errors.New("user already has an offer for this exchange post")
+	ErrDuplicateParticipation    = errors.New("already participated in this auction")
+	ErrInsufficientBalance       = errors.New("insufficient balance")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name

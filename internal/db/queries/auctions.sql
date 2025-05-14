@@ -22,8 +22,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;
 
 -- name: UpdateAuction :one
 UPDATE auctions
-SET status     = COALESCE(sqlc.narg('status'), status),
-    updated_at = now()
+SET status             = COALESCE(sqlc.narg('status'), status),
+    updated_at         = now()
 WHERE id = $1 RETURNING *;
 
 -- name: GetAuctionByID :one
@@ -44,3 +44,9 @@ ORDER BY CASE status
              ELSE EXTRACT(EPOCH FROM created_at) * -1
              END ASC,
          created_at DESC;
+
+-- name: CheckUserParticipation :one
+SELECT EXISTS(SELECT 1
+              FROM auction_participants
+              WHERE auction_id = $1
+                AND user_id = $2) AS "has_participated";

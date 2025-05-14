@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/delivery"
+	"github.com/katatrina/gundam-BE/internal/event"
 	"github.com/katatrina/gundam-BE/internal/mailer"
 	"github.com/katatrina/gundam-BE/internal/phone_number"
 	"github.com/katatrina/gundam-BE/internal/storage"
@@ -37,10 +38,11 @@ type Server struct {
 	zalopayService         *zalopay.ZalopayService
 	deliveryService        delivery.IDeliveryProvider
 	restyClient            *resty.Client
+	eventSender            event.EventSender
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
+func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -59,7 +61,7 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor worker.Tas
 	log.Info().Msg("Cloudinary store created successfully ✅")
 	
 	// Create a new OTP service
-	phoneNumberService, err := phone_number.NewPhoneService(config, redisDb)
+	phoneNumberService, err := phone_number.NewPhoneService(config, redisClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create phone service: %w", err)
 	}
@@ -72,6 +74,9 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor worker.Tas
 	// Khởi tạo resty client
 	restyClient := resty.New()
 	log.Info().Msg("Resty client created successfully ✅")
+	
+	// Khởi tạo SSE server
+	sseServer := event.NewSSEServer()
 	
 	server := &Server{
 		dbStore:                store,
@@ -86,8 +91,10 @@ func NewServer(store db.Store, redisDb *redis.Client, taskDistributor worker.Tas
 		zalopayService:         zalopayService,
 		deliveryService:        deliveryService,
 		restyClient:            restyClient,
+		eventSender:            sseServer,
 	}
 	
+	go sseServer.Run() // Chạy goroutine xử lý sự kiện
 	server.setupRouter()
 	return server, nil
 }
@@ -239,13 +246,15 @@ func (server *Server) setupRouter() *gin.Engine {
 		
 		// Lấy thông tin chi tiết của một phiên đấu giá
 		auctionPublicGroup.GET(":auctionID", server.getAuctionDetails) // ✅
+		
+		auctionPublicGroup.GET(":auctionID/stream", server.streamAuctionEvents) // Endpoint SSE
 	}
 	
 	// API cho người dùng tham gia đấu giá (cần đăng nhập)
-	// userAuctionGroup := v1.Group("/users/me/auctions", authMiddleware(server.tokenMaker))
+	userAuctionGroup := v1.Group("/users/me/auctions", authMiddleware(server.tokenMaker))
 	{
 		// Tham gia đấu giá (đặt cọc)
-		// userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction)
+		userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction)
 		
 		// Đặt giá
 		// userAuctionGroup.POST("/:auctionID/bids", server.placeBid)
@@ -336,7 +345,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	{
 		gundamGroup.GET("", server.listGundams)
 		gundamGroup.GET(":gundamID", server.getGundamDetails)
-		gundamGroup.GET(":slug", server.getGundamBySlug)
+		gundamGroup.GET("/by-slug/:slug", server.getGundamBySlug)
 	}
 	
 	cartGroup := v1.Group("/cart", authMiddleware(server.tokenMaker))

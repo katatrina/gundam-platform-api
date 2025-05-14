@@ -13,6 +13,25 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const checkUserParticipation = `-- name: CheckUserParticipation :one
+SELECT EXISTS(SELECT 1
+              FROM auction_participants
+              WHERE auction_id = $1
+                AND user_id = $2) AS "has_participated"
+`
+
+type CheckUserParticipationParams struct {
+	AuctionID uuid.UUID `json:"auction_id"`
+	UserID    string    `json:"user_id"`
+}
+
+func (q *Queries) CheckUserParticipation(ctx context.Context, arg CheckUserParticipationParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserParticipation, arg.AuctionID, arg.UserID)
+	var has_participated bool
+	err := row.Scan(&has_participated)
+	return has_participated, err
+}
+
 const countSellerActiveAuctions = `-- name: CountSellerActiveAuctions :one
 SELECT COUNT(*)
 FROM auctions
@@ -203,8 +222,8 @@ func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([
 
 const updateAuction = `-- name: UpdateAuction :one
 UPDATE auctions
-SET status     = COALESCE($2, status),
-    updated_at = now()
+SET status             = COALESCE($2, status),
+    updated_at         = now()
 WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 `
 

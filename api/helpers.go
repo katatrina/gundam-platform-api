@@ -408,7 +408,7 @@ func (server *Server) sendOrderCancelNotifications(ctx context.Context, result d
 		baseMessage += fmt.Sprintf(" Lý do: %s", *order.CanceledReason)
 	}
 	
-	// Send notification to seller
+	// Send notification to seller using asynq + Firestore database
 	err = server.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 		RecipientID: order.SellerID,
 		Title:       baseTitle,

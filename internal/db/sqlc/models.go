@@ -1293,7 +1293,7 @@ type AuctionParticipant struct {
 	AuctionID      uuid.UUID `json:"auction_id"`
 	UserID         string    `json:"user_id"`
 	DepositAmount  int64     `json:"deposit_amount"`
-	DepositEntryID *int64    `json:"deposit_entry_id"`
+	DepositEntryID int64     `json:"deposit_entry_id"`
 	IsRefunded     bool      `json:"is_refunded"`
 	CreatedAt      time.Time `json:"created_at"`
 }

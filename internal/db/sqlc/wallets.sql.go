@@ -105,9 +105,9 @@ func (q *Queries) GetWalletForUpdate(ctx context.Context, userID string) (Wallet
 
 const transferNonWithdrawableToBalance = `-- name: TransferNonWithdrawableToBalance :one
 UPDATE wallets
-SET balance = balance + $1,
+SET balance                 = balance + $1,
     non_withdrawable_amount = non_withdrawable_amount - $1,
-    updated_at = now()
+    updated_at              = now()
 WHERE user_id = $2 RETURNING user_id, balance, non_withdrawable_amount, currency, created_at, updated_at
 `
 
