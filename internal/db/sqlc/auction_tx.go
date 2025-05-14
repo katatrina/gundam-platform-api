@@ -20,6 +20,7 @@ type ParticipateInAuctionTxParams struct {
 type ParticipateInAuctionTxResult struct {
 	AuctionParticipant AuctionParticipant `json:"auction_participant"`
 	Auction            Auction            `json:"updated_auction"`
+	Wallet             Wallet             `json:"updated_wallet"`
 }
 
 func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg ParticipateInAuctionTxParams) (ParticipateInAuctionTxResult, error) {
@@ -51,13 +52,14 @@ func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg Participa
 		}
 		
 		// 3. Cập nhật số dư ví
-		_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+		updatedWallet, err := qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
 			UserID: arg.Wallet.UserID,
 			Amount: -arg.Auction.DepositAmount, // Trừ tiền đặt cọc
 		})
 		if err != nil {
 			return fmt.Errorf("failed to update wallet balance: %w", err)
 		}
+		result.Wallet = updatedWallet
 		
 		// 4. Tạo bản ghi participant - xử lý unique constraint violation
 		participantID, err := uuid.NewV7()

@@ -596,6 +596,31 @@ definitions:
     - winner_payment_deadline
     - winning_bid_id
     type: object
+  db.AuctionParticipant:
+    properties:
+      auction_id:
+        type: string
+      created_at:
+        type: string
+      deposit_amount:
+        type: integer
+      deposit_entry_id:
+        type: integer
+      id:
+        type: string
+      is_refunded:
+        type: boolean
+      user_id:
+        type: string
+    required:
+    - auction_id
+    - created_at
+    - deposit_amount
+    - deposit_entry_id
+    - id
+    - is_refunded
+    - user_id
+    type: object
   db.AuctionRequest:
     properties:
       approved_by:
@@ -1729,6 +1754,19 @@ definitions:
     required:
     - order
     - order_delivery
+    type: object
+  db.ParticipateInAuctionTxResult:
+    properties:
+      auction_participant:
+        $ref: '#/definitions/db.AuctionParticipant'
+      updated_auction:
+        $ref: '#/definitions/db.Auction'
+      updated_wallet:
+        $ref: '#/definitions/db.Wallet'
+    required:
+    - auction_participant
+    - updated_auction
+    - updated_wallet
     type: object
   db.PayExchangeDeliveryFeeTxResult:
     properties:
@@ -4252,7 +4290,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Participation result
+          schema:
+            $ref: '#/definitions/db.ParticipateInAuctionTxResult'
       security:
       - accessToken: []
       summary: Participate in an auction

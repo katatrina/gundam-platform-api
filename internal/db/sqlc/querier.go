@@ -59,6 +59,7 @@ type Querier interface {
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
 	GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error)
+	GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auction, error)
 	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)

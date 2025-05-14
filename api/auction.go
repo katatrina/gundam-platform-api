@@ -82,8 +82,8 @@ func (server *Server) getAuctionDetails(c *gin.Context) {
 //	@Description	User deposits money to participate in an active auction.
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			auctionID	path	string	true	"Auction ID"
-//	@Success		200
+//	@Param			auctionID	path		string							true	"Auction ID"
+//	@Success		200			{object}	db.ParticipateInAuctionTxResult	"Participation result"
 //	@Security		accessToken
 //	@Router			/users/me/auctions/{auctionID}/participate [post]
 func (server *Server) participateInAuction(c *gin.Context) {
@@ -124,6 +124,20 @@ func (server *Server) participateInAuction(c *gin.Context) {
 	// Kiểm tra người bán không thể tham gia đấu giá của chính mình
 	if auction.SellerID == userID {
 		err = fmt.Errorf("user cannot participate in their own auction")
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra thời gian đấu giá
+	now := time.Now()
+	if now.Before(auction.StartTime) {
+		err = fmt.Errorf("auction ID %s has not yet started, starts at %s", auction.ID, auction.StartTime)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	if now.After(auction.EndTime) {
+		err = fmt.Errorf("auction ID %s has already ended at %s", auction.ID, auction.EndTime)
 		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 		return
 	}
@@ -199,7 +213,7 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		return
 	}
 	
-	// Gửi cập nhật realtime về phiên đấu giá
+	// Gửi thông tin sự kiện tới client qua SSE
 	topic := fmt.Sprintf("auction:%s", auctionID.String())
 	server.eventSender.Broadcast(event.Event{
 		Topic: topic,
@@ -207,9 +221,8 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		Data: map[string]interface{}{
 			"auction_id":         auctionID.String(),
 			"total_participants": result.Auction.TotalParticipants,
-			"user_id":            userID,
-			"user_full_name":     user.FullName,
-			"timestamp":          time.Now().Format(time.RFC3339),
+			"user":               user,
+			"timestamp":          result.AuctionParticipant.CreatedAt,
 		},
 	})
 	

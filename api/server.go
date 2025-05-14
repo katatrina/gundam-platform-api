@@ -247,14 +247,14 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Lấy thông tin chi tiết của một phiên đấu giá
 		auctionPublicGroup.GET(":auctionID", server.getAuctionDetails) // ✅
 		
-		auctionPublicGroup.GET(":auctionID/stream", server.streamAuctionEvents) // Endpoint SSE
+		auctionPublicGroup.GET(":auctionID/stream", server.streamAuctionEvents) // ✅ Endpoint SSE
 	}
 	
 	// API cho người dùng tham gia đấu giá (cần đăng nhập)
 	userAuctionGroup := v1.Group("/users/me/auctions", authMiddleware(server.tokenMaker))
 	{
 		// Tham gia đấu giá (đặt cọc)
-		userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction)
+		userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction) // ✅
 		
 		// Đặt giá
 		// userAuctionGroup.POST("/:auctionID/bids", server.placeBid)

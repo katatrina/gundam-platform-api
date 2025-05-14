@@ -2752,7 +2752,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "Participation result",
+                        "schema": {
+                            "$ref": "#/definitions/db.ParticipateInAuctionTxResult"
+                        }
                     }
                 }
             }
@@ -4385,6 +4388,41 @@ const docTemplate = `{
                 }
             }
         },
+        "db.AuctionParticipant": {
+            "type": "object",
+            "required": [
+                "auction_id",
+                "created_at",
+                "deposit_amount",
+                "deposit_entry_id",
+                "id",
+                "is_refunded",
+                "user_id"
+            ],
+            "properties": {
+                "auction_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deposit_amount": {
+                    "type": "integer"
+                },
+                "deposit_entry_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_refunded": {
+                    "type": "boolean"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "db.AuctionRequest": {
             "type": "object",
             "required": [
@@ -5967,6 +6005,25 @@ const docTemplate = `{
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
+                }
+            }
+        },
+        "db.ParticipateInAuctionTxResult": {
+            "type": "object",
+            "required": [
+                "auction_participant",
+                "updated_auction",
+                "updated_wallet"
+            ],
+            "properties": {
+                "auction_participant": {
+                    "$ref": "#/definitions/db.AuctionParticipant"
+                },
+                "updated_auction": {
+                    "$ref": "#/definitions/db.Auction"
+                },
+                "updated_wallet": {
+                    "$ref": "#/definitions/db.Wallet"
                 }
             }
         },

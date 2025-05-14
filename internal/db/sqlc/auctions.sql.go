@@ -161,6 +161,44 @@ func (q *Queries) GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, er
 	return i, err
 }
 
+const getAuctionForUpdate = `-- name: GetAuctionForUpdate :one
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+FROM auctions
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auction, error) {
+	row := q.db.QueryRow(ctx, getAuctionForUpdate, id)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listAuctions = `-- name: ListAuctions :many
 SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 FROM auctions

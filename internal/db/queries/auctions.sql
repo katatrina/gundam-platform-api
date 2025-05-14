@@ -31,6 +31,12 @@ SELECT *
 FROM auctions
 WHERE id = $1;
 
+-- name: GetAuctionForUpdate :one
+SELECT *
+FROM auctions
+WHERE id = $1
+FOR UPDATE;
+
 -- name: ListAuctions :many
 SELECT *
 FROM auctions
@@ -50,3 +56,8 @@ SELECT EXISTS(SELECT 1
               FROM auction_participants
               WHERE auction_id = $1
                 AND user_id = $2) AS "has_participated";
+
+-- name: IncrementAuctionParticipants :one
+UPDATE auctions
+SET total_participants = total_participants + 1
+WHERE id = $1 RETURNING *;

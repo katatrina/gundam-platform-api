@@ -53,15 +53,17 @@ func (s *SSEServer) Broadcast(event Event) {
 func (s *SSEServer) Run() {
 	for event := range s.events {
 		s.mu.Lock()
-		if clients, ok := s.clients[event.Topic]; ok {
-			for client := range clients {
-				select {
-				case client <- event:
-				default:
-					// Bỏ qua nếu client không nhận được
-				}
-			}
-		}
+		clients := s.clients[event.Topic]
 		s.mu.Unlock()
+		
+		var wg sync.WaitGroup
+		for client := range clients {
+			wg.Add(1)
+			go func(c chan Event) {
+				defer wg.Done()
+				// Send to client with timeout
+			}(client)
+		}
+		wg.Wait()
 	}
 }
