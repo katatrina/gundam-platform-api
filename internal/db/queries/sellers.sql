@@ -32,6 +32,11 @@ FROM users u
          JOIN seller_profiles sp ON u.id = sp.seller_id
 WHERE u.id = $1;
 
+-- name: GetSellerProfileByID :one
+SELECT *
+FROM seller_profiles
+WHERE seller_id = $1;
+
 -- name: CreateSellerProfile :one
 INSERT INTO seller_profiles (seller_id, shop_name)
 VALUES ($1, $2) RETURNING *;

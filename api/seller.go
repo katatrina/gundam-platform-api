@@ -70,8 +70,8 @@ type getSellerProfileQueryString struct {
 //	@Tags			seller profile
 //	@Accept			json
 //	@Produce		json
-//	@Param			user_id	query		string			true	"User ID"
-//	@Success		200		{object}	db.SellerInfo	"Seller profile details"
+//	@Param			user_id	query		string						true	"User ID"
+//	@Success		200		{object}	db.GetSellerDetailByIDRow	"Seller profile details"
 //	@Failure		404		"User not found"
 //	@Failure		500		"Internal server error"
 //	@Router			/seller/profile [get]
@@ -96,18 +96,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 		return
 	}
 	
-	resp := db.SellerInfo{
-		ID:              row.User.ID,
-		GoogleAccountID: row.User.GoogleAccountID,
-		UserFullName:    row.User.FullName,
-		ShopName:        row.SellerProfile.ShopName,
-		Email:           row.User.Email,
-		PhoneNumber:     row.User.PhoneNumber,
-		Role:            string(row.User.Role),
-		AvatarURL:       row.User.AvatarURL,
-	}
-	
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, row)
 }
 
 //	@Summary		Get current active subscription
@@ -669,19 +658,19 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	resp.Order = order
 	
 	// Lấy thông tin người mua
-	buyer, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
+	receiver, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("buyer ID %s not found", order.BuyerID)
+			err = fmt.Errorf("receiver ID %s not found", order.BuyerID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
 		
-		log.Err(err).Msg("failed to get buyer")
+		log.Err(err).Msg("failed to get receiver")
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	resp.BuyerInfo = buyer
+	resp.Receiver = receiver
 	
 	orderItems, err := server.dbStore.ListOrderItems(c.Request.Context(), order.ID)
 	if err != nil {
@@ -705,11 +694,11 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	}
 	resp.OrderDelivery = orderDelivery
 	
-	// Lấy thông tin địa chỉ giao hàng của người nhận
-	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	// Lấy thông tin địa chỉ gửi hàng
+	fromDeliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.FromDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			err = fmt.Errorf("from delivery address ID %d not found", orderDelivery.FromDeliveryID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -718,7 +707,22 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	resp.ToDeliveryInformation = deliveryInformation
+	resp.FromDeliveryInformation = fromDeliveryInformation
+	
+	// Lấy thông tin địa chỉ giao hàng của người nhận
+	toDeliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("to delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get delivery address")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.ToDeliveryInformation = toDeliveryInformation
 	
 	c.JSON(http.StatusOK, resp)
 }

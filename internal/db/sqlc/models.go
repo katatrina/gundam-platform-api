@@ -1265,6 +1265,7 @@ type Auction struct {
 	BuyNowPrice           *int64          `json:"buy_now_price"`
 	StartTime             time.Time       `json:"start_time"`
 	EndTime               time.Time       `json:"end_time"`
+	ActualEndTime         *time.Time      `json:"actual_end_time"`
 	Status                AuctionStatus   `json:"status"`
 	CurrentPrice          int64           `json:"current_price"`
 	DepositRate           decimal.Decimal `json:"deposit_rate"`

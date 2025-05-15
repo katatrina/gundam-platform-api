@@ -45,19 +45,26 @@ func ConvertGundamAccessoryToDTO(accessory GundamAccessory) GundamAccessoryDTO {
 	}
 }
 
+type Sender struct {
+	User
+	ShopName *string `json:"shop_name,omitempty"` // Tên shop (nếu có)
+}
+
 type MemberOrderInfo struct {
 	Order      Order       `json:"order"`
 	OrderItems []OrderItem `json:"order_items"`
 }
 
 type MemberOrderDetails struct {
-	SellerInfo            *SellerInfo         `json:"seller_info"`             // Thông tin người gửi (null nếu là người gửi)
-	BuyerInfo             *User               `json:"buyer_info"`              // Thông tin người nhận (null nếu là người nhận)
-	Order                 Order               `json:"order"`                   // Thông tin đơn hàng
-	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
-	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
-	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
-	// FromDeliveryInformation *DeliveryInformation `json:"from_delivery_information"` // Địa chỉ gửi hàng của người bán
+	Sender                  Sender              `json:"sender"`                    // Thông tin người gửi hàng (null nếu là người gửi)
+	IsSender                bool                `json:"is_sender"`                 // Có phải người gửi không
+	Receiver                User                `json:"receiver"`                  // Thông tin người nhận hàng (null nếu là người nhận)
+	IsReceiver              bool                `json:"is_receiver"`               // Có phải người nhận không
+	Order                   Order               `json:"order"`                     // Thông tin đơn hàng
+	OrderItems              []OrderItem         `json:"order_items"`               // Danh sách sản phẩm trong đơn hàng
+	OrderDelivery           OrderDelivery       `json:"order_delivery"`            // Thông tin vận chuyển
+	FromDeliveryInformation DeliveryInformation `json:"from_delivery_information"` // Địa chỉ gửi hàng
+	ToDeliveryInformation   DeliveryInformation `json:"to_delivery_information"`   // Địa chỉ nhận hàng
 }
 
 type SalesOrderInfo struct {
@@ -66,22 +73,12 @@ type SalesOrderInfo struct {
 }
 
 type SalesOrderDetails struct {
-	BuyerInfo             User                `json:"buyer_info"`              // Thông tin người mua
-	Order                 Order               `json:"order"`                   // Thông tin đơn hàng
-	OrderItems            []OrderItem         `json:"order_items"`             // Danh sách sản phẩm trong đơn hàng
-	OrderDelivery         OrderDelivery       `json:"order_delivery"`          // Thông tin vận chuyển
-	ToDeliveryInformation DeliveryInformation `json:"to_delivery_information"` // Địa chỉ nhận hàng của người mua
-}
-
-type SellerInfo struct {
-	ID              string  `json:"id"`
-	GoogleAccountID *string `json:"google_account_id"`
-	UserFullName    string  `json:"user_full_name"`
-	ShopName        string  `json:"shop_name"`
-	Email           string  `json:"email"`
-	PhoneNumber     *string `json:"phone_number"`
-	Role            string  `json:"role"`
-	AvatarURL       *string `json:"avatar_url"`
+	Receiver                User                `json:"receiver"`                  // Thông tin người nhận hàng
+	Order                   Order               `json:"order"`                     // Thông tin đơn hàng
+	OrderItems              []OrderItem         `json:"order_items"`               // Danh sách sản phẩm trong đơn hàng
+	OrderDelivery           OrderDelivery       `json:"order_delivery"`            // Thông tin vận chuyển
+	FromDeliveryInformation DeliveryInformation `json:"from_delivery_information"` // Địa chỉ gửi hàng
+	ToDeliveryInformation   DeliveryInformation `json:"to_delivery_information"`   // Địa chỉ nhận hàng
 }
 
 type OpenExchangePostInfo struct {

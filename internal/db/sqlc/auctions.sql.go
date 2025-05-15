@@ -60,7 +60,7 @@ INSERT INTO auctions (id,
                       deposit_amount,
                       start_time,
                       end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type CreateAuctionParams struct {
@@ -108,6 +108,7 @@ func (q *Queries) CreateAuction(ctx context.Context, arg CreateAuctionParams) (A
 		&i.BuyNowPrice,
 		&i.StartTime,
 		&i.EndTime,
+		&i.ActualEndTime,
 		&i.Status,
 		&i.CurrentPrice,
 		&i.DepositRate,
@@ -125,7 +126,7 @@ func (q *Queries) CreateAuction(ctx context.Context, arg CreateAuctionParams) (A
 }
 
 const getAuctionByID = `-- name: GetAuctionByID :one
-SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 FROM auctions
 WHERE id = $1
 `
@@ -145,6 +146,7 @@ func (q *Queries) GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, er
 		&i.BuyNowPrice,
 		&i.StartTime,
 		&i.EndTime,
+		&i.ActualEndTime,
 		&i.Status,
 		&i.CurrentPrice,
 		&i.DepositRate,
@@ -161,15 +163,15 @@ func (q *Queries) GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, er
 	return i, err
 }
 
-const getAuctionForUpdate = `-- name: GetAuctionForUpdate :one
-SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+const getAuctionByIDForUpdate = `-- name: GetAuctionByIDForUpdate :one
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 FROM auctions
 WHERE id = $1
-FOR UPDATE
+    FOR UPDATE
 `
 
-func (q *Queries) GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auction, error) {
-	row := q.db.QueryRow(ctx, getAuctionForUpdate, id)
+func (q *Queries) GetAuctionByIDForUpdate(ctx context.Context, id uuid.UUID) (Auction, error) {
+	row := q.db.QueryRow(ctx, getAuctionByIDForUpdate, id)
 	var i Auction
 	err := row.Scan(
 		&i.ID,
@@ -183,6 +185,83 @@ func (q *Queries) GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auctio
 		&i.BuyNowPrice,
 		&i.StartTime,
 		&i.EndTime,
+		&i.ActualEndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const incrementAuctionParticipants = `-- name: IncrementAuctionParticipants :one
+UPDATE auctions
+SET total_participants = total_participants + 1
+WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+`
+
+func (q *Queries) IncrementAuctionParticipants(ctx context.Context, id uuid.UUID) (Auction, error) {
+	row := q.db.QueryRow(ctx, incrementAuctionParticipants, id)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ActualEndTime,
+		&i.Status,
+		&i.CurrentPrice,
+		&i.DepositRate,
+		&i.DepositAmount,
+		&i.WinnerPaymentDeadline,
+		&i.TotalParticipants,
+		&i.TotalBids,
+		&i.OrderID,
+		&i.CanceledBy,
+		&i.CanceledReason,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const incrementAuctionTotalBids = `-- name: IncrementAuctionTotalBids :one
+UPDATE auctions
+SET total_bids = total_bids + 1
+WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+`
+
+func (q *Queries) IncrementAuctionTotalBids(ctx context.Context, id uuid.UUID) (Auction, error) {
+	row := q.db.QueryRow(ctx, incrementAuctionTotalBids, id)
+	var i Auction
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.GundamID,
+		&i.SellerID,
+		&i.GundamSnapshot,
+		&i.StartingPrice,
+		&i.BidIncrement,
+		&i.WinningBidID,
+		&i.BuyNowPrice,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ActualEndTime,
 		&i.Status,
 		&i.CurrentPrice,
 		&i.DepositRate,
@@ -200,7 +279,7 @@ func (q *Queries) GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auctio
 }
 
 const listAuctions = `-- name: ListAuctions :many
-SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 FROM auctions
 WHERE status = COALESCE($1, status)
 ORDER BY CASE status
@@ -235,6 +314,7 @@ func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([
 			&i.BuyNowPrice,
 			&i.StartTime,
 			&i.EndTime,
+			&i.ActualEndTime,
 			&i.Status,
 			&i.CurrentPrice,
 			&i.DepositRate,
@@ -260,18 +340,33 @@ func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([
 
 const updateAuction = `-- name: UpdateAuction :one
 UPDATE auctions
-SET status             = COALESCE($2, status),
-    updated_at         = now()
-WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+SET status                  = COALESCE($2, status),
+    current_price           = COALESCE($3, current_price),
+    winning_bid_id          = COALESCE($4, winning_bid_id),
+    winner_payment_deadline = COALESCE($5, winner_payment_deadline),
+    actual_end_time         = COALESCE($6, actual_end_time),
+    updated_at              = now()
+WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
 `
 
 type UpdateAuctionParams struct {
-	ID     uuid.UUID         `json:"id"`
-	Status NullAuctionStatus `json:"status"`
+	ID                    uuid.UUID         `json:"id"`
+	Status                NullAuctionStatus `json:"status"`
+	CurrentPrice          *int64            `json:"current_price"`
+	WinningBidID          *uuid.UUID        `json:"winning_bid_id"`
+	WinnerPaymentDeadline *time.Time        `json:"winner_payment_deadline"`
+	ActualEndTime         *time.Time        `json:"actual_end_time"`
 }
 
 func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error) {
-	row := q.db.QueryRow(ctx, updateAuction, arg.ID, arg.Status)
+	row := q.db.QueryRow(ctx, updateAuction,
+		arg.ID,
+		arg.Status,
+		arg.CurrentPrice,
+		arg.WinningBidID,
+		arg.WinnerPaymentDeadline,
+		arg.ActualEndTime,
+	)
 	var i Auction
 	err := row.Scan(
 		&i.ID,
@@ -285,6 +380,7 @@ func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (A
 		&i.BuyNowPrice,
 		&i.StartTime,
 		&i.EndTime,
+		&i.ActualEndTime,
 		&i.Status,
 		&i.CurrentPrice,
 		&i.DepositRate,

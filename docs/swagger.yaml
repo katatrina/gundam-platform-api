@@ -366,6 +366,13 @@ definitions:
     - expected_delivery_time
     - note
     type: object
+  api.placeBidRequest:
+    properties:
+      amount:
+        type: integer
+    required:
+    - amount
+    type: object
   api.provideExchangeDeliveryAddressesRequest:
     properties:
       from_address_id:
@@ -525,6 +532,8 @@ definitions:
     type: object
   db.Auction:
     properties:
+      actual_end_time:
+        type: string
       bid_increment:
         type: integer
       buy_now_price:
@@ -572,6 +581,7 @@ definitions:
       winning_bid_id:
         type: string
     required:
+    - actual_end_time
     - bid_increment
     - buy_now_price
     - canceled_by
@@ -1293,6 +1303,16 @@ definitions:
     - order
     - to_address
     type: object
+  db.GetSellerDetailByIDRow:
+    properties:
+      seller_profile:
+        $ref: '#/definitions/db.SellerProfile'
+      user:
+        $ref: '#/definitions/db.User'
+    required:
+    - seller_profile
+    - user
+    type: object
   db.GundamAccessoryDTO:
     properties:
       name:
@@ -1460,10 +1480,16 @@ definitions:
     type: object
   db.MemberOrderDetails:
     properties:
-      buyer_info:
+      from_delivery_information:
         allOf:
-        - $ref: '#/definitions/db.User'
-        description: Thông tin người nhận (null nếu là người nhận)
+        - $ref: '#/definitions/db.DeliveryInformation'
+        description: Địa chỉ gửi hàng
+      is_receiver:
+        description: Có phải người nhận không
+        type: boolean
+      is_sender:
+        description: Có phải người gửi không
+        type: boolean
       order:
         allOf:
         - $ref: '#/definitions/db.Order'
@@ -1477,20 +1503,27 @@ definitions:
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
-      seller_info:
+      receiver:
         allOf:
-        - $ref: '#/definitions/db.SellerInfo'
-        description: Thông tin người gửi (null nếu là người gửi)
+        - $ref: '#/definitions/db.User'
+        description: Thông tin người nhận hàng (null nếu là người nhận)
+      sender:
+        allOf:
+        - $ref: '#/definitions/db.Sender'
+        description: Thông tin người gửi hàng (null nếu là người gửi)
       to_delivery_information:
         allOf:
         - $ref: '#/definitions/db.DeliveryInformation'
-        description: Địa chỉ nhận hàng của người mua
+        description: Địa chỉ nhận hàng
     required:
-    - buyer_info
+    - from_delivery_information
+    - is_receiver
+    - is_sender
     - order
     - order_delivery
     - order_items
-    - seller_info
+    - receiver
+    - sender
     - to_delivery_information
     type: object
   db.MemberOrderInfo:
@@ -1816,10 +1849,10 @@ definitions:
     type: object
   db.SalesOrderDetails:
     properties:
-      buyer_info:
+      from_delivery_information:
         allOf:
-        - $ref: '#/definitions/db.User'
-        description: Thông tin người mua
+        - $ref: '#/definitions/db.DeliveryInformation'
+        description: Địa chỉ gửi hàng
       order:
         allOf:
         - $ref: '#/definitions/db.Order'
@@ -1833,15 +1866,20 @@ definitions:
         items:
           $ref: '#/definitions/db.OrderItem'
         type: array
+      receiver:
+        allOf:
+        - $ref: '#/definitions/db.User'
+        description: Thông tin người nhận hàng
       to_delivery_information:
         allOf:
         - $ref: '#/definitions/db.DeliveryInformation'
-        description: Địa chỉ nhận hàng của người mua
+        description: Địa chỉ nhận hàng
     required:
-    - buyer_info
+    - from_delivery_information
     - order
     - order_delivery
     - order_items
+    - receiver
     - to_delivery_information
     type: object
   db.SalesOrderInfo:
@@ -1856,34 +1894,6 @@ definitions:
     - order
     - order_items
     type: object
-  db.SellerInfo:
-    properties:
-      avatar_url:
-        type: string
-      email:
-        type: string
-      google_account_id:
-        type: string
-      id:
-        type: string
-      phone_number:
-        type: string
-      role:
-        type: string
-      shop_name:
-        type: string
-      user_full_name:
-        type: string
-    required:
-    - avatar_url
-    - email
-    - google_account_id
-    - id
-    - phone_number
-    - role
-    - shop_name
-    - user_full_name
-    type: object
   db.SellerProfile:
     properties:
       created_at:
@@ -1897,6 +1907,50 @@ definitions:
     required:
     - created_at
     - seller_id
+    - shop_name
+    - updated_at
+    type: object
+  db.Sender:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      full_name:
+        type: string
+      google_account_id:
+        type: string
+      id:
+        type: string
+      phone_number:
+        type: string
+      phone_number_verified:
+        type: boolean
+      role:
+        $ref: '#/definitions/db.UserRole'
+      shop_name:
+        description: Tên shop (nếu có)
+        type: string
+      updated_at:
+        type: string
+    required:
+    - avatar_url
+    - created_at
+    - deleted_at
+    - email
+    - email_verified
+    - full_name
+    - google_account_id
+    - id
+    - phone_number
+    - phone_number_verified
+    - role
     - shop_name
     - updated_at
     type: object
@@ -2802,8 +2856,6 @@ paths:
       - moderator
   /orders:
     get:
-      consumes:
-      - application/json
       description: List all orders of a member with optional filtering by order status
       parameters:
       - description: Filter by order status
@@ -2857,8 +2909,6 @@ paths:
       - orders
   /orders/{orderID}:
     get:
-      consumes:
-      - application/json
       description: Get details of a specific order for a member
       parameters:
       - description: Order ID
@@ -3091,7 +3141,7 @@ paths:
         "200":
           description: Seller profile details
           schema:
-            $ref: '#/definitions/db.SellerInfo'
+            $ref: '#/definitions/db.GetSellerDetailByIDRow'
         "404":
           description: User not found
         "500":
@@ -4277,6 +4327,31 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /users/me/auctions/{auctionID}/bids:
+    post:
+      description: User places a bid in an active auction they have participated in.
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      - description: Request body containing bid amount
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.placeBidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful bid placement
+      security:
+      - accessToken: []
+      summary: Place a bid in an auction
+      tags:
+      - auctions
   /users/me/auctions/{auctionID}/participate:
     post:
       description: User deposits money to participate in an active auction.

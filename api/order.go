@@ -286,7 +286,6 @@ func (req *listMemberOrdersRequest) validate() error {
 //	@Summary		List all orders of a member
 //	@Description	List all orders of a member with optional filtering by order status
 //	@Tags			orders
-//	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			status	query	string				false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
@@ -445,7 +444,6 @@ func (server *Server) completeOrder(ctx *gin.Context) {
 //	@Summary		Get order details for a member
 //	@Description	Get details of a specific order for a member
 //	@Tags			orders
-//	@Accept			json
 //	@Produce		json
 //	@Param			orderID	path		string					true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Success		200		{object}	db.MemberOrderDetails	"Order details"
@@ -454,19 +452,6 @@ func (server *Server) completeOrder(ctx *gin.Context) {
 func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
-	
-	_, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("authenticated user ID %s not found", userID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		log.Err(err).Msg("failed to get user by ID")
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
 	
 	orderID, err := uuid.Parse(c.Param("orderID"))
 	if err != nil {
@@ -519,11 +504,11 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 	}
 	resp.OrderDelivery = orderDelivery
 	
-	// Lấy thông tin địa chỉ giao hàng của người nhận
-	deliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	// Lấy thông tin địa chỉ gửi hàng của người gửi
+	fromDeliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.FromDeliveryID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			err = fmt.Errorf("from delivery address ID %d not found", orderDelivery.FromDeliveryID)
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -532,56 +517,77 @@ func (server *Server) getMemberOrderDetails(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	resp.ToDeliveryInformation = deliveryInformation
+	resp.FromDeliveryInformation = fromDeliveryInformation
+	
+	// Lấy thông tin địa chỉ giao hàng của người nhận
+	toDeliveryInformation, err := server.dbStore.GetDeliveryInformation(c.Request.Context(), orderDelivery.ToDeliveryID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("to delivery address ID %d not found", orderDelivery.ToDeliveryID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get delivery address")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.ToDeliveryInformation = toDeliveryInformation
 	
 	// Xác định vai trò người dùng
 	isSender := order.SellerID == userID
+	resp.IsSender = isSender
 	isReceiver := order.BuyerID == userID
+	resp.IsReceiver = isReceiver
 	
-	// Nếu người dùng là người gửi đơn hàng
-	if isSender {
-		// Lấy thông tin người nhận đơn hàng
-		buyer, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
+	// Lấy thông tin người nhận đơn hàng
+	receiver, err := server.dbStore.GetUserByID(c.Request.Context(), order.BuyerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("receiver ID %s not found", order.BuyerID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get receiver by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.Receiver = receiver
+	
+	// Lấy thông tin người gửi đơn hàng
+	sender, err := server.dbStore.GetUserByID(c.Request.Context(), order.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("sender ID %s not found", order.SellerID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Err(err).Msg("failed to get sender by ID")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	senderDetails := db.Sender{
+		User: sender,
+	}
+	if order.Type == db.OrderTypeRegular && sender.Role == db.UserRoleSeller {
+		sellerProfile, err := server.dbStore.GetSellerProfileByID(c.Request.Context(), order.SellerID)
 		if err != nil {
 			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("buyer ID %s not found", order.BuyerID)
+				err = fmt.Errorf("seller profile not found for seller ID %s", order.SellerID)
 				c.JSON(http.StatusNotFound, errorResponse(err))
 				return
 			}
 			
-			log.Err(err).Msg("failed to get buyer by ID")
+			log.Err(err).Msg("failed to get seller profile")
 			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
-		resp.BuyerInfo = &buyer
+		senderDetails.ShopName = &sellerProfile.ShopName
 	}
-	
-	// Nếu người dùng là người nhận đơn hàng
-	if isReceiver {
-		// Lấy thông tin người gửi đơn hàng
-		seller, err := server.dbStore.GetSellerDetailByID(c.Request.Context(), order.SellerID)
-		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				err = fmt.Errorf("seller ID %s not found", order.SellerID)
-				c.JSON(http.StatusNotFound, errorResponse(err))
-				return
-			}
-			
-			log.Err(err).Msg("failed to get seller by ID")
-			c.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
-		}
-		resp.SellerInfo = &db.SellerInfo{
-			ID:              seller.User.ID,
-			GoogleAccountID: seller.User.GoogleAccountID,
-			UserFullName:    seller.User.FullName,
-			ShopName:        seller.SellerProfile.ShopName,
-			Email:           seller.User.Email,
-			PhoneNumber:     seller.User.PhoneNumber,
-			Role:            string(seller.User.Role),
-			AvatarURL:       seller.User.AvatarURL,
-		}
-	}
+	resp.Sender = senderDetails
 	
 	c.JSON(http.StatusOK, resp)
 }

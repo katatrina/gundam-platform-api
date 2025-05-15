@@ -191,7 +191,7 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		case errors.Is(err, db.ErrDuplicateParticipation):
 			c.JSON(http.StatusConflict, errorResponse(fmt.Errorf("user has already participated in the auction")))
 		case errors.Is(err, db.ErrInsufficientBalance):
-			c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("insufficient balance")))
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(fmt.Errorf("insufficient balance to participate in the auction")))
 		default:
 			c.JSON(http.StatusInternalServerError, errorResponse(fmt.Errorf("failed to participate in auction: %w", err)))
 		}

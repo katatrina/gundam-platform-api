@@ -1,12 +1,14 @@
 package worker
 
 import (
+	"context"
+	
 	"github.com/hibiken/asynq"
 )
 
 type TaskInspector interface {
-	DeleteTask(queue, taskID string) error
-	GetTaskInfo(queue, taskID string) (*asynq.TaskInfo, error)
+	DeleteTask(ctx context.Context, queue, taskID string) error
+	GetTaskInfo(ctx context.Context, queue, taskID string) (*asynq.TaskInfo, error)
 }
 
 type RedisTaskInspector struct {
@@ -19,10 +21,10 @@ func NewTaskInspector(redisOpt asynq.RedisClientOpt) TaskInspector {
 	}
 }
 
-func (i *RedisTaskInspector) DeleteTask(queue, taskID string) error {
+func (i *RedisTaskInspector) DeleteTask(ctx context.Context, queue, taskID string) error {
 	return i.inspector.DeleteTask(queue, taskID)
 }
 
-func (i *RedisTaskInspector) GetTaskInfo(queue, taskID string) (*asynq.TaskInfo, error) {
+func (i *RedisTaskInspector) GetTaskInfo(ctx context.Context, queue, taskID string) (*asynq.TaskInfo, error) {
 	return i.inspector.GetTaskInfo(queue, taskID)
 }

@@ -30,6 +30,8 @@ var (
 	ErrExchangeOfferUnique       = errors.New("user already has an offer for this exchange post")
 	ErrDuplicateParticipation    = errors.New("already participated in this auction")
 	ErrInsufficientBalance       = errors.New("insufficient balance")
+	ErrAuctionEnded              = errors.New("auction has ended")
+	ErrBidTooLow                 = errors.New("bid amount too low")
 )
 
 // PgError represents a PostgreSQL error with its code, message and constraint name

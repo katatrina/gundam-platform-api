@@ -22,8 +22,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *;
 
 -- name: UpdateAuction :one
 UPDATE auctions
-SET status             = COALESCE(sqlc.narg('status'), status),
-    updated_at         = now()
+SET status                  = COALESCE(sqlc.narg('status'), status),
+    current_price           = COALESCE(sqlc.narg('current_price'), current_price),
+    winning_bid_id          = COALESCE(sqlc.narg('winning_bid_id'), winning_bid_id),
+    winner_payment_deadline = COALESCE(sqlc.narg('winner_payment_deadline'), winner_payment_deadline),
+    actual_end_time         = COALESCE(sqlc.narg('actual_end_time'), actual_end_time),
+    updated_at              = now()
 WHERE id = $1 RETURNING *;
 
 -- name: GetAuctionByID :one
@@ -31,11 +35,11 @@ SELECT *
 FROM auctions
 WHERE id = $1;
 
--- name: GetAuctionForUpdate :one
+-- name: GetAuctionByIDForUpdate :one
 SELECT *
 FROM auctions
 WHERE id = $1
-FOR UPDATE;
+    FOR UPDATE;
 
 -- name: ListAuctions :many
 SELECT *
@@ -60,4 +64,9 @@ SELECT EXISTS(SELECT 1
 -- name: IncrementAuctionParticipants :one
 UPDATE auctions
 SET total_participants = total_participants + 1
+WHERE id = $1 RETURNING *;
+
+-- name: IncrementAuctionTotalBids :one
+UPDATE auctions
+SET total_bids = total_bids + 1
 WHERE id = $1 RETURNING *;

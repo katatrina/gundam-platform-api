@@ -138,6 +138,24 @@ func (q *Queries) GetSellerDetailByID(ctx context.Context, id string) (GetSeller
 	return i, err
 }
 
+const getSellerProfileByID = `-- name: GetSellerProfileByID :one
+SELECT seller_id, shop_name, created_at, updated_at
+FROM seller_profiles
+WHERE seller_id = $1
+`
+
+func (q *Queries) GetSellerProfileByID(ctx context.Context, sellerID string) (SellerProfile, error) {
+	row := q.db.QueryRow(ctx, getSellerProfileByID, sellerID)
+	var i SellerProfile
+	err := row.Scan(
+		&i.SellerID,
+		&i.ShopName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listSalesOrders = `-- name: ListSalesOrders :many
 SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders

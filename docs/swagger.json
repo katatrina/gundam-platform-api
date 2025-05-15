@@ -820,9 +820,6 @@
                     }
                 ],
                 "description": "List all orders of a member with optional filtering by order status",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -905,9 +902,6 @@
                     }
                 ],
                 "description": "Get details of a specific order for a member",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1252,7 +1246,7 @@
                     "200": {
                         "description": "Seller profile details",
                         "schema": {
-                            "$ref": "#/definitions/db.SellerInfo"
+                            "$ref": "#/definitions/db.GetSellerDetailByIDRow"
                         }
                     },
                     "404": {
@@ -2724,6 +2718,46 @@
                 }
             }
         },
+        "/users/me/auctions/{auctionID}/bids": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "User places a bid in an active auction they have participated in.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Place a bid in an auction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request body containing bid amount",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.placeBidRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful bid placement"
+                    }
+                }
+            }
+        },
         "/users/me/auctions/{auctionID}/participate": {
             "post": {
                 "security": [
@@ -4060,6 +4094,17 @@
                 }
             }
         },
+        "api.placeBidRequest": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.provideExchangeDeliveryAddressesRequest": {
             "type": "object",
             "required": [
@@ -4290,6 +4335,7 @@
         "db.Auction": {
             "type": "object",
             "required": [
+                "actual_end_time",
                 "bid_increment",
                 "buy_now_price",
                 "canceled_by",
@@ -4315,6 +4361,9 @@
                 "winning_bid_id"
             ],
             "properties": {
+                "actual_end_time": {
+                    "type": "string"
+                },
                 "bid_increment": {
                     "type": "integer"
                 },
@@ -5354,6 +5403,21 @@
                 }
             }
         },
+        "db.GetSellerDetailByIDRow": {
+            "type": "object",
+            "required": [
+                "seller_profile",
+                "user"
+            ],
+            "properties": {
+                "seller_profile": {
+                    "$ref": "#/definitions/db.SellerProfile"
+                },
+                "user": {
+                    "$ref": "#/definitions/db.User"
+                }
+            }
+        },
         "db.GundamAccessoryDTO": {
             "type": "object",
             "required": [
@@ -5586,21 +5650,32 @@
         "db.MemberOrderDetails": {
             "type": "object",
             "required": [
-                "buyer_info",
+                "from_delivery_information",
+                "is_receiver",
+                "is_sender",
                 "order",
                 "order_delivery",
                 "order_items",
-                "seller_info",
+                "receiver",
+                "sender",
                 "to_delivery_information"
             ],
             "properties": {
-                "buyer_info": {
-                    "description": "Thông tin người nhận (null nếu là người nhận)",
+                "from_delivery_information": {
+                    "description": "Địa chỉ gửi hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.User"
+                            "$ref": "#/definitions/db.DeliveryInformation"
                         }
                     ]
+                },
+                "is_receiver": {
+                    "description": "Có phải người nhận không",
+                    "type": "boolean"
+                },
+                "is_sender": {
+                    "description": "Có phải người gửi không",
+                    "type": "boolean"
                 },
                 "order": {
                     "description": "Thông tin đơn hàng",
@@ -5625,16 +5700,24 @@
                         "$ref": "#/definitions/db.OrderItem"
                     }
                 },
-                "seller_info": {
-                    "description": "Thông tin người gửi (null nếu là người gửi)",
+                "receiver": {
+                    "description": "Thông tin người nhận hàng (null nếu là người nhận)",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.SellerInfo"
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
+                },
+                "sender": {
+                    "description": "Thông tin người gửi hàng (null nếu là người gửi)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Sender"
                         }
                     ]
                 },
                 "to_delivery_information": {
-                    "description": "Địa chỉ nhận hàng của người mua",
+                    "description": "Địa chỉ nhận hàng",
                     "allOf": [
                         {
                             "$ref": "#/definitions/db.DeliveryInformation"
@@ -6097,18 +6180,19 @@
         "db.SalesOrderDetails": {
             "type": "object",
             "required": [
-                "buyer_info",
+                "from_delivery_information",
                 "order",
                 "order_delivery",
                 "order_items",
+                "receiver",
                 "to_delivery_information"
             ],
             "properties": {
-                "buyer_info": {
-                    "description": "Thông tin người mua",
+                "from_delivery_information": {
+                    "description": "Địa chỉ gửi hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.User"
+                            "$ref": "#/definitions/db.DeliveryInformation"
                         }
                     ]
                 },
@@ -6135,8 +6219,16 @@
                         "$ref": "#/definitions/db.OrderItem"
                     }
                 },
+                "receiver": {
+                    "description": "Thông tin người nhận hàng",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.User"
+                        }
+                    ]
+                },
                 "to_delivery_information": {
-                    "description": "Địa chỉ nhận hàng của người mua",
+                    "description": "Địa chỉ nhận hàng",
                     "allOf": [
                         {
                             "$ref": "#/definitions/db.DeliveryInformation"
@@ -6163,45 +6255,6 @@
                 }
             }
         },
-        "db.SellerInfo": {
-            "type": "object",
-            "required": [
-                "avatar_url",
-                "email",
-                "google_account_id",
-                "id",
-                "phone_number",
-                "role",
-                "shop_name",
-                "user_full_name"
-            ],
-            "properties": {
-                "avatar_url": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "google_account_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "shop_name": {
-                    "type": "string"
-                },
-                "user_full_name": {
-                    "type": "string"
-                }
-            }
-        },
         "db.SellerProfile": {
             "type": "object",
             "required": [
@@ -6218,6 +6271,66 @@
                     "type": "string"
                 },
                 "shop_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.Sender": {
+            "type": "object",
+            "required": [
+                "avatar_url",
+                "created_at",
+                "deleted_at",
+                "email",
+                "email_verified",
+                "full_name",
+                "google_account_id",
+                "id",
+                "phone_number",
+                "phone_number_verified",
+                "role",
+                "shop_name",
+                "updated_at"
+            ],
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "google_account_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "phone_number_verified": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "$ref": "#/definitions/db.UserRole"
+                },
+                "shop_name": {
+                    "description": "Tên shop (nếu có)",
                     "type": "string"
                 },
                 "updated_at": {

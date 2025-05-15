@@ -26,6 +26,7 @@ type Querier interface {
 	CountSellerActiveAuctions(ctx context.Context, sellerID string) (int64, error)
 	CreateAccessory(ctx context.Context, arg CreateAccessoryParams) error
 	CreateAuction(ctx context.Context, arg CreateAuctionParams) (Auction, error)
+	CreateAuctionBid(ctx context.Context, arg CreateAuctionBidParams) (AuctionBid, error)
 	CreateAuctionParticipant(ctx context.Context, arg CreateAuctionParticipantParams) (AuctionParticipant, error)
 	CreateAuctionRequest(ctx context.Context, arg CreateAuctionRequestParams) (AuctionRequest, error)
 	CreateDeliveryInformation(ctx context.Context, arg CreateDeliveryInformationParams) (DeliveryInformation, error)
@@ -58,8 +59,10 @@ type Querier interface {
 	DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
+	GetAuctionBidByID(ctx context.Context, id uuid.UUID) (AuctionBid, error)
 	GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error)
-	GetAuctionForUpdate(ctx context.Context, id uuid.UUID) (Auction, error)
+	GetAuctionByIDForUpdate(ctx context.Context, id uuid.UUID) (Auction, error)
+	GetAuctionParticipantByUserID(ctx context.Context, arg GetAuctionParticipantByUserIDParams) (AuctionParticipant, error)
 	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
@@ -85,6 +88,7 @@ type Querier interface {
 	GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)
+	GetSellerProfileByID(ctx context.Context, sellerID string) (SellerProfile, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
@@ -97,6 +101,8 @@ type Querier interface {
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	IncrementAuctionParticipants(ctx context.Context, id uuid.UUID) (Auction, error)
+	IncrementAuctionTotalBids(ctx context.Context, id uuid.UUID) (Auction, error)
+	ListAuctionParticipantsExcept(ctx context.Context, arg ListAuctionParticipantsExceptParams) ([]AuctionParticipant, error)
 	ListAuctionRequests(ctx context.Context, status NullAuctionRequestStatus) ([]AuctionRequest, error)
 	ListAuctions(ctx context.Context, status NullAuctionStatus) ([]Auction, error)
 	ListCartItemsWithDetails(ctx context.Context, cartID int64) ([]ListCartItemsWithDetailsRow, error)
@@ -124,6 +130,7 @@ type Querier interface {
 	UnsetPickupAddress(ctx context.Context, userID string) error
 	UnsetPrimaryAddress(ctx context.Context, userID string) error
 	UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error)
+	UpdateAuctionParticipant(ctx context.Context, arg UpdateAuctionParticipantParams) (AuctionParticipant, error)
 	UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionRequestParams) (AuctionRequest, error)
 	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
 	UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error)

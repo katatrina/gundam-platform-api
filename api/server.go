@@ -257,7 +257,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction) // ✅
 		
 		// Đặt giá
-		// userAuctionGroup.POST("/:auctionID/bids", server.placeBid)
+		userAuctionGroup.POST("/:auctionID/bids", server.placeBid)
 		
 		// Thanh toán sau khi thắng
 		// userAuctionGroup.POST("/:auctionID/payment", server.payAuctionWinningBid)

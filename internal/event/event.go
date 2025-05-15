@@ -9,6 +9,8 @@ type Event struct {
 
 const (
 	EventTypeNewParticipant = "new_participant" // Người dùng mới tham gia
+	EventTypeNewBid         = "new_bid"         // Người dùng mới đặt giá
+	EventTypeAuctionEnded   = "auction_ended"   // Phiên đấu giá đã kết thúc
 )
 
 // EventSender là interface cho đại diện cho server gửi sự kiện đến client
