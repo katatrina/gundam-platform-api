@@ -51,6 +51,8 @@ type Store interface {
 	ApproveAuctionRequestTx(ctx context.Context, arg ApproveAuctionRequestTxParams) (ApproveAuctionRequestTxResult, error)
 	ParticipateInAuctionTx(ctx context.Context, arg ParticipateInAuctionTxParams) (ParticipateInAuctionTxResult, error)
 	PlaceBidTx(ctx context.Context, arg PlaceBidTxParams) (PlaceBidTxResult, error)
+	EndAuctionTx(ctx context.Context, arg EndAuctionTxParams) (EndAuctionTxResult, error)
+	HandleAuctionNonPaymentTx(ctx context.Context, arg HandleAuctionNonPaymentTxParams) (HandleAuctionNonPaymentTxResult, error)
 }
 
 type SQLStore struct {

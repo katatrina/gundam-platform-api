@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 	
 	"github.com/gin-gonic/gin"
@@ -151,16 +153,85 @@ func (server *Server) placeBid(c *gin.Context) {
 	
 	// 2. Thực hiện transaction đặt giá
 	result, err := server.dbStore.PlaceBidTx(c, db.PlaceBidTxParams{
-		UserID:        userID,
-		Auction:       auction,
-		ParticipantID: participant.ID,
-		Amount:        req.Amount,
-		OnBuyNowFunc: func(auctionID uuid.UUID) error {
+		UserID:      userID,
+		Auction:     auction,
+		Participant: participant,
+		Amount:      req.Amount,
+		OnEndNowFunc: func(auctionID uuid.UUID) error {
 			// Lấy task ID từ key trong Redis
 			taskID := fmt.Sprintf("auction:end:%s", auctionID.String())
 			
 			// Sử dụng taskInspector để xóa task
 			return server.taskInspector.DeleteTask(c.Request.Context(), worker.QueueCritical, taskID)
+		},
+		CheckPaymentFunc: func(endedAuction db.Auction, winnerID string) error {
+			opts := []asynq.Option{
+				asynq.MaxRetry(3),
+				asynq.Queue(worker.QueueCritical),
+				asynq.ProcessAt(*endedAuction.WinnerPaymentDeadline),
+			}
+			
+			return server.taskDistributor.DistributeTaskCheckAuctionPayment(c.Request.Context(), &worker.PayloadCheckAuctionPayment{
+				AuctionID:  endedAuction.ID,
+				WinnerID:   winnerID,
+				SellerID:   endedAuction.SellerID,
+				Deadline:   endedAuction.WinnerPaymentDeadline.Format(time.RFC3339),
+				GundamName: endedAuction.GundamSnapshot.Name,
+			}, opts...)
+		},
+		PaymentReminderFunc: func(endedAuction db.Auction, winnerID string) error {
+			// TODO: Trong tương lai, có thể thay thế việc nhắc nhở thanh toán bằng cách gửi qua email, sđt, push notification,... thay vì gửi thông báo thông thường.
+			// Bởi vì thanh toán đấu giá là một việc rất quan trọng, nên cần có nhiều cách nhắc nhở khác nhau để đảm bảo người thắng không bỏ lỡ.
+			
+			reminderTimes := []struct {
+				Duration time.Duration
+				Sequence int
+			}{
+				{6 * time.Hour, 1},
+				{24 * time.Hour, 2},
+				{36 * time.Hour, 3},
+			}
+			
+			var wg sync.WaitGroup
+			
+			for _, reminder := range reminderTimes {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					
+					reminderTime := endedAuction.ActualEndTime.Add(reminder.Duration)
+					remainingHours := int((endedAuction.WinnerPaymentDeadline.Sub(reminderTime)).Hours())
+					
+					opts := []asynq.Option{
+						asynq.MaxRetry(3),
+						asynq.Queue(worker.QueueCritical),
+						asynq.ProcessAt(reminderTime),
+					}
+					
+					err := server.taskDistributor.DistributeTaskPaymentReminder(
+						c.Request.Context(),
+						&worker.PayloadPaymentReminder{
+							AuctionID:        endedAuction.ID,
+							WinnerID:         winnerID,
+							GundamName:       endedAuction.GundamSnapshot.Name,
+							RemainingHours:   remainingHours,
+							ReminderSequence: reminder.Sequence,
+						},
+						opts...,
+					)
+					
+					if err != nil {
+						log.Err(err).
+							Str("auction_id", endedAuction.ID.String()).
+							Str("winner_id", winnerID).
+							Int("reminder_sequence", reminder.Sequence).
+							Msg("failed to schedule payment reminder task")
+					}
+				}()
+			}
+			
+			wg.Wait()
+			return err
 		},
 	})
 	if err != nil {
@@ -177,7 +248,8 @@ func (server *Server) placeBid(c *gin.Context) {
 		return
 	}
 	
-	// Phân loại và xử lý transaction.
+	// Giao dịch đặt giá đã thành công, xử lý các thông báo và cập nhật
+	
 	// 3. Lấy thông tin người đặt giá
 	user, err := server.dbStore.GetUserByID(c, userID)
 	if err != nil {
@@ -192,82 +264,11 @@ func (server *Server) placeBid(c *gin.Context) {
 		return
 	}
 	
-	// 4. Gửi thông báo realtime qua SSE
+	// 4. Gửi thông báo realtime qua SSE dựa vào kết quả đặt giá
 	topic := fmt.Sprintf("auction:%s", auctionID.String())
 	
-	// Gửi thông báo new_bid trước
-	server.eventSender.Broadcast(event.Event{
-		Topic: topic,
-		Type:  event.EventTypeNewBid,
-		Data: map[string]interface{}{
-			"auction_id":    auctionID.String(),
-			"current_price": result.Auction.CurrentPrice,
-			"bid_id":        result.AuctionBid.ID.String(),
-			"bid_amount":    result.AuctionBid.Amount,
-			"bidder":        user,
-			"timestamp":     result.AuctionBid.CreatedAt,
-			"total_bids":    result.Auction.TotalBids,
-		},
-	})
-	
-	// Log thông tin đặt giá
-	log.Info().
-		Str("auction_id", auctionID.String()).
-		Str("bidder_id", userID).
-		Int64("amount", req.Amount).
-		Bool("is_buy_now", result.IsBuyNow).
-		Int32("total_bids", result.Auction.TotalBids).
-		Msg("bid placed successfully")
-	
-	// 5. Gửi thông báo cho người bán và người vượt giá
-	go func() {
-		opts := []asynq.Option{
-			asynq.MaxRetry(3),
-			asynq.Queue(worker.QueueCritical),
-		}
-		
-		// Thông báo cho người bán về lượt đặt giá mới (nếu không phải mua ngay)
-		if !result.IsBuyNow {
-			err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-				RecipientID: result.Auction.SellerID,
-				Title:       "Có lượt đặt giá mới",
-				Message: fmt.Sprintf("Có người vừa đặt giá %s cho phiên đấu giá %s của bạn.",
-					util.FormatMoney(req.Amount),
-					result.Auction.GundamSnapshot.Name),
-				Type:        "auction_new_bid",
-				ReferenceID: result.Auction.ID.String(),
-			}, opts...)
-			if err != nil {
-				log.Err(err).
-					Str("recipient_id", result.Auction.SellerID).
-					Str("auction_id", result.Auction.ID.String()).
-					Msg("failed to send notification to seller")
-			}
-		}
-		
-		// Thông báo cho người bị vượt giá (nếu có và không phải mua ngay)
-		if result.PreviousBidder != nil && result.PreviousBidder.ID != userID && !result.IsBuyNow {
-			err := server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-				RecipientID: result.PreviousBidder.ID,
-				Title:       "Giá của bạn đã bị vượt qua",
-				Message: fmt.Sprintf("Lượt đặt giá của bạn cho %s đã bị vượt qua. Giá mới là %s.",
-					result.Auction.GundamSnapshot.Name,
-					util.FormatMoney(req.Amount)),
-				Type:        "auction_outbid",
-				ReferenceID: result.Auction.ID.String(),
-			}, opts...)
-			if err != nil {
-				log.Err(err).
-					Str("recipient_id", result.PreviousBidder.ID).
-					Str("auction_id", result.Auction.ID.String()).
-					Msg("failed to send notification to outbid user")
-			}
-		}
-	}()
-	
-	// 6. Xử lý trường hợp mua ngay
-	if result.IsBuyNow {
-		// Gửi thông báo auction ended qua SSE
+	if result.CanEndNow {
+		// Nếu là mua ngay, chỉ gửi thông báo kết thúc đấu giá
 		server.eventSender.Broadcast(event.Event{
 			Topic: topic,
 			Type:  event.EventTypeAuctionEnded,
@@ -277,7 +278,9 @@ func (server *Server) placeBid(c *gin.Context) {
 				"winning_bid_id": result.AuctionBid.ID.String(),
 				"winner":         user,
 				"reason":         "buy_now_price_reached",
-				"timestamp":      time.Now(),
+				"timestamp":      result.Auction.ActualEndTime,
+				"bid_details":    result.AuctionBid,
+				"total_bids":     result.Auction.TotalBids,
 			},
 		})
 		
@@ -288,24 +291,56 @@ func (server *Server) placeBid(c *gin.Context) {
 			Int64("buy_now_price", req.Amount).
 			Int("refunded_users", len(result.RefundedUserIDs)).
 			Msg("auction ended by buy now")
+	} else {
+		// Nếu là đặt giá thông thường, gửi thông báo new_bid
+		server.eventSender.Broadcast(event.Event{
+			Topic: topic,
+			Type:  event.EventTypeNewBid,
+			Data: map[string]interface{}{
+				"auction_id":    auctionID.String(),
+				"current_price": result.Auction.CurrentPrice,
+				"bid_id":        result.AuctionBid.ID.String(),
+				"bid_amount":    result.AuctionBid.Amount,
+				"bidder":        user,
+				"timestamp":     result.AuctionBid.CreatedAt,
+				"total_bids":    result.Auction.TotalBids,
+			},
+		})
 		
-		// Lên lịch thông báo cho người thắng và người bán
-		go func() {
-			opts := []asynq.Option{
-				asynq.MaxRetry(3),
-				asynq.Queue(worker.QueueCritical),
-			}
+		// Log thông tin đặt giá thông thường
+		log.Info().
+			Str("auction_id", auctionID.String()).
+			Str("bidder_id", userID).
+			Int64("amount", req.Amount).
+			Int32("total_bids", result.Auction.TotalBids).
+			Msg("bid placed successfully")
+	}
+	
+	// 5. Xử lý thông báo hệ thống cho tất cả người liên quan (trong goroutine riêng)
+	go func() {
+		opts := []asynq.Option{
+			asynq.MaxRetry(3),
+			asynq.Queue(worker.QueueCritical),
+		}
+		
+		// Xử lý thông báo dựa trên loại đặt giá
+		if result.CanEndNow {
+			// A. Mua ngay - Thông báo cho người thắng/người bán/người tham gia khác
 			
 			// Thông báo cho người thắng
-			err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-				RecipientID: userID,
-				Title:       "Bạn đã thắng phiên đấu giá!",
-				Message: fmt.Sprintf("Chúc mừng! Bạn đã thắng đấu giá %s với giá %s. Vui lòng thanh toán trong vòng 48 giờ.",
-					result.Auction.GundamSnapshot.Name,
-					util.FormatVND(req.Amount)),
-				Type:        "auction_win",
-				ReferenceID: result.Auction.ID.String(),
-			}, opts...)
+			err := server.taskDistributor.DistributeTaskSendNotification(
+				context.Background(), // Sử dụng context mới để tránh cancel
+				&worker.PayloadSendNotification{
+					RecipientID: userID,
+					Title:       "Bạn đã thắng phiên đấu giá!",
+					Message: fmt.Sprintf("Chúc mừng! Bạn đã thắng đấu giá %s với giá %s. Vui lòng thanh toán trong vòng 48 giờ.",
+						result.Auction.GundamSnapshot.Name,
+						util.FormatVND(req.Amount)),
+					Type:        "auction_win",
+					ReferenceID: result.Auction.ID.String(),
+				},
+				opts...,
+			)
 			if err != nil {
 				log.Err(err).
 					Str("recipient_id", userID).
@@ -314,15 +349,19 @@ func (server *Server) placeBid(c *gin.Context) {
 			}
 			
 			// Thông báo cho người bán
-			err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-				RecipientID: result.Auction.SellerID,
-				Title:       "Phiên đấu giá đã kết thúc",
-				Message: fmt.Sprintf("Phiên đấu giá %s của bạn đã kết thúc với giá cuối cùng là %s.",
-					result.Auction.GundamSnapshot.Name,
-					util.FormatVND(req.Amount)),
-				Type:        "auction_ended",
-				ReferenceID: result.Auction.ID.String(),
-			}, opts...)
+			err = server.taskDistributor.DistributeTaskSendNotification(
+				context.Background(),
+				&worker.PayloadSendNotification{
+					RecipientID: result.Auction.SellerID,
+					Title:       "Phiên đấu giá đã kết thúc",
+					Message: fmt.Sprintf("Phiên đấu giá %s của bạn đã kết thúc với giá cuối cùng là %s.",
+						result.Auction.GundamSnapshot.Name,
+						util.FormatVND(req.Amount)),
+					Type:        "auction_ended",
+					ReferenceID: result.Auction.ID.String(),
+				},
+				opts...,
+			)
 			if err != nil {
 				log.Err(err).
 					Str("recipient_id", result.Auction.SellerID).
@@ -332,15 +371,19 @@ func (server *Server) placeBid(c *gin.Context) {
 			
 			// Thông báo hoàn tiền cho những người tham gia khác
 			for _, refundedUserID := range result.RefundedUserIDs {
-				err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
-					RecipientID: refundedUserID,
-					Title:       "Hoàn trả tiền đặt cọc",
-					Message: fmt.Sprintf("Bạn đã không thắng phiên đấu giá %s. Số tiền đặt cọc %s đã được hoàn trả.",
-						result.Auction.GundamSnapshot.Name,
-						util.FormatVND(result.Auction.DepositAmount)),
-					Type:        "auction_deposit_refund",
-					ReferenceID: result.Auction.ID.String(),
-				}, opts...)
+				err = server.taskDistributor.DistributeTaskSendNotification(
+					context.Background(),
+					&worker.PayloadSendNotification{
+						RecipientID: refundedUserID,
+						Title:       "Hoàn trả tiền đặt cọc",
+						Message: fmt.Sprintf("Bạn đã không thắng phiên đấu giá %s. Số tiền đặt cọc %s đã được hoàn trả.",
+							result.Auction.GundamSnapshot.Name,
+							util.FormatVND(result.Auction.DepositAmount)),
+						Type:        "auction_deposit_refund",
+						ReferenceID: result.Auction.ID.String(),
+					},
+					opts...,
+				)
 				if err != nil {
 					log.Err(err).
 						Str("recipient_id", refundedUserID).
@@ -348,8 +391,55 @@ func (server *Server) placeBid(c *gin.Context) {
 						Msg("failed to send refund notification")
 				}
 			}
-		}()
-	}
+		} else {
+			// B. Đặt giá thông thường - Thông báo cho người bán và người vượt giá
+			
+			// Thông báo cho người bán về lượt đặt giá mới
+			err := server.taskDistributor.DistributeTaskSendNotification(
+				context.Background(),
+				&worker.PayloadSendNotification{
+					RecipientID: result.Auction.SellerID,
+					Title:       "Có lượt đặt giá mới",
+					Message: fmt.Sprintf("Có người vừa đặt giá %s cho phiên đấu giá %s của bạn.",
+						util.FormatVND(req.Amount),
+						result.Auction.GundamSnapshot.Name),
+					Type:        "auction_new_bid",
+					ReferenceID: result.Auction.ID.String(),
+				},
+				opts...,
+			)
+			if err != nil {
+				log.Err(err).
+					Str("recipient_id", result.Auction.SellerID).
+					Str("auction_id", result.Auction.ID.String()).
+					Msg("failed to send notification to seller")
+			}
+			
+			// Thông báo cho người bị vượt giá (nếu có)
+			if result.PreviousBidder != nil && result.PreviousBidder.ID != userID {
+				err := server.taskDistributor.DistributeTaskSendNotification(
+					context.Background(),
+					&worker.PayloadSendNotification{
+						RecipientID: result.PreviousBidder.ID,
+						Title:       "Giá của bạn đã bị vượt qua",
+						Message: fmt.Sprintf("Lượt đặt giá của bạn cho %s đã bị vượt qua. Giá mới là %s.",
+							result.Auction.GundamSnapshot.Name,
+							util.FormatMoney(req.Amount)),
+						Type:        "auction_outbid",
+						ReferenceID: result.Auction.ID.String(),
+					},
+					opts...,
+				)
+				if err != nil {
+					log.Err(err).
+						Str("recipient_id", result.PreviousBidder.ID).
+						Str("auction_id", result.Auction.ID.String()).
+						Msg("failed to send notification to outbid user")
+				}
+			}
+		}
+	}()
 	
+	// Trả về kết quả cho client
 	c.JSON(http.StatusOK, result)
 }

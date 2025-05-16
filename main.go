@@ -113,7 +113,7 @@ func main() {
 	}
 	log.Info().Msg("order tracking service started ✅")
 	
-	go runRedisTaskProcessor(redisOpt, store, firebaseApp)
+	go runRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor)
 	runHTTPServer(&appConfig, store, redisDb, taskDistributor, taskInspector, mailService, ghnService)
 }
 
@@ -170,8 +170,8 @@ func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
 }
 
 // runRedisTaskProcessor creates a new task processor and starts it.
-func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, firebaseApp)
+func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, taskDistributor worker.TaskDistributor) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor)
 	
 	err := taskProcessor.Start()
 	if err != nil {

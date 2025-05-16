@@ -76,6 +76,40 @@ func (q *Queries) GetAuctionParticipantByUserID(ctx context.Context, arg GetAuct
 	return i, err
 }
 
+const listAuctionParticipants = `-- name: ListAuctionParticipants :many
+SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+FROM auction_participants
+WHERE auction_id = $1
+`
+
+func (q *Queries) ListAuctionParticipants(ctx context.Context, auctionID uuid.UUID) ([]AuctionParticipant, error) {
+	rows, err := q.db.Query(ctx, listAuctionParticipants, auctionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuctionParticipant{}
+	for rows.Next() {
+		var i AuctionParticipant
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuctionID,
+			&i.UserID,
+			&i.DepositAmount,
+			&i.DepositEntryID,
+			&i.IsRefunded,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAuctionParticipantsExcept = `-- name: ListAuctionParticipantsExcept :many
 SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
 FROM auction_participants

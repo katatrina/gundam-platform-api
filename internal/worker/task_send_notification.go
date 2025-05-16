@@ -10,10 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	TaskSendNotification = "notification:send"
-)
-
 // PayloadSendNotification contain all data of the task that we want to store in Redis.
 type PayloadSendNotification struct {
 	RecipientID string

@@ -257,7 +257,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		userAuctionGroup.POST("/:auctionID/participate", server.participateInAuction) // ✅
 		
 		// Đặt giá
-		userAuctionGroup.POST("/:auctionID/bids", server.placeBid)
+		userAuctionGroup.POST("/:auctionID/bids", server.placeBid) // ✅
 		
 		// Thanh toán sau khi thắng
 		// userAuctionGroup.POST("/:auctionID/payment", server.payAuctionWinningBid)
@@ -319,7 +319,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Xem chi tiết phiên đấu giá của mình
 			// sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails)
 			
-			// Hủy phiên đấu giá (khi chưa có người tham gia)
+			// Hủy phiên đấu giá (tạm thời không cho hủy)
 			// sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuction)
 		}
 	}

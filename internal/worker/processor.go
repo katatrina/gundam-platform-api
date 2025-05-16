@@ -20,12 +20,13 @@ const (
 )
 
 type RedisTaskProcessor struct {
-	server          *asynq.Server
-	store           db.Store
-	firestoreClient *firestore.Client
+	server          *asynq.Server     // server will process tasks from the Redis queue.
+	store           db.Store          // Tương tác với db
+	firestoreClient *firestore.Client // Dùng để gửi thông báo đến cho người dùng thông qua Firestore
+	distributor     TaskDistributor   // Dùng để phân phối task đến Redis queue
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App) *RedisTaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, distributor TaskDistributor) *RedisTaskProcessor {
 	// Initialize Firestore client
 	firestoreClient, err := firebaseApp.Firestore(context.Background())
 	if err != nil {
@@ -52,6 +53,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, fireba
 		server:          server,
 		store:           store,
 		firestoreClient: firestoreClient,
+		distributor:     distributor,
 	}
 }
 

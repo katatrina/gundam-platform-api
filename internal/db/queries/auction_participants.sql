@@ -12,6 +12,11 @@ FROM auction_participants
 WHERE user_id = $1
   AND auction_id = $2;;
 
+-- name: ListAuctionParticipants :many
+SELECT *
+FROM auction_participants
+WHERE auction_id = $1;
+
 -- name: ListAuctionParticipantsExcept :many
 SELECT *
 FROM auction_participants
