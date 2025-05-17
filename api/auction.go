@@ -270,3 +270,36 @@ func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, rows)
 }
+
+// 	@Summary		List user bids
+//	@Description	Retrieves a list of bids made by the user in a specific auction.
+//	@Tags			auctions
+//	@Produce		json
+//	@Param			auctionID	query	string		true	"Auction ID"
+//	@Success		200			{array}	db.AuctionBid	"List of user bids"
+//	@Security		accessToken
+//	@Router			/users/me/auctions/bids [get]
+func (server *Server) listUserBids(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	auctionIDStr := c.Query("auctionID")
+	auctionID, err := uuid.Parse(auctionIDStr)
+	if err != nil {
+		err = fmt.Errorf("invalid auction ID format: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	auctionBids, err := server.dbStore.ListUserAuctionBids(c.Request.Context(), db.ListUserAuctionBidsParams{
+		BidderID:  &userID,
+		AuctionID: &auctionID,
+	})
+	if err != nil {
+		err = fmt.Errorf("failed to list user auction bids: %w", err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, auctionBids)
+}

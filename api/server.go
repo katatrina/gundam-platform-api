@@ -259,10 +259,13 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Đặt giá
 		userAuctionGroup.POST("/:auctionID/bids", server.placeBid) // ✅
 		
+		// Xem danh sách các lượt đặt giá của bản thân của một phiên đấu giá cụ thể
+		userAuctionGroup.GET("/:auctionID/bids", server.listUserBids) // ✅
+		
 		// Thanh toán sau khi thắng
 		// userAuctionGroup.POST("/:auctionID/payment", server.payAuctionWinningBid)
 		
-		// Xem lịch sử các phiên đấu giá đã tham gia của bản thân
+		// Xem danh sách các phiên đấu giá đã tham gia của bản thân
 		userAuctionGroup.GET("", server.listUserParticipatedAuctions) // ✅
 	}
 	
