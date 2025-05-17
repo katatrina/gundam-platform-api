@@ -961,3 +961,64 @@ func (server *Server) listSellerAuctions(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, auctions)
 }
+
+//	@Summary		Get auction details by seller
+//	@Description	Get details of a specific auction for the seller
+//	@Tags			auctions
+//	@Produce		json
+//	@Param			sellerID	path		string				true	"Seller ID"
+//	@Param			auctionID	path		string				true	"Auction ID (UUID format)"
+//	@Success		200			{object}	db.AuctionDetails	"Auction details"
+//	@Security		accessToken
+//	@Router			/sellers/{sellerID}/auctions/{auctionID} [get]
+func (server *Server) getSellerAuctionDetails(c *gin.Context) {
+	user := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	auctionID, err := uuid.Parse(c.Param("auctionID"))
+	if err != nil {
+		err = fmt.Errorf("failed to parse auction ID: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	auction, err := server.dbStore.GetAuctionByID(c.Request.Context(), auctionID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction ID %s not found", auctionID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	if auction.SellerID != user.ID {
+		err = fmt.Errorf("auction ID %s does not belong to seller ID %s", auction.ID, user.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	var resp db.AuctionDetails
+	resp.Auction = auction
+	
+	// Lấy danh sách người tham gia đấu giá
+	participants, err := server.dbStore.ListAuctionParticipants(c.Request.Context(), auction.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get auction participants")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.AuctionParticipants = participants
+	
+	// Lấy danh sách giá đấu
+	bids, err := server.dbStore.ListAuctionBids(c.Request.Context(), &auction.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get auction bids")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	resp.AuctionBids = bids
+	
+	c.JSON(http.StatusOK, resp)
+}

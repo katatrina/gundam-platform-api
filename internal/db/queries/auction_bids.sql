@@ -11,6 +11,12 @@ SELECT *
 FROM auction_bids
 WHERE id = $1;
 
+-- name: ListAuctionBids :many
+SELECT *
+FROM auction_bids
+WHERE auction_id = $1
+ORDER BY created_at DESC;
+
 -- name: ListUserAuctionBids :many
 SELECT *
 FROM auction_bids

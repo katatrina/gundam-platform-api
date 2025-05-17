@@ -314,10 +314,10 @@ func (server *Server) setupRouter() *gin.Engine {
 		sellerAuctionGroup := sellerGroup.Group("auctions")
 		{
 			// Xem danh sách phiên đấu giá của mình
-			sellerAuctionGroup.GET("", server.listSellerAuctions)
+			sellerAuctionGroup.GET("", server.listSellerAuctions) // ✅
 			
 			// Xem chi tiết phiên đấu giá của mình
-			// sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails)
+			sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails) // ✅
 			
 			// Hủy phiên đấu giá (tạm thời không cho hủy)
 			// sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuction)

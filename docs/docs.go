@@ -1703,6 +1703,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/{sellerID}/auctions/{auctionID}": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get details of a specific auction for the seller",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Get auction details by seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auction ID (UUID format)",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Auction details",
+                        "schema": {
+                            "$ref": "#/definitions/db.AuctionDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/{sellerID}/gundams/{gundamID}/publish": {
             "patch": {
                 "security": [
@@ -4581,6 +4622,38 @@ const docTemplate = `{
                 },
                 "participant_id": {
                     "type": "string"
+                }
+            }
+        },
+        "db.AuctionDetails": {
+            "type": "object",
+            "required": [
+                "auction",
+                "auction_bids",
+                "auction_participants"
+            ],
+            "properties": {
+                "auction": {
+                    "description": "Thông tin phiên đấu giá",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/db.Auction"
+                        }
+                    ]
+                },
+                "auction_bids": {
+                    "description": "Danh sách giá đấu",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.AuctionBid"
+                    }
+                },
+                "auction_participants": {
+                    "description": "Danh sách người tham gia đấu giá",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/db.AuctionParticipant"
+                    }
                 }
             }
         },

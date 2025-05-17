@@ -68,6 +68,40 @@ func (q *Queries) GetAuctionBidByID(ctx context.Context, id uuid.UUID) (AuctionB
 	return i, err
 }
 
+const listAuctionBids = `-- name: ListAuctionBids :many
+SELECT id, auction_id, bidder_id, participant_id, amount, created_at
+FROM auction_bids
+WHERE auction_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAuctionBids(ctx context.Context, auctionID *uuid.UUID) ([]AuctionBid, error) {
+	rows, err := q.db.Query(ctx, listAuctionBids, auctionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuctionBid{}
+	for rows.Next() {
+		var i AuctionBid
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuctionID,
+			&i.BidderID,
+			&i.ParticipantID,
+			&i.Amount,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserAuctionBids = `-- name: ListUserAuctionBids :many
 SELECT id, auction_id, bidder_id, participant_id, amount, created_at
 FROM auction_bids

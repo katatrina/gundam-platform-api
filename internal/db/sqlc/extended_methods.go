@@ -14,21 +14,6 @@ func (ns NullDeliveryOverralStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(ns.DeliveryOverralStatus))
 }
 
-// func CreateGundamSnapshot(gundam *Gundam, grade *GundamGrade, primaryImageURL string) ([]byte, error) {
-// 	snapshot := GundamSnapshot{
-// 		ID:       gundam.ID,
-// 		Name:     gundam.Name,
-// 		Slug:     gundam.Slug,
-// 		Grade:    grade.DisplayName,
-// 		Scale:    string(gundam.Scale),
-// 		Quantity: gundam.Quantity,
-// 		Weight:   gundam.Weight,
-// 		ImageURL: primaryImageURL,
-// 	}
-//
-// 	return json.Marshal(snapshot)
-// }
-
 // Scan implements the sql.Scanner interface.
 func (g *GundamSnapshot) Scan(src interface{}) error {
 	if src == nil {

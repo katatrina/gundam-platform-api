@@ -102,6 +102,7 @@ type Querier interface {
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
 	IncrementAuctionParticipants(ctx context.Context, id uuid.UUID) (Auction, error)
 	IncrementAuctionTotalBids(ctx context.Context, id uuid.UUID) (Auction, error)
+	ListAuctionBids(ctx context.Context, auctionID *uuid.UUID) ([]AuctionBid, error)
 	ListAuctionParticipants(ctx context.Context, auctionID uuid.UUID) ([]AuctionParticipant, error)
 	ListAuctionParticipantsExcept(ctx context.Context, arg ListAuctionParticipantsExceptParams) ([]AuctionParticipant, error)
 	ListAuctionRequests(ctx context.Context, status NullAuctionRequestStatus) ([]AuctionRequest, error)

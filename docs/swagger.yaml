@@ -628,6 +628,27 @@ definitions:
     - id
     - participant_id
     type: object
+  db.AuctionDetails:
+    properties:
+      auction:
+        allOf:
+        - $ref: '#/definitions/db.Auction'
+        description: Thông tin phiên đấu giá
+      auction_bids:
+        description: Danh sách giá đấu
+        items:
+          $ref: '#/definitions/db.AuctionBid'
+        type: array
+      auction_participants:
+        description: Danh sách người tham gia đấu giá
+        items:
+          $ref: '#/definitions/db.AuctionParticipant'
+        type: array
+    required:
+    - auction
+    - auction_bids
+    - auction_participants
+    type: object
   db.AuctionParticipant:
     properties:
       auction_id:
@@ -3470,6 +3491,32 @@ paths:
       security:
       - accessToken: []
       summary: Delete an auction request by seller
+      tags:
+      - auctions
+  /sellers/{sellerID}/auctions/{auctionID}:
+    get:
+      description: Get details of a specific auction for the seller
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Auction ID (UUID format)
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Auction details
+          schema:
+            $ref: '#/definitions/db.AuctionDetails'
+      security:
+      - accessToken: []
+      summary: Get auction details by seller
       tags:
       - auctions
   /sellers/{sellerID}/gundams/{gundamID}/publish:

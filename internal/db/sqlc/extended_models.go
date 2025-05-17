@@ -183,3 +183,9 @@ type GundamSnapshot struct {
 	Weight   int64  `json:"weight"`
 	ImageURL string `json:"image_url"`
 }
+
+type AuctionDetails struct {
+	Auction             Auction              `json:"auction"`              // Thông tin phiên đấu giá
+	AuctionParticipants []AuctionParticipant `json:"auction_participants"` // Danh sách người tham gia đấu giá
+	AuctionBids         []AuctionBid         `json:"auction_bids"`         // Danh sách giá đấu
+}
