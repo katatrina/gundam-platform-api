@@ -1434,6 +1434,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/:sellerID/auctions": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List all auctions that belong to the specified seller, optionally filtered by status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "List all auctions of a seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "scheduled",
+                            "active",
+                            "ended",
+                            "completed",
+                            "failed",
+                            "canceled"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of auctions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Auction"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/:sellerID/orders": {
             "get": {
                 "security": [
@@ -2742,6 +2793,43 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/db.ListUserParticipatedAuctionsRow"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/auctions/bids": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves a list of bids made by the user in a specific auction.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "List user bids",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of user bids",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.AuctionBid"
                             }
                         }
                     }
@@ -4461,6 +4549,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "winning_bid_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.AuctionBid": {
+            "type": "object",
+            "required": [
+                "amount",
+                "auction_id",
+                "bidder_id",
+                "created_at",
+                "id",
+                "participant_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "auction_id": {
+                    "type": "string"
+                },
+                "bidder_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "participant_id": {
                     "type": "string"
                 }
             }

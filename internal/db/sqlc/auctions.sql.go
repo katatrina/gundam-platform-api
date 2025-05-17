@@ -338,6 +338,72 @@ func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([
 	return items, nil
 }
 
+const listSellerAuctions = `-- name: ListSellerAuctions :many
+SELECT id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, winner_payment_deadline, total_participants, total_bids, order_id, canceled_by, canceled_reason, created_at, updated_at
+FROM auctions
+WHERE seller_id = $1
+  AND status = COALESCE($2, status)
+ORDER BY CASE status
+             -- Phiên đang diễn ra: ưu tiên theo thời gian kết thúc gần nhất
+             WHEN 'active' THEN EXTRACT(EPOCH FROM end_time)
+             -- Phiên sắp diễn ra: ưu tiên theo thời gian bắt đầu sớm nhất
+             WHEN 'scheduled' THEN EXTRACT(EPOCH FROM start_time)
+             -- Các trạng thái khác: sắp xếp theo thời gian tạo mới nhất
+             ELSE EXTRACT(EPOCH FROM created_at) * -1
+             END ASC,
+         created_at DESC
+`
+
+type ListSellerAuctionsParams struct {
+	SellerID string            `json:"seller_id"`
+	Status   NullAuctionStatus `json:"status"`
+}
+
+func (q *Queries) ListSellerAuctions(ctx context.Context, arg ListSellerAuctionsParams) ([]Auction, error) {
+	rows, err := q.db.Query(ctx, listSellerAuctions, arg.SellerID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Auction{}
+	for rows.Next() {
+		var i Auction
+		if err := rows.Scan(
+			&i.ID,
+			&i.RequestID,
+			&i.GundamID,
+			&i.SellerID,
+			&i.GundamSnapshot,
+			&i.StartingPrice,
+			&i.BidIncrement,
+			&i.WinningBidID,
+			&i.BuyNowPrice,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ActualEndTime,
+			&i.Status,
+			&i.CurrentPrice,
+			&i.DepositRate,
+			&i.DepositAmount,
+			&i.WinnerPaymentDeadline,
+			&i.TotalParticipants,
+			&i.TotalBids,
+			&i.OrderID,
+			&i.CanceledBy,
+			&i.CanceledReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserParticipatedAuctions = `-- name: ListUserParticipatedAuctions :many
 SELECT a.id, a.request_id, a.gundam_id, a.seller_id, a.gundam_snapshot, a.starting_price, a.bid_increment, a.winning_bid_id, a.buy_now_price, a.start_time, a.end_time, a.actual_end_time, a.status, a.current_price, a.deposit_rate, a.deposit_amount, a.winner_payment_deadline, a.total_participants, a.total_bids, a.order_id, a.canceled_by, a.canceled_reason, a.created_at, a.updated_at,
        ap.id, ap.auction_id, ap.user_id, ap.deposit_amount, ap.deposit_entry_id, ap.is_refunded, ap.created_at

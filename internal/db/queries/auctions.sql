@@ -87,3 +87,18 @@ ORDER BY CASE a.status
              END
     ASC,
          a.created_at DESC;
+
+-- name: ListSellerAuctions :many
+SELECT *
+FROM auctions
+WHERE seller_id = $1
+  AND status = COALESCE(sqlc.narg('status'), status)
+ORDER BY CASE status
+             -- Phiên đang diễn ra: ưu tiên theo thời gian kết thúc gần nhất
+             WHEN 'active' THEN EXTRACT(EPOCH FROM end_time)
+             -- Phiên sắp diễn ra: ưu tiên theo thời gian bắt đầu sớm nhất
+             WHEN 'scheduled' THEN EXTRACT(EPOCH FROM start_time)
+             -- Các trạng thái khác: sắp xếp theo thời gian tạo mới nhất
+             ELSE EXTRACT(EPOCH FROM created_at) * -1
+             END ASC,
+         created_at DESC;

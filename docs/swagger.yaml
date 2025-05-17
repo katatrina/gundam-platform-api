@@ -606,6 +606,28 @@ definitions:
     - winner_payment_deadline
     - winning_bid_id
     type: object
+  db.AuctionBid:
+    properties:
+      amount:
+        type: integer
+      auction_id:
+        type: string
+      bidder_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      participant_id:
+        type: string
+    required:
+    - amount
+    - auction_id
+    - bidder_id
+    - created_at
+    - id
+    - participant_id
+    type: object
   db.AuctionParticipant:
     properties:
       auction_id:
@@ -3273,6 +3295,41 @@ paths:
       summary: Create a new auction request by seller
       tags:
       - auctions
+  /sellers/:sellerID/auctions:
+    get:
+      description: List all auctions that belong to the specified seller, optionally
+        filtered by status
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Filter by status
+        enum:
+        - scheduled
+        - active
+        - ended
+        - completed
+        - failed
+        - canceled
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of auctions
+          schema:
+            items:
+              $ref: '#/definitions/db.Auction'
+            type: array
+      security:
+      - accessToken: []
+      summary: List all auctions of a seller
+      tags:
+      - auctions
   /sellers/:sellerID/orders:
     get:
       consumes:
@@ -4398,6 +4455,29 @@ paths:
       security:
       - accessToken: []
       summary: Participate in an auction
+      tags:
+      - auctions
+  /users/me/auctions/bids:
+    get:
+      description: Retrieves a list of bids made by the user in a specific auction.
+      parameters:
+      - description: Auction ID
+        in: query
+        name: auctionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user bids
+          schema:
+            items:
+              $ref: '#/definitions/db.AuctionBid'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user bids
       tags:
       - auctions
   /users/me/exchange-offers:

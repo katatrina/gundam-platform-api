@@ -925,3 +925,39 @@ func (server *Server) deleteAuctionRequest(c *gin.Context) {
 	
 	c.Status(http.StatusNoContent)
 }
+
+//	@Summary		List all auctions of a seller
+//	@Description	List all auctions that belong to the specified seller, optionally filtered by status
+//	@Tags			auctions
+//	@Produce		json
+//	@Param			sellerID	path	string		true	"Seller ID"
+//	@Param			status		query	string		false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
+//	@Success		200			{array}	db.Auction	"List of auctions"
+//	@Security		accessToken
+//	@Router			/sellers/:sellerID/auctions [get]
+func (server *Server) listSellerAuctions(c *gin.Context) {
+	user := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	status := c.Query("status")
+	if status != "" {
+		if err := db.IsValidAuctionStatus(status); err != nil {
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	auctions, err := server.dbStore.ListSellerAuctions(c.Request.Context(), db.ListSellerAuctionsParams{
+		SellerID: user.ID,
+		Status: db.NullAuctionStatus{
+			AuctionStatus: db.AuctionStatus(status),
+			Valid:         status != "",
+		},
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list auctions")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, auctions)
+}

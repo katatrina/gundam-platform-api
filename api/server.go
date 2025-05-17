@@ -311,15 +311,12 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 		
 		// API cho phiên đấu giá của seller
-		// sellerAuctionGroup := sellerGroup.Group("auctions")
+		sellerAuctionGroup := sellerGroup.Group("auctions")
 		{
-			// Xem danh sách phiên đấu giá của mình (khoông cần thiết)
-			// Xem trong danh sách gundam của người bán
-			// Chi tiết phiên đấu giá xem trên nền tảng
-			// sellerAuctionGroup.GET("", server.listSellerAuctions)
+			// Xem danh sách phiên đấu giá của mình
+			sellerAuctionGroup.GET("", server.listSellerAuctions)
 			
-			// Xem chi tiết phiên đấu giá của mình (không cần thiết)
-			// Tương tự api trên
+			// Xem chi tiết phiên đấu giá của mình
 			// sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails)
 			
 			// Hủy phiên đấu giá (tạm thời không cho hủy)

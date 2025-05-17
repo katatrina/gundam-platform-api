@@ -100,3 +100,12 @@ func IsValidAuctionRequestStatus(status string) error {
 	
 	return nil
 }
+
+func IsValidAuctionStatus(status string) error {
+	if !AuctionStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllAuctionStatusValues())
+		return err
+	}
+	
+	return nil
+}
