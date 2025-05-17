@@ -1478,6 +1478,16 @@ definitions:
     - seller_id
     - seller_name
     type: object
+  db.ListUserParticipatedAuctionsRow:
+    properties:
+      auction:
+        $ref: '#/definitions/db.Auction'
+      auction_participant:
+        $ref: '#/definitions/db.AuctionParticipant'
+    required:
+    - auction
+    - auction_participant
+    type: object
   db.MemberOrderDetails:
     properties:
       from_delivery_information:
@@ -4327,6 +4337,23 @@ paths:
       summary: Retrieve a user by phone_number number
       tags:
       - users
+  /users/me/auctions:
+    get:
+      description: Retrieves a list of auctions the user has participated in.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of participated auctions
+          schema:
+            items:
+              $ref: '#/definitions/db.ListUserParticipatedAuctionsRow'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user participated auctions
+      tags:
+      - auctions
   /users/me/auctions/{auctionID}/bids:
     post:
       description: User places a bid in an active auction they have participated in.

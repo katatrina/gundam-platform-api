@@ -248,3 +248,25 @@ func (server *Server) participateInAuction(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+//	@Summary		List user participated auctions
+//	@Description	Retrieves a list of auctions the user has participated in.
+//	@Tags			auctions
+//	@Produce		json
+//	@Success		200	{array}	db.ListUserParticipatedAuctionsRow	"List of participated auctions"
+//	@Security		accessToken
+//	@Router			/users/me/auctions [get]
+func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// Lấy danh sách các phiên đấu giá mà người dùng đã tham gia
+	rows, err := server.dbStore.ListUserParticipatedAuctions(c, userID)
+	if err != nil {
+		err = fmt.Errorf("failed to list participated rows: %w", err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, rows)
+}

@@ -123,8 +123,10 @@ type Querier interface {
 	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListSellerAuctionRequests(ctx context.Context, arg ListSellerAuctionRequestsParams) ([]AuctionRequest, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
+	ListUserAuctionBids(ctx context.Context, arg ListUserAuctionBidsParams) ([]AuctionBid, error)
 	ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error)
 	ListUserExchanges(ctx context.Context, arg ListUserExchangesParams) ([]Exchange, error)
+	ListUserParticipatedAuctions(ctx context.Context, userID string) ([]ListUserParticipatedAuctionsRow, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)

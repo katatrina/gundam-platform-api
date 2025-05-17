@@ -262,11 +262,8 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Thanh toán sau khi thắng
 		// userAuctionGroup.POST("/:auctionID/payment", server.payAuctionWinningBid)
 		
-		// Xem lịch sử tham gia đấu giá của bản thân
-		// userAuctionGroup.GET("/participations", server.listMyAuctionParticipations)
-		
-		// Xem lịch sử đặt giá của bản thân
-		// userAuctionGroup.GET("/bids", server.listMyAuctionBids)
+		// Xem lịch sử các phiên đấu giá đã tham gia của bản thân
+		userAuctionGroup.GET("", server.listUserParticipatedAuctions) // ✅
 	}
 	
 	// Nhóm các API chỉ dành cho seller
@@ -313,10 +310,13 @@ func (server *Server) setupRouter() *gin.Engine {
 		// API cho phiên đấu giá của seller
 		// sellerAuctionGroup := sellerGroup.Group("auctions")
 		{
-			// Xem danh sách phiên đấu giá của mình
+			// Xem danh sách phiên đấu giá của mình (khoông cần thiết)
+			// Xem trong danh sách gundam của người bán
+			// Chi tiết phiên đấu giá xem trên nền tảng
 			// sellerAuctionGroup.GET("", server.listSellerAuctions)
 			
-			// Xem chi tiết phiên đấu giá của mình
+			// Xem chi tiết phiên đấu giá của mình (không cần thiết)
+			// Tương tự api trên
 			// sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails)
 			
 			// Hủy phiên đấu giá (tạm thời không cho hủy)

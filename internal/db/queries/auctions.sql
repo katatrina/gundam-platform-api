@@ -70,3 +70,20 @@ WHERE id = $1 RETURNING *;
 UPDATE auctions
 SET total_bids = total_bids + 1
 WHERE id = $1 RETURNING *;
+
+-- name: ListUserParticipatedAuctions :many
+SELECT sqlc.embed(a),
+       sqlc.embed(ap)
+FROM auctions a
+         JOIN auction_participants ap ON a.id = ap.auction_id
+WHERE ap.user_id = $1
+ORDER BY CASE a.status
+             -- Phiên đang diễn ra: ưu tiên theo thời gian kết thúc gần nhất
+             WHEN 'active' THEN EXTRACT(EPOCH FROM a.end_time)
+             -- Phiên sắp diễn ra: ưu tiên theo thời gian bắt đầu sớm nhất
+             WHEN 'scheduled' THEN EXTRACT(EPOCH FROM a.start_time)
+             -- Các trạng thái khác: sắp xếp theo thời gian tạo mới nhất
+             ELSE EXTRACT(EPOCH FROM a.created_at) * -1
+             END
+    ASC,
+         a.created_at DESC;

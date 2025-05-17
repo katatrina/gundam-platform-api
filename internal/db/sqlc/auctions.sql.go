@@ -338,6 +338,81 @@ func (q *Queries) ListAuctions(ctx context.Context, status NullAuctionStatus) ([
 	return items, nil
 }
 
+const listUserParticipatedAuctions = `-- name: ListUserParticipatedAuctions :many
+SELECT a.id, a.request_id, a.gundam_id, a.seller_id, a.gundam_snapshot, a.starting_price, a.bid_increment, a.winning_bid_id, a.buy_now_price, a.start_time, a.end_time, a.actual_end_time, a.status, a.current_price, a.deposit_rate, a.deposit_amount, a.winner_payment_deadline, a.total_participants, a.total_bids, a.order_id, a.canceled_by, a.canceled_reason, a.created_at, a.updated_at,
+       ap.id, ap.auction_id, ap.user_id, ap.deposit_amount, ap.deposit_entry_id, ap.is_refunded, ap.created_at
+FROM auctions a
+         JOIN auction_participants ap ON a.id = ap.auction_id
+WHERE ap.user_id = $1
+ORDER BY CASE a.status
+             -- Phiên đang diễn ra: ưu tiên theo thời gian kết thúc gần nhất
+             WHEN 'active' THEN EXTRACT(EPOCH FROM a.end_time)
+             -- Phiên sắp diễn ra: ưu tiên theo thời gian bắt đầu sớm nhất
+             WHEN 'scheduled' THEN EXTRACT(EPOCH FROM a.start_time)
+             -- Các trạng thái khác: sắp xếp theo thời gian tạo mới nhất
+             ELSE EXTRACT(EPOCH FROM a.created_at) * -1
+             END
+    ASC,
+         a.created_at DESC
+`
+
+type ListUserParticipatedAuctionsRow struct {
+	Auction            Auction            `json:"auction"`
+	AuctionParticipant AuctionParticipant `json:"auction_participant"`
+}
+
+func (q *Queries) ListUserParticipatedAuctions(ctx context.Context, userID string) ([]ListUserParticipatedAuctionsRow, error) {
+	rows, err := q.db.Query(ctx, listUserParticipatedAuctions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserParticipatedAuctionsRow{}
+	for rows.Next() {
+		var i ListUserParticipatedAuctionsRow
+		if err := rows.Scan(
+			&i.Auction.ID,
+			&i.Auction.RequestID,
+			&i.Auction.GundamID,
+			&i.Auction.SellerID,
+			&i.Auction.GundamSnapshot,
+			&i.Auction.StartingPrice,
+			&i.Auction.BidIncrement,
+			&i.Auction.WinningBidID,
+			&i.Auction.BuyNowPrice,
+			&i.Auction.StartTime,
+			&i.Auction.EndTime,
+			&i.Auction.ActualEndTime,
+			&i.Auction.Status,
+			&i.Auction.CurrentPrice,
+			&i.Auction.DepositRate,
+			&i.Auction.DepositAmount,
+			&i.Auction.WinnerPaymentDeadline,
+			&i.Auction.TotalParticipants,
+			&i.Auction.TotalBids,
+			&i.Auction.OrderID,
+			&i.Auction.CanceledBy,
+			&i.Auction.CanceledReason,
+			&i.Auction.CreatedAt,
+			&i.Auction.UpdatedAt,
+			&i.AuctionParticipant.ID,
+			&i.AuctionParticipant.AuctionID,
+			&i.AuctionParticipant.UserID,
+			&i.AuctionParticipant.DepositAmount,
+			&i.AuctionParticipant.DepositEntryID,
+			&i.AuctionParticipant.IsRefunded,
+			&i.AuctionParticipant.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAuction = `-- name: UpdateAuction :one
 UPDATE auctions
 SET status                  = COALESCE($2, status),

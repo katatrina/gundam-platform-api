@@ -2720,6 +2720,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/auctions": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Retrieves a list of auctions the user has participated in.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "List user participated auctions",
+                "responses": {
+                    "200": {
+                        "description": "List of participated auctions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.ListUserParticipatedAuctionsRow"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/auctions/{auctionID}/bids": {
             "post": {
                 "security": [
@@ -5646,6 +5674,21 @@ const docTemplate = `{
                 },
                 "seller_name": {
                     "type": "string"
+                }
+            }
+        },
+        "db.ListUserParticipatedAuctionsRow": {
+            "type": "object",
+            "required": [
+                "auction",
+                "auction_participant"
+            ],
+            "properties": {
+                "auction": {
+                    "$ref": "#/definitions/db.Auction"
+                },
+                "auction_participant": {
+                    "$ref": "#/definitions/db.AuctionParticipant"
                 }
             }
         },
