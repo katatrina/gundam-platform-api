@@ -62,6 +62,7 @@ type Querier interface {
 	GetAuctionBidByID(ctx context.Context, id uuid.UUID) (AuctionBid, error)
 	GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error)
 	GetAuctionByIDForUpdate(ctx context.Context, id uuid.UUID) (Auction, error)
+	GetAuctionByOrderID(ctx context.Context, orderID *uuid.UUID) (Auction, error)
 	GetAuctionParticipantByUserID(ctx context.Context, arg GetAuctionParticipantByUserIDParams) (AuctionParticipant, error)
 	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)

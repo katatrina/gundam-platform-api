@@ -68,6 +68,18 @@ func (t *OrderTracker) autoCompleteDeliveredOrders() {
 				continue
 			}
 		
+		case db.OrderTypeAuction:
+			// Xử lý như đơn hàng thông thường
+			err := t.autoCompleteRegularOrder(ctx, order)
+			if err != nil {
+				log.Error().
+					Err(err).
+					Str("order_id", order.ID.String()).
+					Str("order_code", order.Code).
+					Msg("Failed to auto-complete exchange order")
+				continue
+			}
+		
 		default:
 			log.Error().
 				Str("order_id", order.ID.String()).
@@ -344,6 +356,52 @@ func (t *OrderTracker) sendAutoCompleteNotifications(ctx context.Context, order 
 				Str("partner_id", partnerID).
 				Str("exchange_id", exchange.ID.String()).
 				Msg("failed to send auto-complete notification to exchange partner")
+		}
+	
+	case db.OrderTypeAuction:
+		// Thông báo cho người thắng đấu giá
+		err := t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+			RecipientID: order.BuyerID,
+			Title:       fmt.Sprintf("Đơn hàng đấu giá %s đã được tự động hoàn tất", order.Code),
+			Message:     fmt.Sprintf("Đơn hàng đấu giá %s đã được tự động hoàn tất sau 7 ngày kể từ khi giao hàng thành công. Mô hình Gundam đã được thêm vào bộ sưu tập của bạn.", order.Code),
+			Type:        "order",
+			ReferenceID: order.Code,
+		}, opts...)
+		
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("buyer_id", order.BuyerID).
+				Str("order_code", order.Code).
+				Msg("failed to send auto-complete notification to buyer")
+		} else {
+			log.Info().
+				Str("buyer_id", order.BuyerID).
+				Str("order_code", order.Code).
+				Msg("auto-complete notification sent to buyer")
+		}
+		
+		// Thông báo cho người bán
+		err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
+			RecipientID: order.SellerID,
+			Title:       fmt.Sprintf("Đơn hàng đấu giá %s đã được tự động hoàn tất", order.Code),
+			Message: fmt.Sprintf("Đơn hàng đấu giá %s đã được tự động hoàn tất sau 7 ngày kể từ khi giao hàng thành công. Số tiền %s đã được chuyển vào số dư khả dụng của bạn.",
+				order.Code, util.FormatVND(order.ItemsSubtotal)),
+			Type:        "order",
+			ReferenceID: order.Code,
+		}, opts...)
+		
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("seller_id", order.SellerID).
+				Str("order_code", order.Code).
+				Msg("failed to send auto-complete notification to seller")
+		} else {
+			log.Info().
+				Str("seller_id", order.SellerID).
+				Str("order_code", order.Code).
+				Msg("auto-complete notification sent to seller")
 		}
 	
 	default:

@@ -615,6 +615,20 @@ func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctio
 		}
 		result.Auction = updatedAuction
 		
+		// 14. Cập nhật trạng thái của gundam trong auction
+		if arg.Auction.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *arg.Auction.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusProcessing,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam status: %w", err)
+			}
+		}
+		
 		return nil
 	})
 	

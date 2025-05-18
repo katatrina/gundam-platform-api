@@ -353,11 +353,11 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 }
 
 //	@Summary		Confirm order received
-//	@Description	Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.
+//	@Description	Confirm that the receiver has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed. For auction orders, it completes the auction transaction.
 //	@Tags			orders
 //	@Produce		json
 //	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	db.CompleteRegularOrderTxResult	"Order completed successfully"
+//	@Success		200	 "Order completed successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/complete [patch]
 func (server *Server) completeOrder(ctx *gin.Context) {
@@ -430,6 +430,16 @@ func (server *Server) completeOrder(ctx *gin.Context) {
 		result, err := server.handleExchangeOrderConfirmation(ctx, order)
 		if err != nil {
 			log.Err(err).Msg("failed to confirm exchange order received")
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusOK, result)
+	
+	case db.OrderTypeAuction:
+		// Xử lý đơn hàng đấu giá
+		result, err := server.handleAuctionOrderConfirmation(ctx, order)
+		if err != nil {
+			log.Err(err).Msg("failed to confirm auction order received")
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}

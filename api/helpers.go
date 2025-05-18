@@ -289,6 +289,121 @@ func (server *Server) handleExchangeOrderConfirmation(ctx *gin.Context, order db
 	return result, nil
 }
 
+// handleAuctionOrderConfirmation xử lý xác nhận nhận hàng cho đơn hàng đấu giá
+func (server *Server) handleAuctionOrderConfirmation(ctx *gin.Context, order db.Order) (db.CompleteRegularOrderTxResult, error) {
+	// Lấy thông tin giao dịch đơn hàng - giống như đơn hàng thông thường
+	orderTransaction, err := server.dbStore.GetOrderTransactionByOrderID(ctx, order.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("transaction for order ID %s not found", order.ID)
+		}
+		return db.CompleteRegularOrderTxResult{}, err
+	}
+	
+	// Kiểm tra xem giao dịch đã có seller_entry_id chưa
+	if orderTransaction.SellerEntryID == nil {
+		return db.CompleteRegularOrderTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
+	}
+	
+	// Lấy bút toán của người bán
+	sellerEntry, err := server.dbStore.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("seller entry not found for order %s", order.Code)
+		}
+		return db.CompleteRegularOrderTxResult{}, err
+	}
+	
+	// Lấy ví của người bán
+	sellerWallet, err := server.dbStore.GetWalletForUpdate(ctx, order.SellerID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return db.CompleteRegularOrderTxResult{}, fmt.Errorf("wallet not found for seller %s", order.SellerID)
+		}
+		return db.CompleteRegularOrderTxResult{}, err
+	}
+	
+	// Lấy thông tin order items
+	orderItems, err := server.dbStore.ListOrderItems(ctx, order.ID)
+	if err != nil {
+		return db.CompleteRegularOrderTxResult{}, err
+	}
+	
+	// Kiểm tra trạng thái của các Gundam liên quan
+	for _, item := range orderItems {
+		if item.GundamID != nil {
+			gundam, err := server.dbStore.GetGundamByID(ctx, *item.GundamID)
+			if err != nil {
+				if errors.Is(err, db.ErrRecordNotFound) {
+					return db.CompleteRegularOrderTxResult{}, fmt.Errorf("gundam ID %d not found", *item.GundamID)
+				}
+				return db.CompleteRegularOrderTxResult{}, err
+			}
+			
+			if gundam.Status != db.GundamStatusProcessing {
+				return db.CompleteRegularOrderTxResult{}, fmt.Errorf("gundam ID %d is not in processing status", *item.GundamID)
+			}
+		} else {
+			log.Warn().Msg("gundam ID is nil in order item")
+		}
+	}
+	
+	// Lấy thông tin phiên đấu giá liên quan (để hiển thị thông tin trong thông báo)
+	auction, err := server.dbStore.GetAuctionByOrderID(ctx, &order.ID)
+	if err != nil && !errors.Is(err, db.ErrRecordNotFound) {
+		return db.CompleteRegularOrderTxResult{}, fmt.Errorf("failed to get auction details: %w", err)
+	}
+	
+	// Thực hiện transaction xác nhận đơn hàng đã nhận - sử dụng lại transaction của đơn hàng thông thường
+	result, err := server.dbStore.CompleteRegularOrderTx(ctx, db.CompleteRegularOrderTxParams{
+		Order:        &order,
+		OrderItems:   orderItems,
+		SellerEntry:  &sellerEntry,
+		SellerWallet: &sellerWallet,
+	})
+	if err != nil {
+		return db.CompleteRegularOrderTxResult{}, err
+	}
+	
+	opts := []asynq.Option{
+		asynq.MaxRetry(3),
+		asynq.Queue(worker.QueueCritical),
+	}
+	
+	// Gửi thông báo cho người mua - Thông báo riêng cho đơn hàng đấu giá
+	var auctionInfo string
+	if auction.ID != uuid.Nil {
+		auctionInfo = fmt.Sprintf(" từ phiên đấu giá %s", auction.GundamSnapshot.Name)
+	}
+	
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.BuyerID,
+		Title:       fmt.Sprintf("Bạn đã xác nhận hoàn tất đơn hàng đấu giá %s thành công.", result.Order.Code),
+		Message:     fmt.Sprintf("Mô hình Gundam%s đã được thêm vào bộ sưu tập của bạn.", auctionInfo),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to buyer")
+	}
+	log.Info().Msgf("Notification sent to buyer: %s", result.Order.BuyerID)
+	
+	// Gửi thông báo cho người bán - Thông báo riêng cho đơn hàng đấu giá
+	err = server.taskDistributor.DistributeTaskSendNotification(ctx.Request.Context(), &worker.PayloadSendNotification{
+		RecipientID: result.Order.SellerID,
+		Title:       fmt.Sprintf("Đơn hàng đấu giá #%s đã được người mua xác nhận hoàn tất.", result.Order.Code),
+		Message:     fmt.Sprintf("Quyền sở hữu mô hình Gundam%s đã được chuyển cho người mua. Số dư khả dụng của bạn đã được cộng thêm %s.", auctionInfo, util.FormatVND(result.SellerEntry.Amount)),
+		Type:        "order",
+		ReferenceID: result.Order.Code,
+	}, opts...)
+	if err != nil {
+		log.Err(err).Msg("failed to send notification to seller")
+	}
+	log.Info().Msgf("Notification sent to seller: %s", result.Order.SellerID)
+	
+	return result, nil
+}
+
 // sendExchangeCancelNotifications sends notifications to both parties about the canceled exchange
 func (server *Server) sendExchangeCancelNotifications(ctx context.Context, result db.CancelExchangeTxResult, canceledByID string) {
 	exchange := result.Exchange

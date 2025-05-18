@@ -539,7 +539,7 @@ func (server *Server) packageOrder(c *gin.Context) {
 	title := fmt.Sprintf("Đơn hàng %s đã được đóng gói", result.Order.Code)
 	message := fmt.Sprintf("Đơn hàng %s đã được đóng gói và sẽ được giao cho đơn vị vận chuyển. Mã vận đơn: %s, dự kiến giao hàng: %s.",
 		result.Order.Code,
-		result.OrderDelivery.DeliveryTrackingCode,
+		*result.OrderDelivery.DeliveryTrackingCode,
 		result.OrderDelivery.ExpectedDeliveryTime.Format("02/01/2006"))
 	
 	// Tùy chỉnh thông báo dựa trên loại đơn hàng

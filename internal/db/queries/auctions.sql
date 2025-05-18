@@ -42,6 +42,11 @@ FROM auctions
 WHERE id = $1
     FOR UPDATE;
 
+-- name: GetAuctionByOrderID :one
+SELECT *
+FROM auctions
+WHERE order_id = $1;
+
 -- name: ListAuctions :many
 SELECT *
 FROM auctions

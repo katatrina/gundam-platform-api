@@ -350,9 +350,8 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 			log.Info().Msgf("Exchange order %s has been packaged, exchange status: %s", updatedOrder.ID, exchangeStatus)
 		
 		case OrderTypeAuction:
-			// Xử lý đơn hàng đấu giá (sẽ triển khai trong tương lai)
+			// Đơn hàng đấu giá cũng như đơn hàng thông thường
 			log.Info().Msgf("Auction order %s has been packaged", updatedOrder.ID)
-			// TODO: Implement auction order handling
 		
 		default:
 			log.Warn().Msgf("Unknown order type %s for order ID %s", updatedOrder.Type, updatedOrder.ID)
