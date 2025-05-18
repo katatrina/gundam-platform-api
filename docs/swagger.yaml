@@ -352,6 +352,22 @@ definitions:
     required:
     - id_token
     type: object
+  api.payAuctionWinningBidRequest:
+    properties:
+      delivery_fee:
+        type: integer
+      expected_delivery_time:
+        type: string
+      note:
+        type: string
+      user_address_id:
+        type: integer
+    required:
+    - delivery_fee
+    - expected_delivery_time
+    - note
+    - user_address_id
+    type: object
   api.payExchangeDeliveryFeeRequest:
     properties:
       delivery_fee:
@@ -1853,6 +1869,22 @@ definitions:
     - auction_participant
     - updated_auction
     - updated_wallet
+    type: object
+  db.PayAuctionWinningBidTxResult:
+    properties:
+      auction:
+        $ref: '#/definitions/db.Auction'
+      order:
+        $ref: '#/definitions/db.Order'
+      remaining_amount:
+        type: integer
+      wallet_entry:
+        $ref: '#/definitions/db.WalletEntry'
+    required:
+    - auction
+    - order
+    - remaining_amount
+    - wallet_entry
     type: object
   db.PayExchangeDeliveryFeeTxResult:
     properties:
@@ -4502,6 +4534,35 @@ paths:
       security:
       - accessToken: []
       summary: Participate in an auction
+      tags:
+      - auctions
+  /users/me/auctions/{auctionID}/payment:
+    post:
+      consumes:
+      - application/json
+      description: Pay the remaining amount after deposit for a winning auction.
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      - description: Payment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.payAuctionWinningBidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment result
+          schema:
+            $ref: '#/definitions/db.PayAuctionWinningBidTxResult'
+      security:
+      - accessToken: []
+      summary: Pay for winning auction bid
       tags:
       - auctions
   /users/me/auctions/bids:

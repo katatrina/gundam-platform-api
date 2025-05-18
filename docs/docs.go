@@ -2951,6 +2951,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/auctions/{auctionID}/payment": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Pay the remaining amount after deposit for a winning auction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Pay for winning auction bid",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.payAuctionWinningBidRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment result",
+                        "schema": {
+                            "$ref": "#/definitions/db.PayAuctionWinningBidTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/exchange-offers": {
             "get": {
                 "security": [
@@ -4230,6 +4276,29 @@ const docTemplate = `{
             "properties": {
                 "id_token": {
                     "type": "string"
+                }
+            }
+        },
+        "api.payAuctionWinningBidRequest": {
+            "type": "object",
+            "required": [
+                "delivery_fee",
+                "expected_delivery_time",
+                "note",
+                "user_address_id"
+            ],
+            "properties": {
+                "delivery_fee": {
+                    "type": "integer"
+                },
+                "expected_delivery_time": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "user_address_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -6342,6 +6411,29 @@ const docTemplate = `{
                 },
                 "updated_wallet": {
                     "$ref": "#/definitions/db.Wallet"
+                }
+            }
+        },
+        "db.PayAuctionWinningBidTxResult": {
+            "type": "object",
+            "required": [
+                "auction",
+                "order",
+                "remaining_amount",
+                "wallet_entry"
+            ],
+            "properties": {
+                "auction": {
+                    "$ref": "#/definitions/db.Auction"
+                },
+                "order": {
+                    "$ref": "#/definitions/db.Order"
+                },
+                "remaining_amount": {
+                    "type": "integer"
+                },
+                "wallet_entry": {
+                    "$ref": "#/definitions/db.WalletEntry"
                 }
             }
         },

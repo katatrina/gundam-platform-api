@@ -2,7 +2,143 @@ package db
 
 import (
 	"context"
+	"fmt"
+	
+	"github.com/katatrina/gundam-BE/internal/delivery"
 )
+
+// Helper function để tạo delivery information
+func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxParams) (buyerDelivery, sellerDelivery DeliveryInformation, err error) {
+	buyerDelivery, err = qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
+		UserID:        arg.BuyerID,
+		FullName:      arg.BuyerAddress.FullName,
+		PhoneNumber:   arg.BuyerAddress.PhoneNumber,
+		ProvinceName:  arg.BuyerAddress.ProvinceName,
+		DistrictName:  arg.BuyerAddress.DistrictName,
+		GhnDistrictID: arg.BuyerAddress.GhnDistrictID,
+		WardName:      arg.BuyerAddress.WardName,
+		GhnWardCode:   arg.BuyerAddress.GhnWardCode,
+		Detail:        arg.BuyerAddress.Detail,
+	})
+	if err != nil {
+		return
+	}
+	
+	sellerDelivery, err = qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
+		UserID:        arg.SellerID,
+		FullName:      arg.SellerAddress.FullName,
+		PhoneNumber:   arg.SellerAddress.PhoneNumber,
+		ProvinceName:  arg.SellerAddress.ProvinceName,
+		DistrictName:  arg.SellerAddress.DistrictName,
+		GhnDistrictID: arg.SellerAddress.GhnDistrictID,
+		WardName:      arg.SellerAddress.WardName,
+		GhnWardCode:   arg.SellerAddress.GhnWardCode,
+		Detail:        arg.SellerAddress.Detail,
+	})
+	return
+}
+
+func ConvertToDeliveryCreateOrderRequest(order Order, orderItems []OrderItem, senderAddress, receiverAddress DeliveryInformation) delivery.CreateOrderRequest {
+	ghnOrder := delivery.OrderInfo{
+		ID:            order.ID.String(),
+		Code:          order.Code,
+		BuyerID:       order.BuyerID,
+		SellerID:      order.SellerID,
+		ItemsSubtotal: order.ItemsSubtotal,
+		DeliveryFee:   order.DeliveryFee,
+		TotalAmount:   order.TotalAmount,
+		Status:        string(order.Status),
+		PaymentMethod: string(order.PaymentMethod),
+	}
+	if order.Note != nil {
+		ghnOrder.Note = *order.Note
+	}
+	
+	ghnOrderItems := make([]delivery.OrderItemInfo, len(orderItems))
+	for i, item := range orderItems {
+		ghnOrderItems[i] = delivery.OrderItemInfo{
+			OrderID:  item.OrderID.String(),
+			Name:     item.Name,
+			Price:    item.Price,
+			Quantity: item.Quantity,
+			Weight:   item.Weight,
+		}
+	}
+	
+	ghnSenderAddress := delivery.AddressInfo{
+		UserID:        senderAddress.UserID,
+		FullName:      senderAddress.FullName,
+		PhoneNumber:   senderAddress.PhoneNumber,
+		ProvinceName:  senderAddress.ProvinceName,
+		DistrictName:  senderAddress.DistrictName,
+		GhnDistrictID: senderAddress.GhnDistrictID,
+		WardName:      senderAddress.WardName,
+		GhnWardCode:   senderAddress.GhnWardCode,
+		Detail:        senderAddress.Detail,
+	}
+	
+	ghnReceiverAddress := delivery.AddressInfo{
+		UserID:        receiverAddress.UserID,
+		FullName:      receiverAddress.FullName,
+		PhoneNumber:   receiverAddress.PhoneNumber,
+		ProvinceName:  receiverAddress.ProvinceName,
+		DistrictName:  receiverAddress.DistrictName,
+		GhnDistrictID: receiverAddress.GhnDistrictID,
+		WardName:      receiverAddress.WardName,
+		GhnWardCode:   receiverAddress.GhnWardCode,
+		Detail:        receiverAddress.Detail,
+	}
+	
+	return delivery.CreateOrderRequest{
+		Order:           ghnOrder,
+		OrderItems:      ghnOrderItems,
+		SenderAddress:   ghnSenderAddress,
+		ReceiverAddress: ghnReceiverAddress,
+	}
+}
+
+// Helper function để tạo thông tin địa chỉ giao nhận hàng
+func createDeliveryAddresses(qTx *Queries, ctx context.Context, buyerID, sellerID string, shippingAddress UserAddress) (int64, int64, error) {
+	// Tạo thông tin giao hàng của người mua
+	buyerDelivery, err := qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
+		UserID:        buyerID,
+		FullName:      shippingAddress.FullName,
+		PhoneNumber:   shippingAddress.PhoneNumber,
+		ProvinceName:  shippingAddress.ProvinceName,
+		DistrictName:  shippingAddress.DistrictName,
+		GhnDistrictID: shippingAddress.GhnDistrictID,
+		WardName:      shippingAddress.WardName,
+		GhnWardCode:   shippingAddress.GhnWardCode,
+		Detail:        shippingAddress.Detail,
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to create buyer delivery information: %w", err)
+	}
+	
+	// Lấy địa chỉ pickup của người bán
+	sellerPickupAddress, err := qTx.GetUserPickupAddress(ctx, sellerID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get seller pickup address: %w", err)
+	}
+	
+	// Tạo thông tin giao hàng của người bán
+	sellerDelivery, err := qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
+		UserID:        sellerID,
+		FullName:      sellerPickupAddress.FullName,
+		PhoneNumber:   sellerPickupAddress.PhoneNumber,
+		ProvinceName:  sellerPickupAddress.ProvinceName,
+		DistrictName:  sellerPickupAddress.DistrictName,
+		GhnDistrictID: sellerPickupAddress.GhnDistrictID,
+		WardName:      sellerPickupAddress.WardName,
+		GhnWardCode:   sellerPickupAddress.GhnWardCode,
+		Detail:        sellerPickupAddress.Detail,
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to create seller delivery information: %w", err)
+	}
+	
+	return sellerDelivery.ID, buyerDelivery.ID, nil
+}
 
 // Helper function để lấy thông tin chi tiết Gundam
 func (store *SQLStore) GetGundamDetailsByID(ctx context.Context, q *Queries, gundamID int64) (GundamDetails, error) {

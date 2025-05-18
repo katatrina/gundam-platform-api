@@ -27,6 +27,7 @@ SET status                  = COALESCE(sqlc.narg('status'), status),
     winning_bid_id          = COALESCE(sqlc.narg('winning_bid_id'), winning_bid_id),
     winner_payment_deadline = COALESCE(sqlc.narg('winner_payment_deadline'), winner_payment_deadline),
     actual_end_time         = COALESCE(sqlc.narg('actual_end_time'), actual_end_time),
+    order_id                = COALESCE(sqlc.narg('order_id'), order_id),
     updated_at              = now()
 WHERE id = $1 RETURNING *;
 

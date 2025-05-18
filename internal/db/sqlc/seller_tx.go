@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	
-	"github.com/katatrina/gundam-BE/internal/delivery"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -185,65 +184,6 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 	})
 	
 	return result, err
-}
-
-func ConvertToDeliveryCreateOrderRequest(order Order, orderItems []OrderItem, senderAddress, receiverAddress DeliveryInformation) delivery.CreateOrderRequest {
-	ghnOrder := delivery.OrderInfo{
-		ID:            order.ID.String(),
-		Code:          order.Code,
-		BuyerID:       order.BuyerID,
-		SellerID:      order.SellerID,
-		ItemsSubtotal: order.ItemsSubtotal,
-		DeliveryFee:   order.DeliveryFee,
-		TotalAmount:   order.TotalAmount,
-		Status:        string(order.Status),
-		PaymentMethod: string(order.PaymentMethod),
-	}
-	if order.Note != nil {
-		ghnOrder.Note = *order.Note
-	}
-	
-	ghnOrderItems := make([]delivery.OrderItemInfo, len(orderItems))
-	for i, item := range orderItems {
-		ghnOrderItems[i] = delivery.OrderItemInfo{
-			OrderID:  item.OrderID.String(),
-			Name:     item.Name,
-			Price:    item.Price,
-			Quantity: item.Quantity,
-			Weight:   item.Weight,
-		}
-	}
-	
-	ghnSenderAddress := delivery.AddressInfo{
-		UserID:        senderAddress.UserID,
-		FullName:      senderAddress.FullName,
-		PhoneNumber:   senderAddress.PhoneNumber,
-		ProvinceName:  senderAddress.ProvinceName,
-		DistrictName:  senderAddress.DistrictName,
-		GhnDistrictID: senderAddress.GhnDistrictID,
-		WardName:      senderAddress.WardName,
-		GhnWardCode:   senderAddress.GhnWardCode,
-		Detail:        senderAddress.Detail,
-	}
-	
-	ghnReceiverAddress := delivery.AddressInfo{
-		UserID:        receiverAddress.UserID,
-		FullName:      receiverAddress.FullName,
-		PhoneNumber:   receiverAddress.PhoneNumber,
-		ProvinceName:  receiverAddress.ProvinceName,
-		DistrictName:  receiverAddress.DistrictName,
-		GhnDistrictID: receiverAddress.GhnDistrictID,
-		WardName:      receiverAddress.WardName,
-		GhnWardCode:   receiverAddress.GhnWardCode,
-		Detail:        receiverAddress.Detail,
-	}
-	
-	return delivery.CreateOrderRequest{
-		Order:           ghnOrder,
-		OrderItems:      ghnOrderItems,
-		SenderAddress:   ghnSenderAddress,
-		ReceiverAddress: ghnReceiverAddress,
-	}
 }
 
 type CancelOrderBySellerTxParams struct {

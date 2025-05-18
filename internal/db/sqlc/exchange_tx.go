@@ -362,7 +362,7 @@ type CompleteExchangeOrderTxResult struct {
 	PartnerOrder  *Order    `json:"partner_order"`
 }
 
-// ConfirmExchangeOrderReceivedTx xử lý xác nhận đơn hàng trao đổi đã nhận
+// ConfirmExchangeOrderReceivedTx xử lý việc hoàn tất đơn hàng trao đổi khi người nhận xác nhận nhận hàng thành công.
 func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg CompleteExchangeOrderTxParams) (CompleteExchangeOrderTxResult, error) {
 	var result CompleteExchangeOrderTxResult
 	

@@ -364,37 +364,6 @@ func (store *SQLStore) PackageOrderTx(ctx context.Context, arg PackageOrderTxPar
 	return result, err
 }
 
-// Helper function để tạo delivery information
-func createDeliveryInfo(qTx *Queries, ctx context.Context, arg CreateOrderTxParams) (buyerDelivery, sellerDelivery DeliveryInformation, err error) {
-	buyerDelivery, err = qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
-		UserID:        arg.BuyerID,
-		FullName:      arg.BuyerAddress.FullName,
-		PhoneNumber:   arg.BuyerAddress.PhoneNumber,
-		ProvinceName:  arg.BuyerAddress.ProvinceName,
-		DistrictName:  arg.BuyerAddress.DistrictName,
-		GhnDistrictID: arg.BuyerAddress.GhnDistrictID,
-		WardName:      arg.BuyerAddress.WardName,
-		GhnWardCode:   arg.BuyerAddress.GhnWardCode,
-		Detail:        arg.BuyerAddress.Detail,
-	})
-	if err != nil {
-		return
-	}
-	
-	sellerDelivery, err = qTx.CreateDeliveryInformation(ctx, CreateDeliveryInformationParams{
-		UserID:        arg.SellerID,
-		FullName:      arg.SellerAddress.FullName,
-		PhoneNumber:   arg.SellerAddress.PhoneNumber,
-		ProvinceName:  arg.SellerAddress.ProvinceName,
-		DistrictName:  arg.SellerAddress.DistrictName,
-		GhnDistrictID: arg.SellerAddress.GhnDistrictID,
-		WardName:      arg.SellerAddress.WardName,
-		GhnWardCode:   arg.SellerAddress.GhnWardCode,
-		Detail:        arg.SellerAddress.Detail,
-	})
-	return
-}
-
 type CompleteRegularOrderTxParams struct {
 	Order        *Order
 	OrderItems   []OrderItem
@@ -409,6 +378,7 @@ type CompleteRegularOrderTxResult struct {
 	SellerEntry      WalletEntry      `json:"seller_entry"`
 }
 
+// CompleteRegularOrderTx xử lý việc hoàn tất đơn hàng thông thường khi người nhận xác nhận nhận hàng thành công.
 func (store *SQLStore) CompleteRegularOrderTx(ctx context.Context, arg CompleteRegularOrderTxParams) (CompleteRegularOrderTxResult, error) {
 	var result CompleteRegularOrderTxResult
 	

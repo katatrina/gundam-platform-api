@@ -16,15 +16,17 @@ const createOrderTransaction = `-- name: CreateOrderTransaction :one
 INSERT INTO order_transactions (order_id,
                                 amount,
                                 status,
-                                buyer_entry_id)
-VALUES ($1, $2, $3, $4) RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
+                                buyer_entry_id,
+                                seller_entry_id)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, order_id, amount, status, buyer_entry_id, seller_entry_id, created_at, updated_at, completed_at
 `
 
 type CreateOrderTransactionParams struct {
-	OrderID      uuid.UUID              `json:"order_id"`
-	Amount       int64                  `json:"amount"`
-	Status       OrderTransactionStatus `json:"status"`
-	BuyerEntryID int64                  `json:"buyer_entry_id"`
+	OrderID       uuid.UUID              `json:"order_id"`
+	Amount        int64                  `json:"amount"`
+	Status        OrderTransactionStatus `json:"status"`
+	BuyerEntryID  int64                  `json:"buyer_entry_id"`
+	SellerEntryID *int64                 `json:"seller_entry_id"`
 }
 
 func (q *Queries) CreateOrderTransaction(ctx context.Context, arg CreateOrderTransactionParams) (OrderTransaction, error) {
@@ -33,6 +35,7 @@ func (q *Queries) CreateOrderTransaction(ctx context.Context, arg CreateOrderTra
 		arg.Amount,
 		arg.Status,
 		arg.BuyerEntryID,
+		arg.SellerEntryID,
 	)
 	var i OrderTransaction
 	err := row.Scan(

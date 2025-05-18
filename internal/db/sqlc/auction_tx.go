@@ -427,3 +427,196 @@ func (store *SQLStore) HandleAuctionNonPaymentTx(ctx context.Context, arg Handle
 	
 	return result, nil
 }
+
+type PayAuctionWinningBidTxParams struct {
+	Auction              Auction            // Thông tin phiên đấu giá cần thanh toán
+	User                 User               // ID của người thắng đấu giá
+	WinningBid           AuctionBid         // Lượt đấu giá thắng
+	Participant          AuctionParticipant // Thông tin lượt tham gia đấu giá (đặt cọc)
+	ToAddress            UserAddress        // Địa chỉ nhận hàng của người thắng đấu giá
+	DeliveryFee          int64              // Phí vận chuyển
+	ExpectedDeliveryTime time.Time          // Thời gian dự kiến giao hàng
+	Note                 *string            // Ghi chú của người thắng đấu giá gửi cho người bán
+}
+
+type PayAuctionWinningBidTxResult struct {
+	Order           Order       `json:"order"`
+	Auction         Auction     `json:"auction"`
+	WalletEntry     WalletEntry `json:"wallet_entry"`
+	RemainingAmount int64       `json:"remaining_amount"`
+}
+
+func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctionWinningBidTxParams) (PayAuctionWinningBidTxResult, error) {
+	var result PayAuctionWinningBidTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// 1. Tính số tiền còn lại cần thanh toán (tiền thắng - tiền cọc + phí vận chuyển)
+		remainingAmount := arg.WinningBid.Amount - arg.Participant.DepositAmount
+		totalPayment := remainingAmount + arg.DeliveryFee
+		result.RemainingAmount = remainingAmount
+		
+		// 2. Kiểm tra số dư ví của người thắng đấu giá
+		winnerWallet, err := qTx.GetWalletForUpdate(ctx, arg.User.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get wallet: %w", err)
+		}
+		
+		if winnerWallet.Balance < totalPayment {
+			return fmt.Errorf("insufficient balance: %d, required: %d, %w", winnerWallet.Balance, totalPayment, ErrInsufficientBalance)
+		}
+		
+		// 3. Trừ tiền còn lại từ ví người thắng
+		_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+			UserID: arg.User.ID,
+			Amount: -totalPayment,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to deduct balance: %w", err)
+		}
+		
+		// 4. Tạo bút toán trừ tiền số dư cho người thắng đấu giá
+		walletEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.User.ID,
+			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
+			ReferenceType: WalletReferenceTypeAuction,
+			EntryType:     WalletEntryTypeAuctionWinnerPayment,
+			Amount:        -totalPayment, // Số âm vì đây là bút toán trừ tiền
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create wallet entry: %w", err)
+		}
+		result.WalletEntry = walletEntry
+		
+		// 5. Cộng tiền vào non_withdrawable của người bán
+		sellerWallet, err := qTx.GetWalletForUpdate(ctx, arg.Auction.SellerID)
+		if err != nil {
+			return fmt.Errorf("failed to get seller wallet: %w", err)
+		}
+		
+		// Đây là số tiền người bán sẽ nhận được sau khi người thắng đấu giá xác nhận đã nhận hàng thành công.
+		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
+			UserID: arg.Auction.SellerID,
+			Amount: arg.WinningBid.Amount, // Tổng số tiền đấu giá (không bao gồm phí vận chuyển)
+		})
+		if err != nil {
+			return fmt.Errorf("failed to add non-withdrawable amount: %w", err)
+		}
+		
+		// 6. Tạo bút toán cộng tiền vào non_withdrawable cho người bán
+		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      sellerWallet.UserID,
+			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
+			ReferenceType: WalletReferenceTypeAuction,
+			EntryType:     WalletEntryTypeNonWithdrawable,
+			Amount:        arg.WinningBid.Amount, // Số dương vì đây là bút toán cộng tiền
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create non-withdrawable winnerWallet entry: %w", err)
+		}
+		
+		// 7. Tạo bút toán cộng tiền vào số dư cho người bán (trạng thái pending)
+		sellerEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.Auction.SellerID,
+			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
+			ReferenceType: WalletReferenceTypeAuction,
+			EntryType:     WalletEntryTypePaymentreceived,
+			Amount:        arg.WinningBid.Amount, // Tổng số tiền đấu giá (không bao gồm phí vận chuyển)
+			Status:        WalletEntryStatusPending,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create seller wallet entry: %w", err)
+		}
+		
+		// 8. Tạo địa chỉ giao hàng
+		fromDeliveryID, toDeliveryID, err := createDeliveryAddresses(qTx, ctx, arg.User.ID, arg.Auction.SellerID, arg.ToAddress)
+		if err != nil {
+			return fmt.Errorf("failed to create delivery addresses: %w", err)
+		}
+		
+		// 9. Tạo đơn hàng mới cho người thắng đấu giá
+		orderID, err := uuid.NewV7()
+		if err != nil {
+			return fmt.Errorf("failed to generate order ID: %w", err)
+		}
+		
+		orderCode := util.GenerateOrderCode()
+		order, err := qTx.CreateOrder(ctx, CreateOrderParams{
+			ID:            orderID,
+			Code:          orderCode,
+			BuyerID:       arg.User.ID,
+			SellerID:      arg.Auction.SellerID,
+			ItemsSubtotal: arg.WinningBid.Amount,
+			DeliveryFee:   arg.DeliveryFee,
+			TotalAmount:   arg.WinningBid.Amount + arg.DeliveryFee,
+			Status:        OrderStatusPackaging,
+			PaymentMethod: PaymentMethodWallet,
+			Type:          OrderTypeAuction,
+			Note:          arg.Note,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create order: %w", err)
+		}
+		result.Order = order
+		
+		// 10. Tạo order item từ thông tin Gundam trong auction
+		_, err = qTx.CreateOrderItem(ctx, CreateOrderItemParams{
+			OrderID:  orderID,
+			GundamID: arg.Auction.GundamID,
+			Name:     arg.Auction.GundamSnapshot.Name,
+			Slug:     arg.Auction.GundamSnapshot.Slug,
+			Grade:    arg.Auction.GundamSnapshot.Grade,
+			Scale:    arg.Auction.GundamSnapshot.Scale,
+			Price:    arg.WinningBid.Amount,
+			Quantity: arg.Auction.GundamSnapshot.Quantity,
+			Weight:   arg.Auction.GundamSnapshot.Weight,
+			ImageURL: arg.Auction.GundamSnapshot.ImageURL,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create order item: %w", err)
+		}
+		
+		// 11. Tạo thông tin vận chuyển
+		// Các cột status, overall_status, delivery_tracking_code sẽ được cập nhật
+		// sau khi người bán đóng gói đơn hàng.
+		_, err = qTx.CreateOrderDelivery(ctx, CreateOrderDeliveryParams{
+			OrderID:              order.ID,
+			ExpectedDeliveryTime: arg.ExpectedDeliveryTime,
+			FromDeliveryID:       fromDeliveryID,
+			ToDeliveryID:         toDeliveryID,
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 12. Tạo order transaction
+		_, err = qTx.CreateOrderTransaction(ctx, CreateOrderTransactionParams{
+			OrderID:       order.ID,
+			Amount:        arg.WinningBid.Amount + arg.DeliveryFee, // Bao gồm cả phí vận chuyển
+			Status:        OrderTransactionStatusPending,
+			BuyerEntryID:  walletEntry.ID,
+			SellerEntryID: &sellerEntry.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create order transaction: %w", err)
+		}
+		
+		// 13. Cập nhật auction
+		updatedAuction, err := qTx.UpdateAuction(ctx, UpdateAuctionParams{
+			ID:      arg.Auction.ID,
+			OrderID: &orderID,
+			Status:  NullAuctionStatus{AuctionStatus: AuctionStatusCompleted, Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update auction: %w", err)
+		}
+		result.Auction = updatedAuction
+		
+		return nil
+	})
+	
+	return result, err
+}

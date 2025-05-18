@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -271,11 +272,11 @@ func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
 	c.JSON(http.StatusOK, rows)
 }
 
-// 	@Summary		List user bids
+//	@Summary		List user bids
 //	@Description	Retrieves a list of bids made by the user in a specific auction.
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			auctionID	query	string		true	"Auction ID"
+//	@Param			auctionID	query	string			true	"Auction ID"
 //	@Success		200			{array}	db.AuctionBid	"List of user bids"
 //	@Security		accessToken
 //	@Router			/users/me/auctions/bids [get]
@@ -302,4 +303,209 @@ func (server *Server) listUserBids(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, auctionBids)
+}
+
+type payAuctionWinningBidRequest struct {
+	UserAddressID        int64     `json:"user_address_id" binding:"required"`
+	DeliveryFee          int64     `json:"delivery_fee" binding:"required"`
+	ExpectedDeliveryTime time.Time `json:"expected_delivery_time" binding:"required"`
+	Note                 *string   `json:"note"`
+}
+
+//	@Summary		Pay for winning auction bid
+//	@Description	Pay the remaining amount after deposit for a winning auction.
+//	@Tags			auctions
+//	@Accept			json
+//	@Produce		json
+//	@Param			auctionID	path		string							true	"Auction ID"
+//	@Param			request		body		payAuctionWinningBidRequest		true	"Payment request"
+//	@Success		200			{object}	db.PayAuctionWinningBidTxResult	"Payment result"
+//	@Security		accessToken
+//	@Router			/users/me/auctions/{auctionID}/payment [post]
+func (server *Server) payAuctionWinningBid(c *gin.Context) {
+	// 1. Lấy thông tin người dùng từ token
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	// 2. Parse auction ID
+	auctionID, err := uuid.Parse(c.Param("auctionID"))
+	if err != nil {
+		err = fmt.Errorf("invalid auction ID format: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// 3. Parse request body
+	var req payAuctionWinningBidRequest
+	if err = c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Parse expected delivery time
+	expectedDeliveryTime, err := time.Parse(time.RFC3339, req.ExpectedDeliveryTime.String())
+	if err != nil {
+		err = fmt.Errorf("invalid expected_delivery_time format: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// 4. Kiểm tra auction
+	auction, err := server.dbStore.GetAuctionByID(c.Request.Context(), auctionID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction ID %s not found", auctionID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 5. Kiểm tra auction status
+	if auction.Status != db.AuctionStatusEnded {
+		err = fmt.Errorf("auction ID %s is not in ended status, current status: %s", auction.ID, auction.Status)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 6. Kiểm tra phiên đấu giá đã có người thắng chưa
+	if auction.WinningBidID == nil {
+		err = fmt.Errorf("auction ID %s has no winner", auction.ID)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 7. Lấy thông tin lượt đấu giá thắng
+	winningBid, err := server.dbStore.GetAuctionBidByID(c.Request.Context(), *auction.WinningBidID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("winning bid ID %s not found for auction ID %s", *auction.WinningBidID, auction.ID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 8. Kiểm tra người dùng có phải là người thắng không
+	if winningBid.BidderID == nil || *winningBid.BidderID != userID {
+		err = fmt.Errorf("user ID %s is not the winner of auction ID %s", userID, auction.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 9. Kiểm tra thời hạn thanh toán
+	if auction.WinnerPaymentDeadline != nil && time.Now().After(*auction.WinnerPaymentDeadline) {
+		err = fmt.Errorf("payment deadline has passed for auction ID %s", auction.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 10. Kiểm tra đã thanh toán chưa
+	if auction.OrderID != nil {
+		err = fmt.Errorf("auction ID %s has already been paid for", auction.ID)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// 11. Kiểm tra địa chỉ giao hàng
+	toAddress, err := server.dbStore.GetUserAddressByID(c.Request.Context(), db.GetUserAddressByIDParams{
+		ID:     req.UserAddressID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user address ID %d not found", req.UserAddressID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra địa chỉ giao hàng có thuộc về người dùng không
+	if toAddress.UserID != userID {
+		err = fmt.Errorf("address ID does not belong to user ID %s", userID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// 12. Lấy thông tin tham gia đấu giá
+	participant, err := server.dbStore.GetAuctionParticipantByUserID(c.Request.Context(), db.GetAuctionParticipantByUserIDParams{
+		AuctionID: auction.ID,
+		UserID:    userID,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s has not participated in auction ID %s", userID, auction.ID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 13. Lấy thông tin người dùng
+	user, err := server.dbStore.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("user ID %s not found", userID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 14. Thực hiện transaction thanh toán
+	result, err := server.dbStore.PayAuctionWinningBidTx(c.Request.Context(), db.PayAuctionWinningBidTxParams{
+		Auction:              auction,
+		User:                 user,
+		WinningBid:           winningBid,
+		Participant:          participant,
+		ToAddress:            toAddress,
+		DeliveryFee:          req.DeliveryFee,
+		ExpectedDeliveryTime: expectedDeliveryTime,
+		Note:                 req.Note,
+	})
+	if err != nil {
+		if errors.Is(err, db.ErrInsufficientBalance) {
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// 15. Tạo thông báo cho người bán
+	go func() {
+		// Xử lý thông báo (không trả về lỗi)
+		err = server.taskDistributor.DistributeTaskSendNotification(
+			context.Background(),
+			&worker.PayloadSendNotification{
+				RecipientID: auction.SellerID,
+				Title:       "Đã nhận thanh toán cho phiên đấu giá",
+				Message:     fmt.Sprintf("Người thắng đã thanh toán %s cho phiên đấu giá. Vui lòng chuẩn bị đóng gói sản phẩm.", util.FormatVND(winningBid.Amount+req.DeliveryFee)),
+				Type:        "auction_payment",
+				ReferenceID: auction.ID.String(),
+			},
+		)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("auction_id", auction.ID.String()).
+				Str("seller_id", auction.SellerID).
+				Msg("Failed to send notification to seller")
+		}
+	}()
+	
+	// 16. Trả về kết quả
+	c.JSON(http.StatusOK, result)
 }

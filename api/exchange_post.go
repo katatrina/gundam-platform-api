@@ -339,7 +339,7 @@ func (server *Server) listOpenExchangePosts(c *gin.Context) {
 		postInfo.OfferCount = offerCount
 		
 		// Lấy offer của người dùng đã đăng nhập (nếu có)
-		// if userID != "" && userID != post.UserID { // Kiểm tra người dùng không phải là người đăng bài
+		// if userID != "" && userID != post.User { // Kiểm tra người dùng không phải là người đăng bài
 		// 	offer, err := server.dbStore.GetUserExchangeOfferForPost(c.Request.Context(), db.GetUserExchangeOfferForPostParams{
 		// 		PostID:    post.OfferID,
 		// 		OffererID: userID,
