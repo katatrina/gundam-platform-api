@@ -63,6 +63,9 @@ func (processor *RedisTaskProcessor) Start() error {
 	
 	mux.HandleFunc(TaskSendNotification, processor.ProcessTaskSendNotification)
 	mux.HandleFunc(TaskStartAuction, processor.ProcessTaskStartAuction)
+	mux.HandleFunc(TaskEndAuction, processor.ProcessTaskEndAuction)
+	mux.HandleFunc(TaskCheckAuctionPayment, processor.ProcessTaskCheckAuctionPayment)
+	mux.HandleFunc(TaskPaymentReminder, processor.ProcessTaskPaymentReminder)
 	
 	return processor.server.Start(mux)
 }
