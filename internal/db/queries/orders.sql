@@ -48,3 +48,26 @@ FROM orders o
 WHERE o.status = 'delivered'
   AND o.updated_at < $1
 ORDER BY o.updated_at ASC;
+
+-- name: GetOrderDetails :one
+SELECT od.id,
+       o.id      AS order_id,
+       o.code    AS order_code,
+       o.buyer_id,
+       o.seller_id,
+       o.items_subtotal,
+       o.status  AS order_status,
+       od.status as delivery_status,
+       od.overall_status,
+       od.from_delivery_id,
+       od.to_delivery_id,
+       od.delivery_tracking_code,
+       od.expected_delivery_time,
+       od.created_at,
+       od.updated_at
+FROM order_deliveries od
+         JOIN orders o ON od.order_id = o.id
+WHERE o.id = $1
+  AND od.status IS NOT NULL
+  AND od.delivery_tracking_code IS NOT NULL
+ORDER BY od.created_at DESC LIMIT 1;

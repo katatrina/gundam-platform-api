@@ -104,6 +104,156 @@ func (t *OrderTracker) updateExchangeStatusIfNeeded(ctx context.Context, order d
 	}
 }
 
+// handleOrderFailure xử lý khi đơn hàng giao thất bại
+func (t *OrderTracker) handleOrderFailure(ctx context.Context, order db.Order) error {
+	switch order.Type {
+	case db.OrderTypeRegular:
+		return t.handleRegularOrderFailure(ctx, order)
+	case db.OrderTypeExchange:
+		return t.handleExchangeOrderFailure(ctx, order)
+	case db.OrderTypeAuction:
+		return t.handleAuctionOrderFailure(ctx, order)
+	default:
+		return fmt.Errorf("unsupported order type: %s", order.Type)
+	}
+}
+
+// handleRegularOrderFailure xử lý khi đơn hàng thông thường giao thất bại
+func (t *OrderTracker) handleRegularOrderFailure(ctx context.Context, order db.Order) error {
+	// 1. Lấy thông tin giao dịch đơn hàng
+	orderTransaction, err := t.store.GetOrderTransactionByOrderID(ctx, order.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction: %w", err)
+	}
+	
+	// 2. Lấy bút toán của người mua (để hoàn tiền vào số dư ví)
+	buyerEntry, err := t.store.GetWalletEntryByID(ctx, orderTransaction.BuyerEntryID)
+	if err != nil {
+		return fmt.Errorf("failed to get buyer entry: %w", err)
+	}
+	
+	// Kiểm tra xem bút toán của người bán có tồn tại không
+	if orderTransaction.SellerEntryID == nil {
+		return fmt.Errorf("seller entry not found for order %s", order.Code)
+	}
+	
+	// 3. Lấy bút toán của người bán (để cập nhật trạng thái bút toán và trừ vào non-withdrawable)
+	sellerEntry, err := t.store.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
+	if err != nil {
+		return fmt.Errorf("failed to get seller entry: %w", err)
+	}
+	
+	// 4. Lấy thông tin order items
+	orderItems, err := t.store.ListOrderItems(ctx, order.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get order items: %w", err)
+	}
+	
+	// 5. Thực hiện transaction hoàn tiền và cập nhật trạng thái
+	_, err = t.store.FailRegularOrderTx(ctx, db.FailRegularOrderTxParams{
+		FailedOrder:  &order,
+		BuyerEntry:   &buyerEntry,
+		SellerEntry:  &sellerEntry,
+		Transaction:  &orderTransaction,
+		OrderItems:   orderItems,
+		RefundAmount: buyerEntry.Amount, // Hoàn trả toàn bộ số tiền người mua đã thanh toán
+	})
+	if err != nil {
+		return fmt.Errorf("failed to process regular order failure: %w", err)
+	}
+	
+	log.Info().
+		Str("order_id", order.ID.String()).
+		Str("buyer_id", order.BuyerID).
+		Str("seller_id", order.SellerID).
+		Int64("refund_amount", -buyerEntry.Amount).
+		Msg("Regular order failure processed successfully")
+	
+	return nil
+}
+
+// handleExchangeOrderFailure xử lý khi đơn hàng trao đổi giao thất bại
+func (t *OrderTracker) handleExchangeOrderFailure(ctx context.Context, order db.Order) error {
+	// 1. Lấy thông tin exchange từ order
+	exchange, err := t.store.GetExchangeByOrderID(ctx, &order.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return fmt.Errorf("exchange for order ID %s not found", order.ID)
+		}
+		return err
+	}
+	
+	// 2. Cập nhật exchange status dựa trên updateExchangeStatusIfNeeded
+	t.updateExchangeStatusIfNeeded(ctx, order)
+	
+	// TODO: Xử lý quy trình khi đơn hàng trao đổi thất bại
+	
+	// Đơn hàng trao đổi sẽ được xử lý qua updateExchangeStatusIfNeeded
+	// không cần xử lý riêng về tiền bạc (vì chỉ thanh toán phí vận chuyển)
+	log.Info().
+		Str("order_id", order.ID.String()).
+		Str("exchange_id", exchange.ID.String()).
+		Msg("Exchange order failure handled through updateExchangeStatusIfNeeded")
+	
+	return nil
+}
+
+// handleAuctionOrderFailure xử lý khi đơn hàng đấu giá giao thất bại
+func (t *OrderTracker) handleAuctionOrderFailure(ctx context.Context, order db.Order) error {
+	// 1. Lấy thông tin giao dịch đơn hàng
+	orderTransaction, err := t.store.GetOrderTransactionByOrderID(ctx, order.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction: %w", err)
+	}
+	
+	// 2. Lấy bút toán của người bán (để trừ vào non-withdrawable và cập nhật trạng thái bút toán)
+	if orderTransaction.SellerEntryID == nil {
+		return fmt.Errorf("seller entry not found for order %s", order.Code)
+	}
+	sellerEntry, err := t.store.GetWalletEntryByID(ctx, *orderTransaction.SellerEntryID)
+	if err != nil {
+		return fmt.Errorf("failed to get seller entry: %w", err)
+	}
+	
+	// 3. Lấy bút toán của người mua (để hoàn tiền vào số dư ví)
+	buyerEntry, err := t.store.GetWalletEntryByID(ctx, orderTransaction.BuyerEntryID)
+	if err != nil {
+		return fmt.Errorf("failed to get buyer entry: %w", err)
+	}
+	
+	// 4. Lấy thông tin auction
+	auction, err := t.store.GetAuctionByOrderID(ctx, &order.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return fmt.Errorf("auction for order ID %s not found", order.ID)
+		}
+		
+		return fmt.Errorf("failed to get auction: %w", err)
+	}
+	
+	// 5. Thực hiện transaction hoàn tiền và cập nhật trạng thái
+	_, err = t.store.FailAuctionOrderTx(ctx, db.FailAuctionOrderTxParams{
+		Order:        &order,
+		BuyerEntry:   &buyerEntry,
+		SellerEntry:  &sellerEntry,
+		Auction:      &auction,
+		Transaction:  &orderTransaction,
+		RefundAmount: buyerEntry.Amount, // Hoàn trả toàn bộ số tiền người mua đã thanh toán
+	})
+	if err != nil {
+		return fmt.Errorf("failed to process auction order failure: %w", err)
+	}
+	
+	log.Info().
+		Str("order_id", order.ID.String()).
+		Str("buyer_id", order.BuyerID).
+		Str("seller_id", order.SellerID).
+		Int64("refund_amount", -buyerEntry.Amount).
+		Msg("Auction order failure processed successfully")
+	
+	return nil
+}
+
 // checkOrderStatus kiểm tra trạng thái đơn hàng trên GHN và cập nhật vào database.
 func (t *OrderTracker) checkOrderStatus() {
 	ctx := context.Background()
@@ -129,8 +279,8 @@ func (t *OrderTracker) checkOrderStatus() {
 			continue
 		}
 		
-		// Nếu trạng thái đã thay đổi, cập nhật vào db
 		ghnStatus := response.Data.Status
+		// Nếu trạng thái đã thay đổi, cập nhật vào db
 		if ghnStatus != *orderDelivery.Status {
 			log.Info().
 				Str("order_code", orderDelivery.OrderCode).
@@ -167,6 +317,13 @@ func (t *OrderTracker) checkOrderStatus() {
 			log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery status has been updated to \"%s\"", *updatedOrderDelivery.Status)
 			if isOverallStatusChanged {
 				log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order-delivery overall status has been updated to \"%s\"", updatedOrderDelivery.OverallStatus.DeliveryOverralStatus)
+			}
+			
+			// Kiểm tra trạng thái hiện tại của đơn hàng trước khi xử lý
+			currentOrder, err := t.store.GetOrderDetails(ctx, orderDelivery.OrderID)
+			if err != nil {
+				log.Error().Err(err).Str("order_id", orderDelivery.OrderID.String()).Msg("failed to get order")
+				continue
 			}
 			
 			// Xử lý business logic theo quy trình từng bước
@@ -264,7 +421,9 @@ func (t *OrderTracker) checkOrderStatus() {
 					err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 						RecipientID: orderDelivery.SellerID,
 						Title:       fmt.Sprintf("Đơn hàng #%s đã được giao thành công", orderDelivery.OrderCode),
-						Message:     fmt.Sprintf("Đơn hàng #%s đã được giao thành công cho người mua. Số tiền %s sẽ được cộng vào số dư khả dụng của bạn sau khi người mua xác nhận đã nhận được hàng.", orderDelivery.OrderCode, util.FormatVND(orderDelivery.ItemsSubtotal)),
+						Message: fmt.Sprintf("Đơn hàng #%s đã được giao thành công cho người mua. Số tiền %s sẽ được cộng vào số dư khả dụng của bạn sau khi người mua xác nhận đã nhận được hàng.",
+							orderDelivery.OrderCode,
+							util.FormatVND(orderDelivery.ItemsSubtotal)),
 						Type:        "order",
 						ReferenceID: orderDelivery.OrderCode,
 					}, opts...)
@@ -272,6 +431,77 @@ func (t *OrderTracker) checkOrderStatus() {
 						log.Err(err).Msg("failed to send notification to seller")
 					}
 					log.Info().Msgf("Notification sent to seller: %s", orderDelivery.SellerID)
+				
+				// Đơn hàng giao thất bại (failed).
+				// Hệ thống chỉ xử lý (cập nhật đơn hàng, hoàn tiền người mua,...) và thông báo duy nhất một lần.
+				// Hệ thống không xử lý trường hợp giao lại hàng cho người mua.
+				case newOverallStatus == db.DeliveryOverralStatusFailed:
+					// Chỉ xử lý nếu đơn hàng chưa ở trạng thái failed
+					if currentOrder.OrderStatus != db.OrderStatusFailed {
+						updatedOrder, err := t.store.UpdateOrder(ctx, db.UpdateOrderParams{
+							OrderID: orderDelivery.OrderID,
+							Status: db.NullOrderStatus{
+								OrderStatus: db.OrderStatusFailed,
+								Valid:       true,
+							},
+						})
+						if err != nil {
+							log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to update order status to failed")
+							continue
+						}
+						log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\"", updatedOrder.Status)
+						
+						// Kiểm tra và cập nhật giao dịch trao đổi nếu có
+						t.updateExchangeStatusIfNeeded(ctx, updatedOrder)
+						
+						// Xử lý hoàn tiền và cập nhật trạng thái Gundam dựa trên loại đơn hàng
+						err = t.handleOrderFailure(ctx, updatedOrder)
+						if err != nil {
+							log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to handle order failure")
+						}
+						
+						// Gửi thông báo chi tiết
+						t.sendFailureNotifications(ctx, currentOrder, ghnStatus)
+					} else {
+						log.Info().Str("order_code", orderDelivery.OrderCode).Msg("Order already failed, skipping failed handling")
+					}
+				
+				// Đơn hàng được trả về cho người bán.
+				// Hệ thống cũng chỉ xử lý một lần duy nhất giống như trường hợp failed,
+				// nhưng có thông báo cho người bán mỗi khi trạng thái vận chuyển thay đổi
+				// để giúp người bán dễ dàng nhận lại hàng.
+				case newOverallStatus == db.DeliveryOverralStatusReturn:
+					// Kiểm tra trạng thái hiện tại của đơn hàng
+					orderAlreadyFailed := currentOrder.OrderStatus == db.OrderStatusFailed
+					
+					// Nếu đơn hàng chưa ở trạng thái failed, cập nhật trạng thái và xử lý hoàn tiền
+					if !orderAlreadyFailed {
+						// Cập nhật trạng thái đơn hàng thành "failed"
+						updatedOrder, err := t.store.UpdateOrder(ctx, db.UpdateOrderParams{
+							OrderID: orderDelivery.OrderID,
+							Status: db.NullOrderStatus{
+								OrderStatus: db.OrderStatusFailed,
+								Valid:       true,
+							},
+						})
+						if err != nil {
+							log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to update order status to failed")
+							continue
+						}
+						log.Info().Str("order_code", orderDelivery.OrderCode).Msgf("order status has been updated to \"%s\" due to return", updatedOrder.Status)
+						
+						// Kiểm tra và cập nhật giao dịch trao đổi nếu có
+						t.updateExchangeStatusIfNeeded(ctx, updatedOrder)
+						
+						// Xử lý hoàn tiền và cập nhật trạng thái Gundam dựa trên loại đơn hàng (giống như xử lý thất bại)
+						err = t.handleOrderFailure(ctx, updatedOrder)
+						if err != nil {
+							log.Error().Err(err).Str("order_code", orderDelivery.OrderCode).Msg("failed to handle order failure due to return")
+						}
+					}
+					
+					// Gửi thông báo chi tiết (luôn gửi cho người bán, nhưng chỉ gửi cho người mua nếu đơn hàng mới failed)
+					t.sendReturnNotifications(ctx, currentOrder, ghnStatus, orderAlreadyFailed)
 				
 				default:
 					// TODO: Xử lý các trường hợp khác

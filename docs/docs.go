@@ -877,7 +877,7 @@ const docTemplate = `{
                 "summary": "Create a new order",
                 "parameters": [
                     {
-                        "description": "Order details",
+                        "description": "FailedOrder details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -888,7 +888,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Order created successfully",
+                        "description": "FailedOrder created successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CreateOrderTxResult"
                         }
@@ -915,7 +915,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -923,7 +923,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order details",
+                        "description": "FailedOrder details",
                         "schema": {
                             "$ref": "#/definitions/db.MemberOrderDetails"
                         }
@@ -953,7 +953,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -969,7 +969,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order canceled successfully",
+                        "description": "FailedOrder canceled successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderByBuyerTxResult"
                         }
@@ -984,7 +984,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.",
+                "description": "Confirm that the receiver has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed. For auction orders, it completes the auction transaction.",
                 "produces": [
                     "application/json"
                 ],
@@ -996,7 +996,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1004,10 +1004,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order completed successfully",
-                        "schema": {
-                            "$ref": "#/definitions/db.CompleteRegularOrderTxResult"
-                        }
+                        "description": "FailedOrder completed successfully"
                     }
                 }
             }
@@ -1033,7 +1030,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Order ID in UUID format",
+                        "description": "FailedOrder ID in UUID format",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1568,7 +1565,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1612,7 +1609,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1909,7 +1906,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "example": "123e4567-e89b-12d3-a456-426614174000",
-                        "description": "Order ID",
+                        "description": "FailedOrder ID",
                         "name": "orderID",
                         "in": "path",
                         "required": true
@@ -1925,7 +1922,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order canceled successfully",
+                        "description": "FailedOrder canceled successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderBySellerTxResult"
                         }
@@ -4904,7 +4901,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Wallet"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_transaction": {
                     "$ref": "#/definitions/db.OrderTransaction"
@@ -4927,36 +4924,13 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Wallet"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_transaction": {
                     "$ref": "#/definitions/db.OrderTransaction"
                 },
                 "refund_entry": {
                     "$ref": "#/definitions/db.WalletEntry"
-                }
-            }
-        },
-        "db.CompleteRegularOrderTxResult": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_transaction",
-                "seller_entry",
-                "seller_wallet"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_transaction": {
-                    "$ref": "#/definitions/db.OrderTransaction"
-                },
-                "seller_entry": {
-                    "$ref": "#/definitions/db.WalletEntry"
-                },
-                "seller_wallet": {
-                    "$ref": "#/definitions/db.Wallet"
                 }
             }
         },
@@ -4973,7 +4947,7 @@ const docTemplate = `{
                     "description": "Đơn hàng đã được cập nhật",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.Order"
+                            "$ref": "#/definitions/db.FailedOrder"
                         }
                     ]
                 },
@@ -5052,7 +5026,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.WalletEntry"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
@@ -5680,7 +5654,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng và vận chuyển",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.Order"
+                            "$ref": "#/definitions/db.FailedOrder"
                         }
                     ]
                 },
@@ -5987,7 +5961,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.Order"
+                            "$ref": "#/definitions/db.FailedOrder"
                         }
                     ]
                 },
@@ -6040,7 +6014,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_items": {
                     "type": "array",
@@ -6104,7 +6078,7 @@ const docTemplate = `{
                 }
             }
         },
-        "db.Order": {
+        "db.FailedOrder": {
             "type": "object",
             "required": [
                 "buyer_id",
@@ -6388,7 +6362,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
@@ -6427,7 +6401,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Auction"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "remaining_amount": {
                     "type": "integer"
@@ -6454,13 +6428,13 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Exchange"
                 },
                 "offerer_order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "partner_has_paid": {
                     "type": "boolean"
                 },
                 "poster_order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 }
             }
         },
@@ -6529,7 +6503,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.Order"
+                            "$ref": "#/definitions/db.FailedOrder"
                         }
                     ]
                 },
@@ -6574,7 +6548,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.Order"
+                    "$ref": "#/definitions/db.FailedOrder"
                 },
                 "order_items": {
                     "type": "array",

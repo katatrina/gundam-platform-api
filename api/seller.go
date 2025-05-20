@@ -358,7 +358,7 @@ type confirmOrderRequestParams struct {
 //	@Accept			json
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			orderID		path	string	true	"FailedOrder ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
 //	@Router			/sellers/:sellerID/orders/:orderID/confirm [patch]
@@ -412,7 +412,7 @@ func (server *Server) confirmOrder(c *gin.Context) {
 		return
 	}
 	
-	log.Info().Msgf("Order confirmed: %s", result.Order.Code)
+	log.Info().Msgf("FailedOrder confirmed: %s", result.Order.Code)
 	
 	// Thông báo cho người dùng về việc đơn hàng đã được xác nhận thành công
 	opts := []asynq.Option{
@@ -460,7 +460,7 @@ type packageOrderRequestBody struct {
 //	@Tags			orders
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			orderID			path		string					true	"Order ID in UUID format"
+//	@Param			orderID			path		string					true	"FailedOrder ID in UUID format"
 //	@Param			package_images	formData	file					true	"Package images (at least one image required)"
 //	@Success		200				{object}	db.PackageOrderTxResult	"Successfully packaged order with delivery details"
 //	@Security		accessToken
@@ -616,7 +616,7 @@ func (server *Server) updateSellerProfile(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
-//	@Param			orderID		path	string	true	"Order ID"
+//	@Param			orderID		path	string	true	"FailedOrder ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.SalesOrderDetails	"Sales order details"
 //	@Router			/sellers/:sellerID/orders/:orderID [get]
@@ -733,9 +733,9 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			sellerID	path		string							true	"Seller ID"	example(s123e456-e789-45d0-9876-54321abcdef)
-//	@Param			orderID		path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			orderID		path		string							true	"FailedOrder ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Param			request		body		cancelOrderRequest				false	"Cancellation reason"
-//	@Success		200			{object}	db.CancelOrderBySellerTxResult	"Order canceled successfully"
+//	@Success		200			{object}	db.CancelOrderBySellerTxResult	"FailedOrder canceled successfully"
 //	@Security		accessToken
 //	@Router			/sellers/{sellerID}/orders/{orderID}/cancel [patch]
 func (server *Server) cancelOrderBySeller(c *gin.Context) {

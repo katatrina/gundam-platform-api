@@ -444,7 +444,7 @@ func (q *Queries) ListSellerAuctions(ctx context.Context, arg ListSellerAuctions
 
 const listUserParticipatedAuctions = `-- name: ListUserParticipatedAuctions :many
 SELECT a.id, a.request_id, a.gundam_id, a.seller_id, a.gundam_snapshot, a.starting_price, a.bid_increment, a.winning_bid_id, a.buy_now_price, a.start_time, a.end_time, a.actual_end_time, a.status, a.current_price, a.deposit_rate, a.deposit_amount, a.winner_payment_deadline, a.total_participants, a.total_bids, a.order_id, a.canceled_by, a.canceled_reason, a.created_at, a.updated_at,
-       ap.id, ap.auction_id, ap.user_id, ap.deposit_amount, ap.deposit_entry_id, ap.is_refunded, ap.created_at
+       ap.id, ap.auction_id, ap.user_id, ap.deposit_amount, ap.deposit_entry_id, ap.is_refunded, ap.created_at, ap.updated_at
 FROM auctions a
          JOIN auction_participants ap ON a.id = ap.auction_id
 WHERE ap.user_id = $1
@@ -506,6 +506,7 @@ func (q *Queries) ListUserParticipatedAuctions(ctx context.Context, userID strin
 			&i.AuctionParticipant.DepositEntryID,
 			&i.AuctionParticipant.IsRefunded,
 			&i.AuctionParticipant.CreatedAt,
+			&i.AuctionParticipant.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

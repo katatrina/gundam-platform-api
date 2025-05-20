@@ -982,7 +982,7 @@
                         "accessToken": []
                     }
                 ],
-                "description": "Confirm that the buyer has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed.",
+                "description": "Confirm that the receiver has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed. For auction orders, it completes the auction transaction.",
                 "produces": [
                     "application/json"
                 ],
@@ -1002,10 +1002,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order completed successfully",
-                        "schema": {
-                            "$ref": "#/definitions/db.CompleteRegularOrderTxResult"
-                        }
+                        "description": "Order completed successfully"
                     }
                 }
             }
@@ -4932,29 +4929,6 @@
                 },
                 "refund_entry": {
                     "$ref": "#/definitions/db.WalletEntry"
-                }
-            }
-        },
-        "db.CompleteRegularOrderTxResult": {
-            "type": "object",
-            "required": [
-                "order",
-                "order_transaction",
-                "seller_entry",
-                "seller_wallet"
-            ],
-            "properties": {
-                "order": {
-                    "$ref": "#/definitions/db.Order"
-                },
-                "order_transaction": {
-                    "$ref": "#/definitions/db.OrderTransaction"
-                },
-                "seller_entry": {
-                    "$ref": "#/definitions/db.WalletEntry"
-                },
-                "seller_wallet": {
-                    "$ref": "#/definitions/db.Wallet"
                 }
             }
         },

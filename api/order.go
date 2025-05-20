@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// CreateOrderRequest contains the necessary information to create a new order
 type createOrderRequest struct {
 	// ID of the seller
 	// example: user123
@@ -65,8 +64,8 @@ type createOrderRequest struct {
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		createOrderRequest		true	"Order details"
-//	@Success		201		{object}	db.CreateOrderTxResult	"Order created successfully"
+//	@Param			request	body		createOrderRequest		true	"FailedOrder details"
+//	@Success		201		{object}	db.CreateOrderTxResult	"FailedOrder created successfully"
 //	@Security		accessToken
 //	@Router			/orders [post]
 func (server *Server) createOrder(c *gin.Context) {
@@ -225,7 +224,7 @@ func (server *Server) createOrder(c *gin.Context) {
 		return
 	}
 	
-	log.Info().Msgf("Order created successfully: %v", result)
+	log.Info().Msgf("FailedOrder created successfully: %v", result)
 	
 	opts := []asynq.Option{
 		asynq.MaxRetry(3),
@@ -356,8 +355,8 @@ func (server *Server) listMemberOrders(ctx *gin.Context) {
 //	@Description	Confirm that the receiver has received the order. For regular orders, it completes the transaction and transfers payment to seller. For exchange orders, it updates exchange status and may complete the exchange if both parties have confirmed. For auction orders, it completes the auction transaction.
 //	@Tags			orders
 //	@Produce		json
-//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200	 "Order completed successfully"
+//	@Param			orderID	path	string	true	"FailedOrder ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		"FailedOrder completed successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/complete [patch]
 func (server *Server) completeOrder(ctx *gin.Context) {
@@ -455,8 +454,8 @@ func (server *Server) completeOrder(ctx *gin.Context) {
 //	@Description	Get details of a specific order for a member
 //	@Tags			orders
 //	@Produce		json
-//	@Param			orderID	path		string					true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
-//	@Success		200		{object}	db.MemberOrderDetails	"Order details"
+//	@Param			orderID	path		string					true	"FailedOrder ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Success		200		{object}	db.MemberOrderDetails	"FailedOrder details"
 //	@Security		accessToken
 //	@Router			/orders/{orderID} [get]
 func (server *Server) getMemberOrderDetails(c *gin.Context) {
@@ -611,9 +610,9 @@ type cancelOrderRequest struct {
 //	@Tags			orders
 //	@Accept			json
 //	@Produce		json
-//	@Param			orderID	path		string							true	"Order ID"	example(123e4567-e89b-12d3-a456-426614174000)
+//	@Param			orderID	path		string							true	"FailedOrder ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Param			request	body		cancelOrderRequest				false	"Cancel order request"
-//	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"Order canceled successfully"
+//	@Success		200		{object}	db.CancelOrderByBuyerTxResult	"FailedOrder canceled successfully"
 //	@Security		accessToken
 //	@Router			/orders/{orderID}/cancel [patch]
 func (server *Server) cancelOrderByBuyer(c *gin.Context) {

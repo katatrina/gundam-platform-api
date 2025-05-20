@@ -1104,7 +1104,7 @@ const (
 	WalletEntryTypePaymentreceived      WalletEntryType = "payment received"
 	WalletEntryTypeNonWithdrawable      WalletEntryType = "non_withdrawable"
 	WalletEntryTypeRefund               WalletEntryType = "refund"
-	WalletEntryTypeRefunddeduction      WalletEntryType = "refund deduction"
+	WalletEntryTypeRefundDeduction      WalletEntryType = "refund_deduction"
 	WalletEntryTypeAuctionDeposit       WalletEntryType = "auction_deposit"
 	WalletEntryTypeAuctionDepositRefund WalletEntryType = "auction_deposit_refund"
 	WalletEntryTypeAuctionCompensation  WalletEntryType = "auction_compensation"
@@ -1155,7 +1155,7 @@ func (e WalletEntryType) Valid() bool {
 		WalletEntryTypePaymentreceived,
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefunddeduction,
+		WalletEntryTypeRefundDeduction,
 		WalletEntryTypeAuctionDeposit,
 		WalletEntryTypeAuctionDepositRefund,
 		WalletEntryTypeAuctionCompensation,
@@ -1174,7 +1174,7 @@ func AllWalletEntryTypeValues() []WalletEntryType {
 		WalletEntryTypePaymentreceived,
 		WalletEntryTypeNonWithdrawable,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefunddeduction,
+		WalletEntryTypeRefundDeduction,
 		WalletEntryTypeAuctionDeposit,
 		WalletEntryTypeAuctionDepositRefund,
 		WalletEntryTypeAuctionCompensation,
@@ -1297,6 +1297,7 @@ type AuctionParticipant struct {
 	DepositEntryID int64     `json:"deposit_entry_id"`
 	IsRefunded     bool      `json:"is_refunded"`
 	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type AuctionRequest struct {

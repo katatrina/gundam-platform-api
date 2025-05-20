@@ -422,7 +422,7 @@ func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg Complete
 				}
 				
 				// Chuyển tiền từ non_withdrawable_amount sang balance
-				_, err := qTx.TransferNonWithdrawableToBalance(ctx, TransferNonWithdrawableToBalanceParams{
+				_, err = qTx.TransferNonWithdrawableToBalance(ctx, TransferNonWithdrawableToBalanceParams{
 					UserID: receiverID,
 					Amount: *arg.Exchange.CompensationAmount,
 				})
@@ -430,7 +430,7 @@ func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg Complete
 					return fmt.Errorf("failed to transfer compensation amount: %w", err)
 				}
 				
-				// Ghi lại giao dịch
+				// Ghi lại giao dịch nhận tiền bù
 				_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 					WalletID:      receiverID,
 					ReferenceID:   util.StringPointer(arg.Exchange.ID.String()),
@@ -614,7 +614,7 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				WalletID:      receiverID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypeRefunddeduction,       // Loại bút toán trừ tiền hoàn lại
+				EntryType:     WalletEntryTypeRefundDeduction,       // Loại bút toán trừ tiền hoàn lại
 				Amount:        -*updatedExchange.CompensationAmount, // Số âm vì đây là khoản trừ
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
@@ -623,7 +623,7 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to create wallet entry for refund deduction: %w", err)
 			}
 			
-			// Cộng tiền vào balance của người trả
+			// Cộng tiền vào balance của người trả tiền bù
 			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
 				UserID: payerWallet.UserID,
 				Amount: *updatedExchange.CompensationAmount,
@@ -632,7 +632,7 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to add balance to payer wallet: %w", err)
 			}
 			
-			// Tạo wallet entry cho giao dịch hoàn tiền
+			// Tạo bút toán hoàn trả tiền bù
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      *updatedExchange.PayerID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),

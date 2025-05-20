@@ -566,3 +566,267 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 	
 	return result, err
 }
+
+type FailRegularOrderTxParams struct {
+	FailedOrder  *Order            // Đơn hàng failed cần xử lý
+	BuyerEntry   *WalletEntry      // Bút toán người mua để hoàn tiền về số dư ví
+	SellerEntry  *WalletEntry      // Bút toán người bán để cập nhật trạng thái cũng như trừ non_withdrawable_amount
+	Transaction  *OrderTransaction // Quản lý giao dịch đơn hàng
+	OrderItems   []OrderItem       // Danh sách các mặt hàng trong đơn hàng để chuyển trạng thái
+	RefundAmount int64             // Số tiền cần hoàn lại cho người mua
+}
+
+type FailRegularOrderTxResult struct {
+	BuyerRefundEntry WalletEntry
+	Order            Order
+	OrderTransaction OrderTransaction
+}
+
+// FailRegularOrderTx xử lý việc hoàn tiền và cập nhật trạng thái khi đơn hàng thông thường thất bại
+func (store *SQLStore) FailRegularOrderTx(ctx context.Context, arg FailRegularOrderTxParams) (FailRegularOrderTxResult, error) {
+	var result FailRegularOrderTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		// Số tiền âm sẽ được đổi thành dương, do lấy từ bút toán trừ số dư ví của người mua,
+		// không phải từ order transaction.
+		refundAmount := -arg.RefundAmount
+		
+		// 1. Hoàn tiền vào số dư của người mua
+		_, err := qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+			UserID: arg.FailedOrder.BuyerID,
+			Amount: refundAmount,
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 2. Tạo bút toán hoàn tiền cho người mua
+		buyerRefundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.FailedOrder.BuyerID,
+			ReferenceID:   util.StringPointer(arg.FailedOrder.ID.String()),
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypeRefund,
+			Amount:        refundAmount,
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return err
+		}
+		result.BuyerRefundEntry = buyerRefundEntry
+		
+		if arg.SellerEntry.Status == WalletEntryStatusCompleted {
+			log.Warn().Msgf("seller entry ID %d is already completed", arg.SellerEntry.ID)
+		}
+		
+		// Cập nhật trạng thái bút toán của người bán thành "failed"
+		_, err = qTx.UpdateWalletEntryByID(ctx, UpdateWalletEntryByIDParams{
+			ID: arg.SellerEntry.ID,
+			Status: NullWalletEntryStatus{
+				WalletEntryStatus: WalletEntryStatusFailed,
+				Valid:             true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update seller wallet entry status: %w", err)
+		}
+		
+		// 3. Giảm non_withdrawable_amount của người bán vì đã cộng khi người bán xác nhận đơn hàng.
+		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
+			UserID: arg.FailedOrder.SellerID,
+			Amount: -arg.SellerEntry.Amount,
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 4. Tạo bút toán cập nhật non_withdrawable_amount của người bán
+		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.FailedOrder.SellerID,
+			ReferenceID:   util.StringPointer(arg.FailedOrder.ID.String()),
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypeRefundDeduction,
+			Amount:        -arg.SellerEntry.Amount,
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		
+		// 5. Cập nhật trạng thái giao dịch đơn hàng
+		updatedTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
+			OrderID: arg.FailedOrder.ID,
+			Status: NullOrderTransactionStatus{
+				OrderTransactionStatus: OrderTransactionStatusRefunded,
+				Valid:                  true,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		result.OrderTransaction = updatedTransaction
+		
+		// 6. Cập nhật trạng thái các sản phẩm trong đơn hàng về "in store" cho người bán
+		for _, item := range arg.OrderItems {
+			if item.GundamID != nil {
+				// Đảm bảo Gundam vẫn thuộc về người bán
+				err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+					ID: *item.GundamID,
+					Status: NullGundamStatus{
+						GundamStatus: GundamStatusInstore,
+						Valid:        true,
+					},
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+		
+		// 7. Cập nhật trạng thái đơn hàng
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			OrderID: arg.FailedOrder.ID,
+			Status: NullOrderStatus{
+				OrderStatus: OrderStatusFailed,
+				Valid:       true,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		result.Order = updatedOrder
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type FailAuctionOrderTxParams struct {
+	Order        *Order
+	BuyerEntry   *WalletEntry
+	SellerEntry  *WalletEntry
+	Auction      *Auction
+	Transaction  *OrderTransaction
+	RefundAmount int64
+}
+
+type FailAuctionOrderTxResult struct {
+	Order            Order
+	OrderTransaction OrderTransaction
+	BuyerRefundEntry WalletEntry
+}
+
+// FailAuctionOrderTx xử lý việc hoàn tiền và cập nhật trạng thái khi đơn hàng đấu giá thất bại
+func (store *SQLStore) FailAuctionOrderTx(ctx context.Context, arg FailAuctionOrderTxParams) (FailAuctionOrderTxResult, error) {
+	var result FailAuctionOrderTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		refundAmount := -arg.RefundAmount // Số tiền âm sẽ được đổi thành dương
+		
+		// 1. Hoàn tiền cho người mua
+		_, err := qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+			UserID: arg.Order.BuyerID,
+			Amount: refundAmount,
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 2. Tạo bút toán hoàn tiền cho người mua
+		buyerRefundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.Order.BuyerID,
+			ReferenceID:   util.StringPointer(arg.Order.ID.String()),
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypeRefund,
+			Amount:        refundAmount,
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return err
+		}
+		result.BuyerRefundEntry = buyerRefundEntry
+		
+		if arg.SellerEntry.Status == WalletEntryStatusCompleted {
+			log.Warn().Msgf("seller entry ID %d is already completed", arg.SellerEntry.ID)
+		}
+		
+		// Cập nhật trạng thái bút toán của người bán thành "failed"
+		_, err = qTx.UpdateWalletEntryByID(ctx, UpdateWalletEntryByIDParams{
+			ID: arg.SellerEntry.ID,
+			Status: NullWalletEntryStatus{
+				WalletEntryStatus: WalletEntryStatusFailed,
+				Valid:             true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update seller wallet entry status: %w", err)
+		}
+		
+		// 3. Giảm non_withdrawable_amount của người bán
+		err = qTx.AddWalletNonWithdrawableAmount(ctx, AddWalletNonWithdrawableAmountParams{
+			UserID: arg.Order.SellerID,
+			Amount: -arg.SellerEntry.Amount,
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 3. Tạo bút toán cập nhật non_withdrawable_amount của người bán
+		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.Order.SellerID,
+			ReferenceID:   util.StringPointer(arg.Order.ID.String()),
+			ReferenceType: WalletReferenceTypeOrder,
+			EntryType:     WalletEntryTypeRefundDeduction,
+			Amount:        -arg.SellerEntry.Amount,
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return err
+		}
+		
+		// 4. Cập nhật trạng thái giao dịch đơn hàng
+		updatedTransaction, err := qTx.UpdateOrderTransaction(ctx, UpdateOrderTransactionParams{
+			OrderID: arg.Order.ID,
+			Status: NullOrderTransactionStatus{
+				OrderTransactionStatus: OrderTransactionStatusRefunded,
+				Valid:                  true,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		result.OrderTransaction = updatedTransaction
+		
+		// 5. Cập nhật Gundam status
+		if arg.Auction.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *arg.Auction.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusInstore,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+		
+		// 6. Cập nhật đơn hàng
+		updatedOrder, err := qTx.UpdateOrder(ctx, UpdateOrderParams{
+			OrderID: arg.Order.ID,
+			Status: NullOrderStatus{
+				OrderStatus: OrderStatusFailed,
+				Valid:       true,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		result.Order = updatedOrder
+		
+		return nil
+	})
+	
+	return result, err
+}

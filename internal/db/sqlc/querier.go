@@ -83,6 +83,7 @@ type Querier interface {
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
+	GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDetailsRow, error)
 	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
 	GetOrdersToAutoComplete(ctx context.Context, updatedAt time.Time) ([]Order, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)

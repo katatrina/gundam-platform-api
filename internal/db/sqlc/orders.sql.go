@@ -150,6 +150,71 @@ func (q *Queries) GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	return i, err
 }
 
+const getOrderDetails = `-- name: GetOrderDetails :one
+SELECT od.id,
+       o.id      AS order_id,
+       o.code    AS order_code,
+       o.buyer_id,
+       o.seller_id,
+       o.items_subtotal,
+       o.status  AS order_status,
+       od.status as delivery_status,
+       od.overall_status,
+       od.from_delivery_id,
+       od.to_delivery_id,
+       od.delivery_tracking_code,
+       od.expected_delivery_time,
+       od.created_at,
+       od.updated_at
+FROM order_deliveries od
+         JOIN orders o ON od.order_id = o.id
+WHERE o.id = $1
+  AND od.status IS NOT NULL
+  AND od.delivery_tracking_code IS NOT NULL
+ORDER BY od.created_at DESC LIMIT 1
+`
+
+type GetOrderDetailsRow struct {
+	ID                   int64                     `json:"id"`
+	OrderID              uuid.UUID                 `json:"order_id"`
+	OrderCode            string                    `json:"order_code"`
+	BuyerID              string                    `json:"buyer_id"`
+	SellerID             string                    `json:"seller_id"`
+	ItemsSubtotal        int64                     `json:"items_subtotal"`
+	OrderStatus          OrderStatus               `json:"order_status"`
+	DeliveryStatus       *string                   `json:"delivery_status"`
+	OverallStatus        NullDeliveryOverralStatus `json:"overall_status"`
+	FromDeliveryID       int64                     `json:"from_delivery_id"`
+	ToDeliveryID         int64                     `json:"to_delivery_id"`
+	DeliveryTrackingCode *string                   `json:"delivery_tracking_code"`
+	ExpectedDeliveryTime time.Time                 `json:"expected_delivery_time"`
+	CreatedAt            time.Time                 `json:"created_at"`
+	UpdatedAt            time.Time                 `json:"updated_at"`
+}
+
+func (q *Queries) GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDetailsRow, error) {
+	row := q.db.QueryRow(ctx, getOrderDetails, id)
+	var i GetOrderDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.OrderCode,
+		&i.BuyerID,
+		&i.SellerID,
+		&i.ItemsSubtotal,
+		&i.OrderStatus,
+		&i.DeliveryStatus,
+		&i.OverallStatus,
+		&i.FromDeliveryID,
+		&i.ToDeliveryID,
+		&i.DeliveryTrackingCode,
+		&i.ExpectedDeliveryTime,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getOrdersToAutoComplete = `-- name: GetOrdersToAutoComplete :many
 SELECT o.id, o.code, o.buyer_id, o.seller_id, o.items_subtotal, o.delivery_fee, o.total_amount, o.status, o.payment_method, o.type, o.note, o.is_packaged, o.packaging_image_urls, o.canceled_by, o.canceled_reason, o.created_at, o.updated_at, o.completed_at
 FROM orders o

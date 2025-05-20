@@ -17,7 +17,7 @@ INSERT INTO auction_participants (id,
                                   user_id,
                                   deposit_amount,
                                   deposit_entry_id)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+VALUES ($1, $2, $3, $4, $5) RETURNING id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 `
 
 type CreateAuctionParticipantParams struct {
@@ -45,12 +45,13 @@ func (q *Queries) CreateAuctionParticipant(ctx context.Context, arg CreateAuctio
 		&i.DepositEntryID,
 		&i.IsRefunded,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getAuctionParticipantByUserID = `-- name: GetAuctionParticipantByUserID :one
-SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 FROM auction_participants
 WHERE user_id = $1
   AND auction_id = $2
@@ -72,12 +73,13 @@ func (q *Queries) GetAuctionParticipantByUserID(ctx context.Context, arg GetAuct
 		&i.DepositEntryID,
 		&i.IsRefunded,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listAuctionParticipants = `-- name: ListAuctionParticipants :many
-SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 FROM auction_participants
 WHERE auction_id = $1
 `
@@ -99,6 +101,7 @@ func (q *Queries) ListAuctionParticipants(ctx context.Context, auctionID uuid.UU
 			&i.DepositEntryID,
 			&i.IsRefunded,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -111,7 +114,7 @@ func (q *Queries) ListAuctionParticipants(ctx context.Context, auctionID uuid.UU
 }
 
 const listAuctionParticipantsExcept = `-- name: ListAuctionParticipantsExcept :many
-SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 FROM auction_participants
 WHERE auction_id = $1
   AND user_id != $2
@@ -139,6 +142,7 @@ func (q *Queries) ListAuctionParticipantsExcept(ctx context.Context, arg ListAuc
 			&i.DepositEntryID,
 			&i.IsRefunded,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +158,7 @@ const updateAuctionParticipant = `-- name: UpdateAuctionParticipant :one
 UPDATE auction_participants
 SET is_refunded = COALESCE($2, is_refunded),
     updated_at  = now()
-WHERE id = $1 RETURNING id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at
+WHERE id = $1 RETURNING id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 `
 
 type UpdateAuctionParticipantParams struct {
@@ -173,6 +177,7 @@ func (q *Queries) UpdateAuctionParticipant(ctx context.Context, arg UpdateAuctio
 		&i.DepositEntryID,
 		&i.IsRefunded,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

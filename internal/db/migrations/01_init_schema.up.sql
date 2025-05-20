@@ -64,7 +64,7 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
   'payment received',
   'non_withdrawable',
   'refund',
-  'refund deduction',
+  'refund_deduction',
   'auction_deposit',
   'auction_deposit_refund',
   'auction_compensation',
@@ -561,7 +561,8 @@ CREATE TABLE "auction_participants"
     "deposit_amount"   bigint      NOT NULL,
     "deposit_entry_id" bigint      NOT NULL,
     "is_refunded"      bool        NOT NULL DEFAULT false,
-    "created_at"       timestamptz NOT NULL DEFAULT (now())
+    "created_at"       timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"       timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE INDEX ON "user_addresses" ("user_id", "is_primary");

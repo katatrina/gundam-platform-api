@@ -819,22 +819,6 @@ definitions:
     - order_transaction
     - refund_entry
     type: object
-  db.CompleteRegularOrderTxResult:
-    properties:
-      order:
-        $ref: '#/definitions/db.Order'
-      order_transaction:
-        $ref: '#/definitions/db.OrderTransaction'
-      seller_entry:
-        $ref: '#/definitions/db.WalletEntry'
-      seller_wallet:
-        $ref: '#/definitions/db.Wallet'
-    required:
-    - order
-    - order_transaction
-    - seller_entry
-    - seller_wallet
-    type: object
   db.ConfirmOrderTxResult:
     properties:
       order:
@@ -3045,10 +3029,10 @@ paths:
       - orders
   /orders/{orderID}/complete:
     patch:
-      description: Confirm that the buyer has received the order. For regular orders,
+      description: Confirm that the receiver has received the order. For regular orders,
         it completes the transaction and transfers payment to seller. For exchange
         orders, it updates exchange status and may complete the exchange if both parties
-        have confirmed.
+        have confirmed. For auction orders, it completes the auction transaction.
       parameters:
       - description: Order ID
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -3061,8 +3045,6 @@ paths:
       responses:
         "200":
           description: Order completed successfully
-          schema:
-            $ref: '#/definitions/db.CompleteRegularOrderTxResult'
       security:
       - accessToken: []
       summary: Confirm order received

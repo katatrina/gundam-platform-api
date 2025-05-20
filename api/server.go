@@ -122,6 +122,7 @@ func (server *Server) setupRouter() *gin.Engine {
 	v1.POST("/auth/login", server.loginUser)
 	v1.POST("/auth/google-login", server.loginUserWithGoogle)
 	
+	// API cho member thông thường
 	userGroup := v1.Group("/users")
 	{
 		userGroup.POST("", server.createUser)

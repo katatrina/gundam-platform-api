@@ -40,6 +40,9 @@ type Store interface {
 	PackageOrderTx(ctx context.Context, arg PackageOrderTxParams) (PackageOrderTxResult, error)
 	CompleteRegularOrderTx(ctx context.Context, arg CompleteRegularOrderTxParams) (CompleteRegularOrderTxResult, error)
 	CompleteExchangeOrderTx(ctx context.Context, arg CompleteExchangeOrderTxParams) (CompleteExchangeOrderTxResult, error)
+	FailRegularOrderTx(ctx context.Context, arg FailRegularOrderTxParams) (FailRegularOrderTxResult, error)
+	// FailExchangeOrderTx(ctx context.Context, arg FailExchangeOrderTxParams) (FailExchangeOrderTxResult, error)
+	FailAuctionOrderTx(ctx context.Context, arg FailAuctionOrderTxParams) (FailAuctionOrderTxResult, error)
 	
 	CreateExchangePostTx(ctx context.Context, arg CreateExchangePostTxParams) (CreateExchangePostTxResult, error)
 	DeleteExchangePostTx(ctx context.Context, arg DeleteExchangePostTxParams) (DeleteExchangePostTxResult, error)
@@ -59,8 +62,8 @@ type Store interface {
 	ParticipateInAuctionTx(ctx context.Context, arg ParticipateInAuctionTxParams) (ParticipateInAuctionTxResult, error)
 	PlaceBidTx(ctx context.Context, arg PlaceBidTxParams) (PlaceBidTxResult, error)
 	EndAuctionTx(ctx context.Context, arg EndAuctionTxParams) (EndAuctionTxResult, error)
-	HandleAuctionNonPaymentTx(ctx context.Context, arg HandleAuctionNonPaymentTxParams) (HandleAuctionNonPaymentTxResult, error)
 	PayAuctionWinningBidTx(ctx context.Context, arg PayAuctionWinningBidTxParams) (PayAuctionWinningBidTxResult, error)
+	HandleAuctionNonPaymentTx(ctx context.Context, arg HandleAuctionNonPaymentTxParams) (HandleAuctionNonPaymentTxResult, error)
 }
 
 type SQLStore struct {
