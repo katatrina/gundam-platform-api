@@ -279,7 +279,7 @@ func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
 //	@Param			auctionID	query	string			true	"Auction ID"
 //	@Success		200			{array}	db.AuctionBid	"List of user bids"
 //	@Security		accessToken
-//	@Router			/users/me/auctions/bids [get]
+//	@Router			/users/me/auctions/:auctionID/bids [get]
 func (server *Server) listUserBids(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject

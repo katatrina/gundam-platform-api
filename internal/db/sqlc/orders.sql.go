@@ -118,6 +118,53 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	return i, err
 }
 
+const getDeliveredOrdersToAutoComplete = `-- name: GetDeliveredOrdersToAutoComplete :many
+SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
+FROM orders
+WHERE status = 'delivered'
+  AND updated_at < $1
+ORDER BY updated_at ASC
+`
+
+func (q *Queries) GetDeliveredOrdersToAutoComplete(ctx context.Context, updatedAt time.Time) ([]Order, error) {
+	rows, err := q.db.Query(ctx, getDeliveredOrdersToAutoComplete, updatedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Order{}
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.BuyerID,
+			&i.SellerID,
+			&i.ItemsSubtotal,
+			&i.DeliveryFee,
+			&i.TotalAmount,
+			&i.Status,
+			&i.PaymentMethod,
+			&i.Type,
+			&i.Note,
+			&i.IsPackaged,
+			&i.PackagingImageURLs,
+			&i.CanceledBy,
+			&i.CanceledReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrderByID = `-- name: GetOrderByID :one
 SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
@@ -154,6 +201,7 @@ const getOrderDetails = `-- name: GetOrderDetails :one
 SELECT od.id,
        o.id      AS order_id,
        o.code    AS order_code,
+       o.type    AS order_type,
        o.buyer_id,
        o.seller_id,
        o.items_subtotal,
@@ -178,6 +226,7 @@ type GetOrderDetailsRow struct {
 	ID                   int64                     `json:"id"`
 	OrderID              uuid.UUID                 `json:"order_id"`
 	OrderCode            string                    `json:"order_code"`
+	OrderType            OrderType                 `json:"order_type"`
 	BuyerID              string                    `json:"buyer_id"`
 	SellerID             string                    `json:"seller_id"`
 	ItemsSubtotal        int64                     `json:"items_subtotal"`
@@ -199,6 +248,7 @@ func (q *Queries) GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDe
 		&i.ID,
 		&i.OrderID,
 		&i.OrderCode,
+		&i.OrderType,
 		&i.BuyerID,
 		&i.SellerID,
 		&i.ItemsSubtotal,
@@ -213,53 +263,6 @@ func (q *Queries) GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDe
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getOrdersToAutoComplete = `-- name: GetOrdersToAutoComplete :many
-SELECT o.id, o.code, o.buyer_id, o.seller_id, o.items_subtotal, o.delivery_fee, o.total_amount, o.status, o.payment_method, o.type, o.note, o.is_packaged, o.packaging_image_urls, o.canceled_by, o.canceled_reason, o.created_at, o.updated_at, o.completed_at
-FROM orders o
-WHERE o.status = 'delivered'
-  AND o.updated_at < $1
-ORDER BY o.updated_at ASC
-`
-
-func (q *Queries) GetOrdersToAutoComplete(ctx context.Context, updatedAt time.Time) ([]Order, error) {
-	rows, err := q.db.Query(ctx, getOrdersToAutoComplete, updatedAt)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Order{}
-	for rows.Next() {
-		var i Order
-		if err := rows.Scan(
-			&i.ID,
-			&i.Code,
-			&i.BuyerID,
-			&i.SellerID,
-			&i.ItemsSubtotal,
-			&i.DeliveryFee,
-			&i.TotalAmount,
-			&i.Status,
-			&i.PaymentMethod,
-			&i.Type,
-			&i.Note,
-			&i.IsPackaged,
-			&i.PackagingImageURLs,
-			&i.CanceledBy,
-			&i.CanceledReason,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.CompletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listMemberOrders = `-- name: ListMemberOrders :many

@@ -18,7 +18,7 @@ import (
 func (t *OrderTracker) autoCompleteDeliveredOrders() {
 	ctx := context.Background()
 	
-	// Lấy danh sách đơn hàng đã giao (delivered) hơn 7 ngày và chưa hoàn tất
+	// Lấy danh sách đơn hàng đã giao (delivered) hơn 7 ngày (so với updated_at) và chưa hoàn tất
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
 	
 	log.Info().
@@ -26,8 +26,7 @@ func (t *OrderTracker) autoCompleteDeliveredOrders() {
 		Time("cutoff_date", sevenDaysAgo).
 		Msg("Scanning for orders to auto-complete")
 	
-	// Sử dụng phương thức GetOrdersToAutoComplete từ Store
-	orders, err := t.store.GetOrdersToAutoComplete(ctx, sevenDaysAgo)
+	orders, err := t.store.GetDeliveredOrdersToAutoComplete(ctx, sevenDaysAgo)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get orders for auto-completion")
 		return
@@ -70,13 +69,14 @@ func (t *OrderTracker) autoCompleteDeliveredOrders() {
 		
 		case db.OrderTypeAuction:
 			// Xử lý như đơn hàng thông thường
+			// Bởi vì đơn hàng đấu giá không ảnh hưởng dến phiên đấu giá đã hoàn thành
 			err := t.autoCompleteRegularOrder(ctx, order)
 			if err != nil {
 				log.Error().
 					Err(err).
 					Str("order_id", order.ID.String()).
 					Str("order_code", order.Code).
-					Msg("Failed to auto-complete exchange order")
+					Msg("Failed to auto-complete auction order")
 				continue
 			}
 		
@@ -197,7 +197,7 @@ func (t *OrderTracker) autoCompleteExchangeOrder(ctx context.Context, order db.O
 		return err
 	}
 	
-	// 4. Kiểm tra trạng thái của các Gundam liên quan
+	// 4. Kiểm tra trạng thái của các gundam liên quan
 	for _, item := range orderItems {
 		if item.GundamID != nil {
 			gundam, err := t.store.GetGundamByID(ctx, *item.GundamID)
@@ -289,7 +289,7 @@ func (t *OrderTracker) sendAutoCompleteNotifications(ctx context.Context, order 
 		}
 	
 	case db.OrderTypeExchange:
-		// Xác định bối cảnh của đơn hàng trao đổi
+		// Xác định bối cảnh của cuộc trao đổi dựa trên đơn hàng
 		exchange, err := t.store.GetExchangeByOrderID(ctx, &order.ID)
 		if err != nil {
 			log.Error().
@@ -302,8 +302,8 @@ func (t *OrderTracker) sendAutoCompleteNotifications(ctx context.Context, order 
 		// Thông báo cho người nhận hàng (buyer của đơn hàng hiện tại)
 		err = t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 			RecipientID: order.BuyerID,
-			Title:       fmt.Sprintf("Đơn hàng trao đổi #%s đã được tự động hoàn tất", order.Code),
-			Message:     fmt.Sprintf("Đơn hàng trao đổi #%s đã được tự động hoàn tất sau 7 ngày kể từ khi giao hàng thành công. Các mô hình Gundam đã được cập nhật trong bộ sưu tập của bạn.", order.Code),
+			Title:       fmt.Sprintf("Đơn hàng trao đổi %s đã được tự động hoàn tất", order.Code),
+			Message:     fmt.Sprintf("Đơn hàng trao đổi %s đã được tự động hoàn tất sau 7 ngày kể từ khi giao hàng thành công. Các mô hình Gundam đã được cập nhật trong bộ sưu tập của bạn.", order.Code),
 			Type:        "order",
 			ReferenceID: order.Code,
 		}, opts...)
@@ -334,10 +334,8 @@ func (t *OrderTracker) sendAutoCompleteNotifications(ctx context.Context, order 
 			
 			// Nếu có tiền bù, thêm thông tin
 			if exchange.PayerID != nil && exchange.CompensationAmount != nil {
-				if partnerID == *exchange.PayerID {
-					message += fmt.Sprintf("Bạn đã trả %s tiền bù cho giao dịch này.", util.FormatVND(*exchange.CompensationAmount))
-				} else {
-					message += fmt.Sprintf("Bạn đã nhận %s tiền bù cho giao dịch này.", util.FormatVND(*exchange.CompensationAmount))
+				if partnerID != *exchange.PayerID {
+					message += fmt.Sprintf("Bạn đã nhận được %s tiền bù cho giao dịch này.", util.FormatVND(*exchange.CompensationAmount))
 				}
 			}
 		}

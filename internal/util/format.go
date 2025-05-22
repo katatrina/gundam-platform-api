@@ -95,10 +95,6 @@ func StringPointer(s string) *string {
 	return &s
 }
 
-func Int32Pointer(i int32) *int32 {
-	return &i
-}
-
 func Int64Pointer(i int64) *int64 {
 	return &i
 }

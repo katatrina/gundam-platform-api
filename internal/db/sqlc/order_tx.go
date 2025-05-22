@@ -423,7 +423,7 @@ func (store *SQLStore) CompleteRegularOrderTx(ctx context.Context, arg CompleteR
 		}
 		result.OrderTransaction = updatedOrderTransaction
 		
-		// 4. Chuyển quyền sở hữu các mặt hàng trong đơn hàng cho người mua,
+		// 4. Chuyển quyền sở hữu các mặt hàng trong đơn hàng cho người nhận hàng,
 		// cũng như cập nhật trạng thái của chúng thành "in store"
 		for _, item := range arg.OrderItems {
 			if item.GundamID != nil {
@@ -439,7 +439,7 @@ func (store *SQLStore) CompleteRegularOrderTx(ctx context.Context, arg CompleteR
 					return fmt.Errorf("failed to update gundam owner: %w", err)
 				}
 			} else {
-				log.Warn().Msgf("Gundam ID %d not found in order item %d", item.GundamID, item.ID)
+				log.Warn().Msgf("gundam ID %d not found in order item %d", item.GundamID, item.ID)
 			}
 		}
 		

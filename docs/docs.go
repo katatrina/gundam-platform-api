@@ -2837,7 +2837,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/me/auctions/bids": {
+        "/users/me/auctions/:auctionID/bids": {
             "get": {
                 "security": [
                     {
@@ -3762,6 +3762,41 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/auctions/{auctionID}/stream": {
+            "get": {
+                "description": "Establishes an SSE connection to receive real-time updates about an auction",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Stream auction events via Server-Sent Events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event stream. Data will be sent as SSE events with format: 'event: {eventType}\\ndata: {jsonData}'",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid auction ID format",
+                        "schema": {
+                            "type": "object"
+                        }
                     }
                 }
             }
@@ -4732,6 +4767,7 @@ const docTemplate = `{
                 "deposit_entry_id",
                 "id",
                 "is_refunded",
+                "updated_at",
                 "user_id"
             ],
             "properties": {
@@ -4752,6 +4788,9 @@ const docTemplate = `{
                 },
                 "is_refunded": {
                     "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
                 },
                 "user_id": {
                     "type": "string"
@@ -4901,7 +4940,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Wallet"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_transaction": {
                     "$ref": "#/definitions/db.OrderTransaction"
@@ -4924,7 +4963,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Wallet"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_transaction": {
                     "$ref": "#/definitions/db.OrderTransaction"
@@ -4947,7 +4986,7 @@ const docTemplate = `{
                     "description": "Đơn hàng đã được cập nhật",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.FailedOrder"
+                            "$ref": "#/definitions/db.Order"
                         }
                     ]
                 },
@@ -5026,7 +5065,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.WalletEntry"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
@@ -5654,7 +5693,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng và vận chuyển",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.FailedOrder"
+                            "$ref": "#/definitions/db.Order"
                         }
                     ]
                 },
@@ -5961,7 +6000,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.FailedOrder"
+                            "$ref": "#/definitions/db.Order"
                         }
                     ]
                 },
@@ -6014,7 +6053,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_items": {
                     "type": "array",
@@ -6078,7 +6117,7 @@ const docTemplate = `{
                 }
             }
         },
-        "db.FailedOrder": {
+        "db.Order": {
             "type": "object",
             "required": [
                 "buyer_id",
@@ -6362,7 +6401,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_delivery": {
                     "$ref": "#/definitions/db.OrderDelivery"
@@ -6401,7 +6440,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Auction"
                 },
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "remaining_amount": {
                     "type": "integer"
@@ -6428,13 +6467,13 @@ const docTemplate = `{
                     "$ref": "#/definitions/db.Exchange"
                 },
                 "offerer_order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "partner_has_paid": {
                     "type": "boolean"
                 },
                 "poster_order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 }
             }
         },
@@ -6503,7 +6542,7 @@ const docTemplate = `{
                     "description": "Thông tin đơn hàng",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/db.FailedOrder"
+                            "$ref": "#/definitions/db.Order"
                         }
                     ]
                 },
@@ -6548,7 +6587,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "order": {
-                    "$ref": "#/definitions/db.FailedOrder"
+                    "$ref": "#/definitions/db.Order"
                 },
                 "order_items": {
                     "type": "array",
@@ -7055,7 +7094,7 @@ const docTemplate = `{
                 "payment received",
                 "non_withdrawable",
                 "refund",
-                "refund deduction",
+                "refund_deduction",
                 "auction_deposit",
                 "auction_deposit_refund",
                 "auction_compensation",
@@ -7069,7 +7108,7 @@ const docTemplate = `{
                 "WalletEntryTypePaymentreceived",
                 "WalletEntryTypeNonWithdrawable",
                 "WalletEntryTypeRefund",
-                "WalletEntryTypeRefunddeduction",
+                "WalletEntryTypeRefundDeduction",
                 "WalletEntryTypeAuctionDeposit",
                 "WalletEntryTypeAuctionDepositRefund",
                 "WalletEntryTypeAuctionCompensation",

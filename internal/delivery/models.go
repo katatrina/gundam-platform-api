@@ -72,6 +72,7 @@ type GetOrderDetailsResponse struct {
 	Code    int64  `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		Status string `json:"status"`
+		Status   string    `json:"status"`    // Trạng thái hiện tại của đơn vận chuyển
+		LeadTime time.Time `json:"lead_time"` // Thời gian dự kiến giao hàng sớm nhất
 	} `json:"data"`
 }

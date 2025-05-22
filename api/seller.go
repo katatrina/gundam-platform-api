@@ -732,7 +732,7 @@ func (server *Server) getSalesOrderDetails(c *gin.Context) {
 //	@Tags			sellers
 //	@Accept			json
 //	@Produce		json
-//	@Param			sellerID	path		string							true	"Seller ID"	example(s123e456-e789-45d0-9876-54321abcdef)
+//	@Param			sellerID	path		string							true	"Seller ID"			example(s123e456-e789-45d0-9876-54321abcdef)
 //	@Param			orderID		path		string							true	"FailedOrder ID"	example(123e4567-e89b-12d3-a456-426614174000)
 //	@Param			request		body		cancelOrderRequest				false	"Cancellation reason"
 //	@Success		200			{object}	db.CancelOrderBySellerTxResult	"FailedOrder canceled successfully"
