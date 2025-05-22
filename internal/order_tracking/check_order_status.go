@@ -283,7 +283,7 @@ func (t *OrderTracker) checkOrderStatus() {
 						log.Info().Msgf("Order %s is not an exchange order, skipping failed to delivering", currentOrder.OrderCode)
 					}
 				
-				// Đơn hàng được trả về cho người bán (return group).
+				// Đơn hàng được trả về cho người bán (return group) ✅.
 				// Đối với đơn thông thường và đơn đấu giá:
 				// Hệ thống cũng chỉ xử lý một lần duy nhất giống như trường hợp failed,
 				// nhưng có thông báo cho người bán mỗi khi trạng thái vận chuyển (ghnStatus) thay đổi
