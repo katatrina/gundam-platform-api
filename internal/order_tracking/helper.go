@@ -164,7 +164,7 @@ func (t *OrderTracker) getDetailedFailureNotification(orderCode, ghnStatus strin
 	
 	case "lost":
 		title = fmt.Sprintf("Đơn hàng %s bị mất", orderCode)
-		message = fmt.Sprintf("Đơn hàng #%s bị mất trong quá trình vận chuyển. Vui lòng liên hệ với đơn vị vận chuyển để biết thêm chi tiết.", orderCode)
+		message = fmt.Sprintf("Đơn hàng %s bị mất trong quá trình vận chuyển. Vui lòng liên hệ với đơn vị vận chuyển để biết thêm chi tiết.", orderCode)
 	
 	default:
 		title = fmt.Sprintf("Đơn hàng %s không thể hoàn thành", orderCode)
@@ -186,7 +186,7 @@ func (t *OrderTracker) sendReturnNotifications(ctx context.Context, orderDetails
 	// Nếu đơn hàng chưa failed, gửi thông báo cho cả người mua và người bán
 	if !orderAlreadyFailed {
 		// Gửi thông báo cho người mua
-		buyerMessage := fmt.Sprintf("%s. Số tiền đã thanh toán đã được hoàn trả vào ví của bạn.", message)
+		buyerMessage := fmt.Sprintf("Đơn hàng %s giao không thành công và đang được trả lại cho người bán. Số tiền mà bạn đã thanh toán đã được hoàn trả vào số dư ví của bạn.", orderDetails.OrderCode)
 		err := t.taskDistributor.DistributeTaskSendNotification(ctx, &worker.PayloadSendNotification{
 			RecipientID: orderDetails.BuyerID,
 			Title:       title,
@@ -446,12 +446,6 @@ func (t *OrderTracker) handleOrderStatusFailed(ctx context.Context, currentOrder
 
 // handleOrderStatusReturn xử lý khi đơn hàng chuyển sang trạng thái return
 func (t *OrderTracker) handleOrderStatusReturn(ctx context.Context, currentOrder db.GetOrderDetailsRow, ghnStatus string) {
-	// Không xử lý đơn hàng trao đổi trong trạng thái return (sẽ được giao lại cho người nhận tới khi thành công, không trả lại hàng cho nguời gửi)
-	if currentOrder.OrderType == db.OrderTypeExchange {
-		log.Info().Str("order_code", currentOrder.OrderCode).Msg("Exchange order in return status - will be retried, no processing needed")
-		return
-	}
-	
 	// Kiểm tra trạng thái hiện tại của đơn hàng
 	orderAlreadyFailed := currentOrder.OrderStatus == db.OrderStatusFailed
 	
@@ -470,16 +464,13 @@ func (t *OrderTracker) handleOrderStatusReturn(ctx context.Context, currentOrder
 		}
 		log.Info().Str("order_code", currentOrder.OrderCode).Msgf("order status has been updated to \"%s\" due to return", updatedOrder.Status)
 		
-		// Kiểm tra và cập nhật giao dịch trao đổi nếu có
-		t.updateExchangeStatusIfNeeded(ctx, updatedOrder)
-		
-		// Xử lý hoàn tiền và cập nhật trạng thái Gundam dựa trên loại đơn hàng (giống như xử lý thất bại)
+		// Xử lý hoàn tiền và cập nhật trạng thái Gundam dựa trên loại đơn hàng (thông thường và đấu giá)
 		err = t.handleOrderFailure(ctx, updatedOrder)
 		if err != nil {
 			log.Error().Err(err).Str("order_code", currentOrder.OrderCode).Msg("failed to handle order failure due to return")
 		}
-		
-		// Gửi thông báo chi tiết (luôn gửi cho người bán, nhưng chỉ gửi cho người mua nếu đơn hàng mới failed)
-		t.sendReturnNotifications(ctx, currentOrder, ghnStatus, orderAlreadyFailed)
 	}
+	
+	// Gửi thông báo chi tiết (luôn gửi cho người bán, nhưng chỉ gửi cho người mua nếu đơn hàng mới failed)
+	t.sendReturnNotifications(ctx, currentOrder, ghnStatus, orderAlreadyFailed)
 }

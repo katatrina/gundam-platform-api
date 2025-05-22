@@ -276,8 +276,12 @@ func (t *OrderTracker) checkOrderStatus() {
 					t.handleOrderStatusFailed(ctx, currentOrder, ghnStatus)
 				
 				// failed -> delivering (chỉ cho đơn trao đổi): Đơn hàng đang được giao lại cho người nhận sau khi giao thất bại ✅.
-				case oldOverallStatus == db.DeliveryOverralStatusFailed && newOverallStatus == db.DeliveryOverralStatusDelivering && currentOrder.OrderType == db.OrderTypeExchange:
-					t.handleFailedToDelivering(ctx, currentOrder)
+				case oldOverallStatus == db.DeliveryOverralStatusFailed && newOverallStatus == db.DeliveryOverralStatusDelivering:
+					if currentOrder.OrderType == db.OrderTypeExchange {
+						t.handleFailedToDelivering(ctx, currentOrder)
+					} else {
+						log.Info().Msgf("Order %s is not an exchange order, skipping failed to delivering", currentOrder.OrderCode)
+					}
 				
 				// Đơn hàng được trả về cho người bán (return group).
 				// Đối với đơn thông thường và đơn đấu giá:
@@ -286,8 +290,13 @@ func (t *OrderTracker) checkOrderStatus() {
 				// để giúp người bán dễ dàng nhận lại hàng.
 				// Đối với đơn trao đổi:
 				// Không nên switch status vào nhóm này.
-				// Nếu vẫn switch thì hệ thống sẽ không xử lý gì cả, và đơn vận chuyển có thể không được giao lại cho người nhận.
+				// Nếu vẫn switch thì hệ thống sẽ không xử lý gì cả, và đơn vận chuyển có khả năng không thế giao lại cho người nhận.
 				case newOverallStatus == db.DeliveryOverralStatusReturn:
+					if currentOrder.OrderType == db.OrderTypeExchange {
+						log.Warn().Str("order_code", currentOrder.OrderCode).Msgf("Exchange order in return group - new status %s, this should not happen", ghnStatus)
+						continue
+					}
+					
 					t.handleOrderStatusReturn(ctx, currentOrder, ghnStatus)
 				
 				default:
