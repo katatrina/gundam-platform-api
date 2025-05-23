@@ -73,7 +73,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Details of the auction",
                         "schema": {
-                            "$ref": "#/definitions/db.Auction"
+                            "$ref": "#/definitions/db.AuctionDetails"
                         }
                     }
                 }

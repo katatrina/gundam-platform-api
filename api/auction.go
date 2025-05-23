@@ -79,8 +79,8 @@ func (server *Server) listAuctions(c *gin.Context) {
 //	@Description	Retrieves details of a specific auction by its ID.
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			auctionID	path		string		true	"ID of the auction"
-//	@Success		200			{object}	db.Auction	"Details of the auction"
+//	@Param			auctionID	path		string				true	"ID of the auction"
+//	@Success		200			{object}	db.AuctionDetails	"Details of the auction"
 //	@Router			/auctions/{auctionID} [get]
 func (server *Server) getAuctionDetails(c *gin.Context) {
 	auctionID, err := uuid.Parse(c.Param("auctionID"))
@@ -90,6 +90,7 @@ func (server *Server) getAuctionDetails(c *gin.Context) {
 		return
 	}
 	
+	// Lấy thông tin phiên đấu giá
 	auction, err := server.dbStore.GetAuctionByID(c, auctionID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
@@ -103,7 +104,29 @@ func (server *Server) getAuctionDetails(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, auction)
+	// Thông tin chi tiết phiên đấu giá
+	var auctionDetails db.AuctionDetails
+	auctionDetails.Auction = auction
+	
+	// Lấy danh sách người tham gia đấu giá (sắp xếp theo thời gian tham gia gần nhất)
+	participants, err := server.dbStore.ListAuctionParticipants(c, auction.ID)
+	if err != nil {
+		err = fmt.Errorf("failed to list auction participants: %w", err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	auctionDetails.AuctionParticipants = participants
+	
+	// Lấy danh sách giá đấu đã đặt (sắp xếp theo thời gian đặt giá gần nhất)
+	bids, err := server.dbStore.ListAuctionBids(c, &auction.ID)
+	if err != nil {
+		err = fmt.Errorf("failed to list auction bids: %w", err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	auctionDetails.AuctionBids = bids
+	
+	c.JSON(http.StatusOK, auctionDetails)
 }
 
 //	@Summary		Participate in an auction
