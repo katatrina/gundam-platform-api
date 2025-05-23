@@ -301,7 +301,7 @@ func (server *Server) participateInAuction(c *gin.Context) {
 }
 
 //	@Summary		List user participated auctions
-//	@Description	Retrieves a list of auctions the user has participated in.
+//	@Description	Retrieves a list of auctions the user has participated in. Each auction includes the auction information and the user's participation information.
 //	@Tags			auctions
 //	@Produce		json
 //	@Success		200	{array}	db.ListUserParticipatedAuctionsRow	"List of participated auctions"
@@ -311,7 +311,8 @@ func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
 	userID := authPayload.Subject
 	
-	// Lấy danh sách các phiên đấu giá mà người dùng đã tham gia
+	// Lấy danh sách các phiên đấu giá mà người dùng đã tham gia, cùng vời thông tin tham gia của họ.
+	// Có sắp xếp hợp lí tùy theo trạng thái phiên đấu giá.
 	rows, err := server.dbStore.ListUserParticipatedAuctions(c, userID)
 	if err != nil {
 		err = fmt.Errorf("failed to list participated rows: %w", err)
@@ -323,7 +324,7 @@ func (server *Server) listUserParticipatedAuctions(c *gin.Context) {
 }
 
 //	@Summary		List user bids
-//	@Description	Retrieves a list of bids made by the user in a specific auction.
+//	@Description	Retrieves a list of bids made by the user in a participated auction.
 //	@Tags			auctions
 //	@Produce		json
 //	@Param			auctionID	query	string			true	"Auction ID"
@@ -342,6 +343,8 @@ func (server *Server) listUserBids(c *gin.Context) {
 		return
 	}
 	
+	// Lấy danh sách các giá đấu mà người dùng đã đặt trong phiên đấu giá
+	// Sắp xếp theo thời gian đặt giá gần nhất
 	auctionBids, err := server.dbStore.ListUserAuctionBids(c.Request.Context(), db.ListUserAuctionBidsParams{
 		BidderID:  &userID,
 		AuctionID: &auctionID,

@@ -2816,7 +2816,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Retrieves a list of auctions the user has participated in.",
+                "description": "Retrieves a list of auctions the user has participated in. Each auction includes the auction information and the user's participation information.",
                 "produces": [
                     "application/json"
                 ],
@@ -2844,7 +2844,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Retrieves a list of bids made by the user in a specific auction.",
+                "description": "Retrieves a list of bids made by the user in a participated auction.",
                 "produces": [
                     "application/json"
                 ],
