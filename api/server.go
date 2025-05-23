@@ -77,6 +77,7 @@ func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker
 	
 	// Khởi tạo SSE server
 	sseServer := event.NewSSEServer()
+	go sseServer.Run() // Chạy trong goroutine riêng
 	
 	server := &Server{
 		dbStore:                store,
@@ -94,7 +95,6 @@ func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker
 		eventSender:            sseServer,
 	}
 	
-	go sseServer.Run() // Chạy goroutine xử lý sự kiện
 	server.setupRouter()
 	return server, nil
 }

@@ -77,6 +77,41 @@
                 }
             }
         },
+        "/auctions/{auctionID}/stream": {
+            "get": {
+                "description": "Establishes an SSE connection to receive real-time updates about an auction",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Stream auction events via Server-Sent Events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE connection established"
+                    },
+                    "400": {
+                        "description": "Invalid auction ID format"
+                    },
+                    "404": {
+                        "description": "Auction not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/auth/google-login": {
             "post": {
                 "description": "Authenticate a user using Google ID token. If the user doesn't exist, a new user will be created.",
@@ -3760,41 +3795,6 @@
                     },
                     "500": {
                         "description": "Internal server error"
-                    }
-                }
-            }
-        },
-        "/v1/auctions/{auctionID}/stream": {
-            "get": {
-                "description": "Establishes an SSE connection to receive real-time updates about an auction",
-                "produces": [
-                    "text/event-stream"
-                ],
-                "tags": [
-                    "auctions"
-                ],
-                "summary": "Stream auction events via Server-Sent Events",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auction ID",
-                        "name": "auctionID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Event stream. Data will be sent as SSE events with format: 'event: {eventType}\\ndata: {jsonData}'",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid auction ID format",
-                        "schema": {
-                            "type": "object"
-                        }
                     }
                 }
             }

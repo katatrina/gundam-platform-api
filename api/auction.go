@@ -264,18 +264,18 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		return
 	}
 	
-	// Gửi thông tin sự kiện tới client qua SSE
-	topic := fmt.Sprintf("auction:%s", auctionID.String())
-	server.eventSender.Broadcast(event.Event{
-		Topic: topic,
+	// Gửi sự kiện "Có người tham gia mới" tới tất cả client đang xem phiên đấu giá
+	newParticipantEvent := event.Event{
+		Topic: fmt.Sprintf("auction:%s", auctionID.String()),
 		Type:  event.EventTypeNewParticipant,
 		Data: map[string]interface{}{
-			"auction_id":         auctionID.String(),
-			"total_participants": result.Auction.TotalParticipants,
-			"user":               user,
-			"timestamp":          result.AuctionParticipant.CreatedAt,
+			"auction_id":         auctionID.String(),                  // ID phiên đấu giá
+			"total_participants": result.Auction.TotalParticipants,    // Tổng số người tham gia phiên đấu giá
+			"new_participant":    user,                                // Thông tin người tham gia mới
+			"timestamp":          result.AuctionParticipant.CreatedAt, // Thời điểm tham gia của người tham gia mới
 		},
-	})
+	}
+	server.eventSender.Broadcast(newParticipantEvent)
 	
 	opts := []asynq.Option{
 		asynq.MaxRetry(3),

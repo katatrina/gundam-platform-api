@@ -3,7 +3,7 @@ package event
 // Event đại diện cho một sự kiện trong hệ thống
 type Event struct {
 	Topic string      // Ví dụ: "auction:123", "user:abc"
-	Type  string      // Loại sự kiện: new_participant, new_bid, notification
+	Type  string      // Loại sự kiện: new_participant, new_bid, auction_ended
 	Data  interface{} // Dữ liệu sự kiện (tùy thuộc loại)
 }
 

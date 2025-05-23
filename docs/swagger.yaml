@@ -2448,6 +2448,30 @@ paths:
       summary: Get auction details
       tags:
       - auctions
+  /auctions/{auctionID}/stream:
+    get:
+      description: Establishes an SSE connection to receive real-time updates about
+        an auction
+      parameters:
+      - description: Auction ID
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE connection established
+        "400":
+          description: Invalid auction ID format
+        "404":
+          description: Auction not found
+        "500":
+          description: Internal server error
+      summary: Stream auction events via Server-Sent Events
+      tags:
+      - auctions
   /auth/google-login:
     post:
       consumes:
@@ -4857,31 +4881,6 @@ paths:
       summary: Request negotiation for an exchange offer
       tags:
       - exchanges
-  /v1/auctions/{auctionID}/stream:
-    get:
-      description: Establishes an SSE connection to receive real-time updates about
-        an auction
-      parameters:
-      - description: Auction ID
-        in: path
-        name: auctionID
-        required: true
-        type: string
-      produces:
-      - text/event-stream
-      responses:
-        "200":
-          description: 'Event stream. Data will be sent as SSE events with format:
-            ''event: {eventType}\ndata: {jsonData}'''
-          schema:
-            type: string
-        "400":
-          description: Invalid auction ID format
-          schema:
-            type: object
-      summary: Stream auction events via Server-Sent Events
-      tags:
-      - auctions
   /wallet/zalopay/create:
     post:
       consumes:
