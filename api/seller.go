@@ -930,9 +930,9 @@ func (server *Server) deleteAuctionRequest(c *gin.Context) {
 //	@Description	List all auctions that belong to the specified seller, optionally filtered by status
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			sellerID	path	string		true	"Seller ID"
-//	@Param			status		query	string		false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
-//	@Success		200			{array}	db.Auction	"List of auctions"
+//	@Param			sellerID	path	string				true	"Seller ID"
+//	@Param			status		query	string				false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
+//	@Success		200			{array}	db.AuctionDetails	"List of auctions"
 //	@Security		accessToken
 //	@Router			/sellers/:sellerID/auctions [get]
 func (server *Server) listSellerAuctions(c *gin.Context) {
@@ -959,7 +959,34 @@ func (server *Server) listSellerAuctions(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, auctions)
+	var resp []db.AuctionDetails
+	
+	for _, auction := range auctions {
+		var auctionDetails db.AuctionDetails
+		auctionDetails.Auction = auction
+		
+		// Lấy danh sách người tham gia đấu giá
+		participants, err := server.dbStore.ListAuctionParticipants(c.Request.Context(), auction.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get auction participants")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		auctionDetails.AuctionParticipants = participants
+		
+		// Lấy danh sách giá đấu
+		bids, err := server.dbStore.ListAuctionBids(c.Request.Context(), &auction.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get auction bids")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		auctionDetails.AuctionBids = bids
+		
+		resp = append(resp, auctionDetails)
+	}
+	
+	c.JSON(http.StatusOK, resp)
 }
 
 //	@Summary		Get auction details by seller

@@ -47,7 +47,7 @@ func (server *Server) listAuctions(c *gin.Context) {
 	}
 	
 	// Danh sách thông tin đấu giá chi tiết
-	var result []db.AuctionDetails
+	var resp []db.AuctionDetails
 	for _, auction := range auctions {
 		// Lấy danh sách người tham gia đấu giá (sắp xếp theo thời gian tham gia gần nhất)
 		participants, err := server.dbStore.ListAuctionParticipants(c, auction.ID)
@@ -65,14 +65,14 @@ func (server *Server) listAuctions(c *gin.Context) {
 			return
 		}
 		
-		result = append(result, db.AuctionDetails{
+		resp = append(resp, db.AuctionDetails{
 			Auction:             auction,
 			AuctionParticipants: participants,
 			AuctionBids:         bids,
 		})
 	}
 	
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, resp)
 }
 
 //	@Summary		Get auction details
