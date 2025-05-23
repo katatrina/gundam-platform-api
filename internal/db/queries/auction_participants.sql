@@ -15,13 +15,15 @@ WHERE user_id = $1
 -- name: ListAuctionParticipants :many
 SELECT *
 FROM auction_participants
-WHERE auction_id = $1;
+WHERE auction_id = $1
+ORDER BY created_at DESC;
 
 -- name: ListAuctionParticipantsExcept :many
 SELECT *
 FROM auction_participants
 WHERE auction_id = $1
-  AND user_id != $2;
+  AND user_id != $2
+ORDER BY created_at DESC;
 
 -- name: UpdateAuctionParticipant :one
 UPDATE auction_participants

@@ -2424,7 +2424,7 @@ paths:
           description: List of auctions
           schema:
             items:
-              $ref: '#/definitions/db.Auction'
+              $ref: '#/definitions/db.AuctionDetails'
             type: array
       summary: Get platform auctions
       tags:

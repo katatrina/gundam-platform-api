@@ -22,8 +22,8 @@ import (
 //	@Description	Retrieves upcoming and ongoing auctions from the platform.
 //	@Tags			auctions
 //	@Produce		json
-//	@Param			status	query	string		false	"Filter by status"	Enums(scheduled, active)
-//	@Success		200		{array}	db.Auction	"List of auctions"
+//	@Param			status	query	string				false	"Filter by status"	Enums(scheduled, active)
+//	@Success		200		{array}	db.AuctionDetails	"List of auctions"
 //	@Router			/auctions [get]
 func (server *Server) listAuctions(c *gin.Context) {
 	status := db.AuctionStatus(c.Query("status"))
@@ -35,6 +35,7 @@ func (server *Server) listAuctions(c *gin.Context) {
 		}
 	}
 	
+	// Lấy danh sách các phiên đấu giá, có lọc theo trạng thái, có sắp xếp hợp lý theo trạng thái
 	auctions, err := server.dbStore.ListAuctions(c, db.NullAuctionStatus{
 		AuctionStatus: status,
 		Valid:         status != "",
@@ -45,7 +46,33 @@ func (server *Server) listAuctions(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, auctions)
+	// Danh sách thông tin đấu giá chi tiết
+	var result []db.AuctionDetails
+	for _, auction := range auctions {
+		// Lấy danh sách người tham gia đấu giá (sắp xếp theo thời gian tham gia gần nhất)
+		participants, err := server.dbStore.ListAuctionParticipants(c, auction.ID)
+		if err != nil {
+			err = fmt.Errorf("failed to list auction participants: %w", err)
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Lấy danh sách giá đấu đã đặt (sắp xếp theo thời gian đặt giá gần nhất)
+		bids, err := server.dbStore.ListAuctionBids(c, &auction.ID)
+		if err != nil {
+			err = fmt.Errorf("failed to list auction bids: %w", err)
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		result = append(result, db.AuctionDetails{
+			Auction:             auction,
+			AuctionParticipants: participants,
+			AuctionBids:         bids,
+		})
+	}
+	
+	c.JSON(http.StatusOK, result)
 }
 
 //	@Summary		Get auction details

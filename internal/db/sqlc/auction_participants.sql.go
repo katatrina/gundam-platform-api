@@ -82,6 +82,7 @@ const listAuctionParticipants = `-- name: ListAuctionParticipants :many
 SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, created_at, updated_at
 FROM auction_participants
 WHERE auction_id = $1
+ORDER BY created_at DESC
 `
 
 func (q *Queries) ListAuctionParticipants(ctx context.Context, auctionID uuid.UUID) ([]AuctionParticipant, error) {
@@ -118,6 +119,7 @@ SELECT id, auction_id, user_id, deposit_amount, deposit_entry_id, is_refunded, c
 FROM auction_participants
 WHERE auction_id = $1
   AND user_id != $2
+ORDER BY created_at DESC
 `
 
 type ListAuctionParticipantsExceptParams struct {

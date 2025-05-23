@@ -43,7 +43,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/db.Auction"
+                                "$ref": "#/definitions/db.AuctionDetails"
                             }
                         }
                     }
