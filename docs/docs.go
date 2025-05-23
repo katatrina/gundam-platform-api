@@ -6412,12 +6412,16 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "auction_participant",
+                "participant",
                 "updated_auction",
                 "updated_wallet"
             ],
             "properties": {
                 "auction_participant": {
                     "$ref": "#/definitions/db.AuctionParticipant"
+                },
+                "participant": {
+                    "$ref": "#/definitions/db.User"
                 },
                 "updated_auction": {
                     "$ref": "#/definitions/db.Auction"

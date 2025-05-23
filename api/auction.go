@@ -250,20 +250,6 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		return
 	}
 	
-	// Lấy thông tin người dùng tham gia đấu giá
-	user, err := server.dbStore.GetUserByID(c, userID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("user ID %s not found", userID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		
-		err = fmt.Errorf("failed to get user details: %w", err)
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
 	// Gửi sự kiện "Có người tham gia mới" tới tất cả client đang xem phiên đấu giá
 	newParticipantEvent := event.Event{
 		Topic: fmt.Sprintf("auction:%s", auctionID.String()),
@@ -271,7 +257,7 @@ func (server *Server) participateInAuction(c *gin.Context) {
 		Data: map[string]interface{}{
 			"auction_id":         auctionID.String(),                  // ID phiên đấu giá
 			"total_participants": result.Auction.TotalParticipants,    // Tổng số người tham gia phiên đấu giá
-			"new_participant":    user,                                // Thông tin người tham gia mới
+			"new_participant":    result.Participant,                  // Thông tin người tham gia mới
 			"timestamp":          result.AuctionParticipant.CreatedAt, // Thời điểm tham gia của người tham gia mới
 		},
 	}

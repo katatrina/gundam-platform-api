@@ -20,6 +20,7 @@ type ParticipateInAuctionTxParams struct {
 
 type ParticipateInAuctionTxResult struct {
 	AuctionParticipant AuctionParticipant `json:"auction_participant"`
+	Participant        User               `json:"participant"`
 	Auction            Auction            `json:"updated_auction"`
 	Wallet             Wallet             `json:"updated_wallet"`
 }
@@ -62,14 +63,14 @@ func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg Participa
 		}
 		result.Wallet = updatedWallet
 		
-		// 4. Tạo bản ghi participant - xử lý unique constraint violation
-		participantID, err := uuid.NewV7()
+		// 4. Tạo bản ghi auction participant - xử lý unique constraint violation
+		auctionParticipantID, err := uuid.NewV7()
 		if err != nil {
-			return fmt.Errorf("failed to generate participant ID: %w", err)
+			return fmt.Errorf("failed to generate auctionParticipant ID: %w", err)
 		}
 		
-		participant, err := qTx.CreateAuctionParticipant(ctx, CreateAuctionParticipantParams{
-			ID:             participantID,
+		auctionParticipant, err := qTx.CreateAuctionParticipant(ctx, CreateAuctionParticipantParams{
+			ID:             auctionParticipantID,
 			AuctionID:      arg.Auction.ID,
 			UserID:         arg.UserID,
 			DepositAmount:  arg.Auction.DepositAmount,
@@ -83,7 +84,7 @@ func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg Participa
 			}
 			return fmt.Errorf("failed to create auction participant: %w", err)
 		}
-		result.AuctionParticipant = participant
+		result.AuctionParticipant = auctionParticipant
 		
 		// 5. Cập nhật tổng số người tham gia auction - sử dụng increment atomic
 		updatedAuction, err := qTx.IncrementAuctionParticipants(ctx, arg.Auction.ID)
@@ -91,6 +92,13 @@ func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg Participa
 			return fmt.Errorf("failed to update auction participants count: %w", err)
 		}
 		result.Auction = updatedAuction
+		
+		// 6. Lấy thông tin người tham gia
+		participant, err := qTx.GetUserByID(ctx, arg.UserID)
+		if err != nil {
+			return fmt.Errorf("failed to get participated user info: %w", err)
+		}
+		result.Participant = participant
 		
 		return nil
 	})
