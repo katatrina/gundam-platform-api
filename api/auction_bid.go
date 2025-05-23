@@ -256,74 +256,47 @@ func (server *Server) placeBid(c *gin.Context) {
 		return
 	}
 	
-	// Giao dịch đặt giá đã thành công, chuẩn bị gửi sự kiện đến các client và thông báo cho người dùng
-	
-	topic := fmt.Sprintf("auction:%s", auctionID.String())
-	
-	// 4. Gửi sự kiện dựa vào ngữ cảnh
-	if result.CanEndNow { // Phiên đấu giá đã kết thúc
-		auctionEndedEvent := event.Event{
-			Topic: topic,
-			Type:  event.EventTypeAuctionEnded,
-			Data: map[string]interface{}{
-				"auction_id":     auctionID.String(),            // ID phiên đấu giá
-				"final_price":    req.Amount,                    // Giá cuối cùng
-				"winning_bid_id": result.AuctionBid.ID.String(), // ID của bid thắng
-				"winner":         result.Bidder,                 // Thông tin người thắng
-				"reason":         "buy_now_price_reached",       // Lý do kết thúc
-				"bid_details":    result.AuctionBid,             // Chi tiết bid thắng
-				"total_bids":     result.Auction.TotalBids,      // Tổng số lượt đặt giá
-				"timestamp":      result.Auction.ActualEndTime,  // Thời gian kết thúc
-			},
-		}
-		server.eventSender.Broadcast(auctionEndedEvent)
-		
-		// Log thông tin của phiên đấu giá đã kết thúc
-		log.Info().
-			Str("auction_id", auctionID.String()).
-			Str("bidder_id", userID).
-			Int64("buy_now_price", req.Amount).
-			Int("refunded_users", len(result.RefundedUserIDs)).
-			Msg("auction ended by buy now")
-	} else { // Phiên đấu giá vẫn tiếp tục diễn ra
-		auctionNewBidEvent := event.Event{
-			Topic: topic,
-			Type:  event.EventTypeNewBid,
-			Data: map[string]interface{}{
-				"auction_id":    auctionID.String(),            // ID phiên đấu giá
-				"current_price": result.Auction.CurrentPrice,   // Giá hiện tại
-				"bid_id":        result.AuctionBid.ID.String(), // ID của bid mới
-				"bid_amount":    result.AuctionBid.Amount,      // Số tiền đặt giá
-				"bidder":        result.Bidder,                 // Thông tin người đặt giá
-				"total_bids":    result.Auction.TotalBids,      // Tổng số lượt đặt giá mới nhất
-				"timestamp":     result.AuctionBid.CreatedAt,   // Thời gian đặt giá
-			},
-		}
-		server.eventSender.Broadcast(auctionNewBidEvent)
-		
-		// Log thông tin của phiên đấu giá đang diễn ra
-		log.Info().
-			Str("auction_id", auctionID.String()).
-			Str("bidder_id", userID).
-			Int64("amount", req.Amount).
-			Int32("total_bids", result.Auction.TotalBids).
-			Msg("bid placed successfully")
-	}
-	
-	// 5. Xử lý thông báo hệ thống cho tất cả người liên quan (trong goroutine riêng)
+	// Broadcast events và send notifications async
 	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		
+		topic := fmt.Sprintf("auction:%s", auctionID.String())
+		
 		opts := []asynq.Option{
 			asynq.MaxRetry(3),
 			asynq.Queue(worker.QueueCritical),
 		}
 		
-		// Xử lý thông báo dựa trên loại đặt giá
-		if result.CanEndNow {
-			// A. Mua ngay - Thông báo cho người thắng/người bán/người tham gia khác
+		// 3. Gửi sự kiện và thông báo dựa vào ngữ cảnh
+		if result.CanEndNow { // Phiên đấu giá đã kết thúc
+			auctionEndedEvent := event.Event{
+				Topic: topic,
+				Type:  event.EventTypeAuctionEnded,
+				Data: map[string]interface{}{
+					"auction_id":     auctionID.String(),            // ID phiên đấu giá
+					"final_price":    req.Amount,                    // Giá cuối cùng
+					"winning_bid_id": result.AuctionBid.ID.String(), // ID của bid thắng
+					"winner":         result.Bidder,                 // Thông tin người thắng
+					"reason":         "buy_now_price_reached",       // Lý do kết thúc
+					"bid_details":    result.AuctionBid,             // Chi tiết bid thắng
+					"total_bids":     result.Auction.TotalBids,      // Tổng số lượt đặt giá
+					"timestamp":      result.Auction.ActualEndTime,  // Thời gian kết thúc
+				},
+			}
+			server.eventSender.Broadcast(auctionEndedEvent)
+			
+			// Log thông tin của phiên đấu giá đã kết thúc
+			log.Info().
+				Str("auction_id", auctionID.String()).
+				Str("bidder_id", userID).
+				Int64("buy_now_price", req.Amount).
+				Int("refunded_users", len(result.RefundedUserIDs)).
+				Msg("auction ended by buy now")
 			
 			// Thông báo cho người thắng
-			err := server.taskDistributor.DistributeTaskSendNotification(
-				context.Background(), // Sử dụng context mới để tránh cancel
+			err = server.taskDistributor.DistributeTaskSendNotification(
+				ctx,
 				&worker.PayloadSendNotification{
 					RecipientID: userID,
 					Title:       "Bạn đã thắng phiên đấu giá!",
@@ -344,7 +317,7 @@ func (server *Server) placeBid(c *gin.Context) {
 			
 			// Thông báo cho người bán
 			err = server.taskDistributor.DistributeTaskSendNotification(
-				context.Background(),
+				ctx,
 				&worker.PayloadSendNotification{
 					RecipientID: result.Auction.SellerID,
 					Title:       "Phiên đấu giá đã kết thúc",
@@ -366,7 +339,7 @@ func (server *Server) placeBid(c *gin.Context) {
 			// Thông báo hoàn tiền cho những người tham gia khác
 			for _, refundedUserID := range result.RefundedUserIDs {
 				err = server.taskDistributor.DistributeTaskSendNotification(
-					context.Background(),
+					ctx,
 					&worker.PayloadSendNotification{
 						RecipientID: refundedUserID,
 						Title:       "Hoàn trả tiền đặt cọc",
@@ -385,12 +358,33 @@ func (server *Server) placeBid(c *gin.Context) {
 						Msg("failed to send refund notification")
 				}
 			}
-		} else {
-			// B. Đặt giá thông thường - Thông báo cho người bán và người vượt giá
+		} else { // Phiên đấu giá vẫn tiếp tục diễn ra
+			auctionNewBidEvent := event.Event{
+				Topic: topic,
+				Type:  event.EventTypeNewBid,
+				Data: map[string]interface{}{
+					"auction_id":    auctionID.String(),            // ID phiên đấu giá
+					"current_price": result.Auction.CurrentPrice,   // Giá hiện tại
+					"bid_id":        result.AuctionBid.ID.String(), // ID của bid mới
+					"bid_amount":    result.AuctionBid.Amount,      // Số tiền đặt giá
+					"bidder":        result.Bidder,                 // Thông tin người đặt giá
+					"total_bids":    result.Auction.TotalBids,      // Tổng số lượt đặt giá mới nhất
+					"timestamp":     result.AuctionBid.CreatedAt,   // Thời gian đặt giá
+				},
+			}
+			server.eventSender.Broadcast(auctionNewBidEvent)
+			
+			// Log thông tin của phiên đấu giá đang diễn ra
+			log.Info().
+				Str("auction_id", auctionID.String()).
+				Str("bidder_id", userID).
+				Int64("amount", req.Amount).
+				Int32("total_bids", result.Auction.TotalBids).
+				Msg("bid placed successfully")
 			
 			// Thông báo cho người bán về lượt đặt giá mới
-			err := server.taskDistributor.DistributeTaskSendNotification(
-				context.Background(),
+			err = server.taskDistributor.DistributeTaskSendNotification(
+				ctx,
 				&worker.PayloadSendNotification{
 					RecipientID: result.Auction.SellerID,
 					Title:       "Có lượt đặt giá mới",
@@ -411,8 +405,8 @@ func (server *Server) placeBid(c *gin.Context) {
 			
 			// Thông báo cho người bị vượt giá (nếu có)
 			if result.PreviousBidder != nil && result.PreviousBidder.ID != userID {
-				err := server.taskDistributor.DistributeTaskSendNotification(
-					context.Background(),
+				err = server.taskDistributor.DistributeTaskSendNotification(
+					ctx,
 					&worker.PayloadSendNotification{
 						RecipientID: result.PreviousBidder.ID,
 						Title:       "Giá của bạn đã bị vượt qua",

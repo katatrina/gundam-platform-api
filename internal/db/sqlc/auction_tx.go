@@ -114,6 +114,7 @@ type EndAuctionTxParams struct {
 type EndAuctionTxResult struct {
 	HasWinner             bool       `json:"has_winner"`
 	WinnerID              *string    `json:"winner_id,omitempty"`
+	Winner                *User      `json:"winner,omitempty"`
 	FinalPrice            int64      `json:"final_price"`
 	RefundedUserIDs       []string   `json:"refunded_user_ids"`
 	WinnerPaymentDeadline *time.Time `json:"winner_payment_deadline,omitempty"`
@@ -307,6 +308,13 @@ func (store *SQLStore) EndAuctionTx(ctx context.Context, arg EndAuctionTxParams)
 			
 			result.RefundedUserIDs = append(result.RefundedUserIDs, p.UserID)
 		}
+		
+		// 9. Lấy thông tin người thắng cuộc
+		winner, err := qTx.GetUserByID(ctx, *winningBid.BidderID)
+		if err != nil {
+			return fmt.Errorf("failed to get winner info: %w", err)
+		}
+		result.Winner = &winner
 		
 		return nil
 	})

@@ -12,6 +12,7 @@ import (
 	"github.com/katatrina/gundam-BE/api"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
 	"github.com/katatrina/gundam-BE/internal/delivery"
+	"github.com/katatrina/gundam-BE/internal/event"
 	"github.com/katatrina/gundam-BE/internal/mailer"
 	ordertracking "github.com/katatrina/gundam-BE/internal/order_tracking"
 	"github.com/katatrina/gundam-BE/internal/util"
@@ -113,12 +114,16 @@ func main() {
 	}
 	log.Info().Msg("order tracking service started ✅")
 	
-	go runRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor)
-	runHTTPServer(&appConfig, store, redisDb, taskDistributor, taskInspector, mailService, ghnService)
+	// Khởi tạo SSE server
+	sseServer := event.NewSSEServer()
+	go sseServer.Run() // Chạy trong goroutine riêng
+	
+	go runRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor, sseServer)
+	runHTTPServer(&appConfig, store, redisDb, taskDistributor, taskInspector, mailService, ghnService, sseServer)
 }
 
-func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) {
-	server, err := api.NewServer(store, redisDb, taskDistributor, taskInspector, appConfig, mailer, deliveryService)
+func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider, eventSender event.EventSender) {
+	server, err := api.NewServer(store, redisDb, taskDistributor, taskInspector, appConfig, mailer, deliveryService, eventSender)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
@@ -170,8 +175,8 @@ func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
 }
 
 // runRedisTaskProcessor creates a new task processor and starts it.
-func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, taskDistributor worker.TaskDistributor) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor)
+func runRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, taskDistributor worker.TaskDistributor, eventSender event.EventSender) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, firebaseApp, taskDistributor, eventSender)
 	
 	err := taskProcessor.Start()
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/event"
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/rs/zerolog/log"
 )
@@ -106,6 +107,45 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 		return err
 	}
 	
+	// Gửi event SSE về việc phiên đấu giá kết thúc
+	topic := fmt.Sprintf("auction:%s", payload.AuctionID.String())
+	
+	// Phiên đấu giá đã kết thúc, và có người thắng
+	if result.HasWinner && result.WinnerID != nil && result.Winner != nil && auction.WinningBidID != nil {
+		// Broadcast event đấu giá kết thúc có người thắng
+		auctionEndedEvent := event.Event{
+			Topic: topic,
+			Type:  event.EventTypeAuctionEnded,
+			Data: map[string]interface{}{
+				"auction_id":     payload.AuctionID.String(),    // ID của phiên đấu giá
+				"final_price":    result.FinalPrice,             // Giá cuối cùng của phiên đấu giá
+				"winning_bid_id": auction.WinningBidID.String(), // ID của bid thắng cuộc
+				"winner":         *result.Winner,                // Thông tin người thắng cuộc
+				"reason":         "time_expired",                // Kết thúc do hết thời gian
+				"total_bids":     auction.TotalBids,             // Tổng số bid đã đặt
+				"timestamp":      actualEndTime,                 // Thời gian kết thúc thực tế
+				"has_winner":     true,                          // Có người thắng
+			},
+		}
+		processor.eventSender.Broadcast(auctionEndedEvent)
+		
+	} else {
+		// Broadcast event đấu giá kết thúc không có người thắng
+		auctionEndedEvent := event.Event{
+			Topic: topic,
+			Type:  event.EventTypeAuctionEnded,
+			Data: map[string]interface{}{
+				"auction_id":  payload.AuctionID.String(),
+				"final_price": result.FinalPrice,
+				"reason":      "time_expired_no_winner", // Hết thời gian, không có người đặt giá
+				"total_bids":  auction.TotalBids,
+				"timestamp":   actualEndTime,
+				"has_winner":  false,
+			},
+		}
+		processor.eventSender.Broadcast(auctionEndedEvent)
+	}
+	
 	// Xử lý các thông báo và tác vụ tiếp theo tùy theo kết quả
 	if result.HasWinner && result.WinnerID != nil && result.WinnerPaymentDeadline != nil {
 		// Lên lịch kiểm tra thanh toán sau 48 giờ
@@ -176,25 +216,6 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 				Msg("failed to send win notification")
 		}
 		
-		// Lấy thông tin người thắng đấu giá
-		winner, err := processor.store.GetUserByID(ctx, *result.WinnerID)
-		if err != nil {
-			if errors.Is(err, db.ErrRecordNotFound) {
-				log.Warn().
-					Err(err).
-					Str("winner_id", *result.WinnerID).
-					Str("auction_id", payload.AuctionID.String()).
-					Msg("winner not found")
-				return nil
-			}
-			log.Error().
-				Err(err).
-				Str("winner_id", *result.WinnerID).
-				Str("auction_id", payload.AuctionID.String()).
-				Msg("failed to get winner details")
-			return err
-		}
-		
 		// Gửi thông báo cho người bán
 		err = processor.distributor.DistributeTaskSendNotification(ctx, &PayloadSendNotification{
 			RecipientID: auction.SellerID,
@@ -202,7 +223,7 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 			Message: fmt.Sprintf("Phiên đấu giá %s của bạn đã kết thúc với giá cuối cùng là %s, thuộc về người thắng cuộc %s. Vui lòng đợi người thắng thanh toán trong vòng 48 giờ.",
 				auction.GundamSnapshot.Name,
 				util.FormatMoney(result.FinalPrice),
-				winner.FullName),
+				result.Winner.FullName),
 			Type:        "auction_end",
 			ReferenceID: payload.AuctionID.String(),
 		})

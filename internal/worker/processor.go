@@ -7,6 +7,7 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"github.com/hibiken/asynq"
 	db "github.com/katatrina/gundam-BE/internal/db/sqlc"
+	"github.com/katatrina/gundam-BE/internal/event"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,9 +25,10 @@ type RedisTaskProcessor struct {
 	store           db.Store          // Tương tác với db
 	firestoreClient *firestore.Client // Dùng để gửi thông báo đến cho người dùng thông qua Firestore
 	distributor     TaskDistributor   // Dùng để phân phối task đến Redis queue
+	eventSender     event.EventSender // Dùng để gửi sự kiện đến client
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, distributor TaskDistributor) *RedisTaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, firebaseApp *firebase.App, distributor TaskDistributor, eventSender event.EventSender) *RedisTaskProcessor {
 	// Initialize Firestore client
 	firestoreClient, err := firebaseApp.Firestore(context.Background())
 	if err != nil {
@@ -54,6 +56,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, fireba
 		store:           store,
 		firestoreClient: firestoreClient,
 		distributor:     distributor,
+		eventSender:     eventSender,
 	}
 }
 

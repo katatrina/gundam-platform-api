@@ -42,7 +42,7 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider) (*Server, error) {
+func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, config *util.Config, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider, eventSender event.EventSender) (*Server, error) {
 	// Create a new JWT token maker
 	tokenMaker, err := token.NewJWTMaker(config.TokenSecretKey)
 	if err != nil {
@@ -75,10 +75,6 @@ func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker
 	restyClient := resty.New()
 	log.Info().Msg("Resty client created successfully ✅")
 	
-	// Khởi tạo SSE server
-	sseServer := event.NewSSEServer()
-	go sseServer.Run() // Chạy trong goroutine riêng
-	
 	server := &Server{
 		dbStore:                store,
 		tokenMaker:             tokenMaker,
@@ -92,7 +88,7 @@ func NewServer(store db.Store, redisClient *redis.Client, taskDistributor worker
 		zalopayService:         zalopayService,
 		deliveryService:        deliveryService,
 		restyClient:            restyClient,
-		eventSender:            sseServer,
+		eventSender:            eventSender,
 	}
 	
 	server.setupRouter()
