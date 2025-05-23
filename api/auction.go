@@ -259,8 +259,8 @@ func (server *Server) participateInAuction(c *gin.Context) {
 			Data: map[string]interface{}{
 				"auction_id":         auctionID.String(),                  // ID phiên đấu giá
 				"total_participants": result.Auction.TotalParticipants,    // Tổng số người tham gia phiên đấu giá
-				"new_participant":    result.Participant,                  // Thông tin người tham gia mới
-				"timestamp":          result.AuctionParticipant.CreatedAt, // Thời điểm tham gia của người tham gia mới
+				"new_participant":    result.Participant,                  // Thông tin cá nhân của người tham gia mới
+				"timestamp":          result.AuctionParticipant.CreatedAt, // Thời điểm tham gia
 			},
 		}
 		server.eventSender.Broadcast(newParticipantEvent)

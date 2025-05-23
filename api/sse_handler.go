@@ -76,9 +76,9 @@ func (server *Server) streamAuctionEvents(c *gin.Context) {
 	
 	// Gửi event kết nối thành công
 	connectionData := map[string]interface{}{
-		"auction_id": auctionIDStr,
-		"timestamp":  time.Now().Format(time.RFC3339),
-		"status":     "connected",
+		"auction_id": auctionIDStr,                    // ID của phiên đấu giá
+		"timestamp":  time.Now().Format(time.RFC3339), // Thời gian kết nối
+		"status":     "connected",                     // Trạng thái kết nối
 	}
 	if data, err := json.Marshal(connectionData); err == nil {
 		fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
@@ -104,8 +104,9 @@ func (server *Server) streamAuctionEvents(c *gin.Context) {
 				// Log error và gửi error event
 				log.Error().Err(err).Msgf("failed to serialize event data: %v, event: %+v", err, event)
 				errorData := map[string]string{
-					"error":      "failed to serialize event data",
-					"event_type": event.Type,
+					"error":      "failed to serialize event data", // Mô tả lỗi
+					"event_type": event.Type,                       // Loại sự kiện
+					"timestamp":  time.Now().Format(time.RFC3339),  // Thời gian xảy ra lỗi
 				}
 				if errorJson, jsonErr := json.Marshal(errorData); jsonErr == nil {
 					fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", errorJson)

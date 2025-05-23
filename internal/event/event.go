@@ -8,8 +8,8 @@ type Event struct {
 }
 
 const (
-	EventTypeNewParticipant = "new_participant" // Người dùng mới tham gia
-	EventTypeNewBid         = "new_bid"         // Người dùng mới đặt giá
+	EventTypeNewParticipant = "new_participant" // Có người dùng mới tham gia phiên đấu giá
+	EventTypeNewBid         = "new_bid"         // Có người dùng mới đặt giá
 	EventTypeAuctionEnded   = "auction_ended"   // Phiên đấu giá đã kết thúc
 )
 

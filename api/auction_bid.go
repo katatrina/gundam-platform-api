@@ -269,7 +269,7 @@ func (server *Server) placeBid(c *gin.Context) {
 		}
 		
 		// 3. Gửi sự kiện và thông báo dựa vào ngữ cảnh
-		if result.CanEndNow { // Phiên đấu giá đã kết thúc
+		if result.CanEndNow { // Phiên đấu giá đã kết thúc và có người thắng
 			auctionEndedEvent := event.Event{
 				Topic: topic,
 				Type:  event.EventTypeAuctionEnded,
@@ -279,9 +279,9 @@ func (server *Server) placeBid(c *gin.Context) {
 					"winning_bid_id": result.AuctionBid.ID.String(), // ID của bid thắng
 					"winner":         result.Bidder,                 // Thông tin người thắng
 					"reason":         "buy_now_price_reached",       // Lý do kết thúc
-					"bid_details":    result.AuctionBid,             // Chi tiết bid thắng
-					"total_bids":     result.Auction.TotalBids,      // Tổng số lượt đặt giá
-					"timestamp":      result.Auction.ActualEndTime,  // Thời gian kết thúc
+					"total_bids":     result.Auction.TotalBids,      // Tổng số lượt đặt giá hiện tại
+					"timestamp":      result.Auction.ActualEndTime,  // Thời gian kết thúc thực tế
+					"has_winner":     true,                          // Có người thắng
 				},
 			}
 			server.eventSender.Broadcast(auctionEndedEvent)
@@ -367,8 +367,8 @@ func (server *Server) placeBid(c *gin.Context) {
 					"current_price": result.Auction.CurrentPrice,   // Giá hiện tại
 					"bid_id":        result.AuctionBid.ID.String(), // ID của bid mới
 					"bid_amount":    result.AuctionBid.Amount,      // Số tiền đặt giá
-					"bidder":        result.Bidder,                 // Thông tin người đặt giá
-					"total_bids":    result.Auction.TotalBids,      // Tổng số lượt đặt giá mới nhất
+					"bidder":        result.Bidder,                 // Thông tin cá nhân của người đặt giá
+					"total_bids":    result.Auction.TotalBids,      // Tổng số lượt đặt giá hiện tại
 					"timestamp":     result.AuctionBid.CreatedAt,   // Thời gian đặt giá
 				},
 			}

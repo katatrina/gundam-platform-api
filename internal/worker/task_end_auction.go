@@ -112,7 +112,7 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 	
 	// Phiên đấu giá đã kết thúc, và có người thắng
 	if result.HasWinner && result.WinnerID != nil && result.Winner != nil && auction.WinningBidID != nil {
-		// Broadcast event đấu giá kết thúc có người thắng
+		// Event đấu giá kết thúc và có người thắng
 		auctionEndedEvent := event.Event{
 			Topic: topic,
 			Type:  event.EventTypeAuctionEnded,
@@ -121,7 +121,7 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 				"final_price":    result.FinalPrice,             // Giá cuối cùng của phiên đấu giá
 				"winning_bid_id": auction.WinningBidID.String(), // ID của bid thắng cuộc
 				"winner":         *result.Winner,                // Thông tin người thắng cuộc
-				"reason":         "time_expired",                // Kết thúc do hết thời gian
+				"reason":         "time_expired_has_winner",     // Kết thúc do hết thời gian
 				"total_bids":     auction.TotalBids,             // Tổng số bid đã đặt
 				"timestamp":      actualEndTime,                 // Thời gian kết thúc thực tế
 				"has_winner":     true,                          // Có người thắng
@@ -130,17 +130,17 @@ func (processor *RedisTaskProcessor) ProcessTaskEndAuction(
 		processor.eventSender.Broadcast(auctionEndedEvent)
 		
 	} else {
-		// Broadcast event đấu giá kết thúc không có người thắng
+		// Event đấu giá kết thúc nhưng không có người thắng
 		auctionEndedEvent := event.Event{
 			Topic: topic,
 			Type:  event.EventTypeAuctionEnded,
 			Data: map[string]interface{}{
-				"auction_id":  payload.AuctionID.String(),
-				"final_price": result.FinalPrice,
-				"reason":      "time_expired_no_winner", // Hết thời gian, không có người đặt giá
-				"total_bids":  auction.TotalBids,
-				"timestamp":   actualEndTime,
-				"has_winner":  false,
+				"auction_id":  payload.AuctionID.String(), // ID của phiên đấu giá
+				"final_price": result.FinalPrice,          // Giá cuối cùng của phiên đấu giá
+				"reason":      "time_expired_no_winner",   // Hết thời gian, không có người thắng
+				"total_bids":  auction.TotalBids,          // Tổng số bid đã đặt
+				"timestamp":   actualEndTime,              // Thời gian kết thúc thực tế
+				"has_winner":  false,                      // Không có người thắng
 			},
 		}
 		processor.eventSender.Broadcast(auctionEndedEvent)
