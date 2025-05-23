@@ -24,6 +24,7 @@ type PlaceBidTxParams struct {
 type PlaceBidTxResult struct {
 	AuctionBid      AuctionBid `json:"auction_bid"`
 	Auction         Auction    `json:"updated_auction"`
+	Bidder          User       `json:"bidder"`
 	PreviousBidder  *User      `json:"previous_bidder"`
 	CanEndNow       bool       `json:"can_end_now"`
 	RefundedUserIDs []string   `json:"refunded_user_ids"`
@@ -206,6 +207,13 @@ func (store *SQLStore) PlaceBidTx(ctx context.Context, arg PlaceBidTxParams) (Pl
 				}
 			}
 		} // end if canEndNow
+		
+		// 7. Lấy thông tin người đặt giá
+		bidder, err := qTx.GetUserByID(ctx, arg.UserID)
+		if err != nil {
+			return fmt.Errorf("failed to get bidder: %w", err)
+		}
+		result.Bidder = bidder
 		
 		return nil
 	})
