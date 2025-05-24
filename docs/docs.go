@@ -3062,7 +3062,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Create a 1-1 exchange offer with optional compensation.",
+                "description": "Create a new exchange offer for trading multiple Gundams between users with optional compensation.\n\n**Business Rules:**\n- Không thể tạo offer cho bài đăng của chính mình\n- Mỗi user chỉ có 1 offer cho mỗi bài đăng\n- Gundam của chủ bài đăng phải có status \"for exchange\"\n- Gundam của người đề xuất phải có status \"in store\" (sẽ được chuyển thành \"for exchange\" sau khi tạo offer)\n- Nếu có compensation, người trả phải có đủ số dư (chỉ kiểm tra nếu người đề xuất là người trả)\n- Compensation chỉ được trừ tiền khi offer được chấp nhận, không trừ ngay",
                 "consumes": [
                     "application/json"
                 ],
@@ -3086,7 +3086,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Create exchange offer response",
+                        "description": "Exchange offer created successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CreateExchangeOfferTxResult"
                         }
@@ -4039,34 +4039,52 @@ const docTemplate = `{
                 "compensation_amount",
                 "exchange_post_id",
                 "note",
-                "offerer_gundam_id",
+                "offerer_gundam_ids",
                 "payer_id",
-                "poster_gundam_id"
+                "poster_gundam_ids"
             ],
             "properties": {
                 "compensation_amount": {
-                    "description": "Số tiền bù (null nếu không có bù tiền)",
-                    "type": "integer"
+                    "description": "Số tiền bù theo VND (bắt buộc nếu có payer_id, phải \u003e 0, chỉ trừ tiền khi offer được chấp nhận)",
+                    "type": "integer",
+                    "example": 50000
                 },
                 "exchange_post_id": {
-                    "description": "ID bài đăng trao đổi",
-                    "type": "string"
+                    "description": "UUID của bài đăng trao đổi mà bạn muốn tạo offer",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "note": {
-                    "description": "Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)",
-                    "type": "string"
+                    "description": "Tin nhắn gửi kèm cho chủ bài đăng (tùy chọn)",
+                    "type": "string",
+                    "example": "Tôi rất thích RG Unicorn của bạn!"
                 },
-                "offerer_gundam_id": {
-                    "description": "ID Gundam của người đề xuất",
-                    "type": "integer"
+                "offerer_gundam_ids": {
+                    "description": "Danh sách ID các Gundam của bạn để đưa ra trao đổi (phải thuộc về bạn và có status \"in store\")",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        789,
+                        321
+                    ]
                 },
                 "payer_id": {
-                    "description": "ID người bù tiền (poster_id hoặc offerer_id, hoặc null)",
-                    "type": "string"
+                    "description": "ID người phải trả tiền bù (chỉ có thể là bạn hoặc chủ bài đăng, để null nếu không có ai bù)",
+                    "type": "string",
+                    "example": "user_abc123"
                 },
-                "poster_gundam_id": {
-                    "description": "ID Gundam của người đăng bài",
-                    "type": "integer"
+                "poster_gundam_ids": {
+                    "description": "Danh sách ID các Gundam của chủ bài đăng mà bạn muốn nhận về (phải thuộc bài đăng này và có status \"for exchange\")",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        123,
+                        456
+                    ]
                 }
             }
         },
@@ -4430,7 +4448,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "note": {
-                    "description": "Ghi chú thương lượng, không bắt buộc",
+                    "description": "Tin nhắn thương lượng, không bắt buộc",
                     "type": "string"
                 },
                 "payer_id": {

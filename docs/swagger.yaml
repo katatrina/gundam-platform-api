@@ -130,30 +130,48 @@ definitions:
   api.createExchangeOfferRequest:
     properties:
       compensation_amount:
-        description: Số tiền bù (null nếu không có bù tiền)
+        description: Số tiền bù theo VND (bắt buộc nếu có payer_id, phải > 0, chỉ
+          trừ tiền khi offer được chấp nhận)
+        example: 50000
         type: integer
       exchange_post_id:
-        description: ID bài đăng trao đổi
+        description: UUID của bài đăng trao đổi mà bạn muốn tạo offer
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       note:
-        description: Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)
+        description: Tin nhắn gửi kèm cho chủ bài đăng (tùy chọn)
+        example: Tôi rất thích RG Unicorn của bạn!
         type: string
-      offerer_gundam_id:
-        description: ID Gundam của người đề xuất
-        type: integer
+      offerer_gundam_ids:
+        description: Danh sách ID các Gundam của bạn để đưa ra trao đổi (phải thuộc
+          về bạn và có status "in store")
+        example:
+        - 789
+        - 321
+        items:
+          type: integer
+        type: array
       payer_id:
-        description: ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
+        description: ID người phải trả tiền bù (chỉ có thể là bạn hoặc chủ bài đăng,
+          để null nếu không có ai bù)
+        example: user_abc123
         type: string
-      poster_gundam_id:
-        description: ID Gundam của người đăng bài
-        type: integer
+      poster_gundam_ids:
+        description: Danh sách ID các Gundam của chủ bài đăng mà bạn muốn nhận về
+          (phải thuộc bài đăng này và có status "for exchange")
+        example:
+        - 123
+        - 456
+        items:
+          type: integer
+        type: array
     required:
     - compensation_amount
     - exchange_post_id
     - note
-    - offerer_gundam_id
+    - offerer_gundam_ids
     - payer_id
-    - poster_gundam_id
+    - poster_gundam_ids
     type: object
   api.createExchangePostRequest:
     properties:
@@ -429,7 +447,7 @@ definitions:
         description: Bắt buộc khi require_compensation=true
         type: integer
       note:
-        description: Ghi chú thương lượng, không bắt buộc
+        description: Tin nhắn thương lượng, không bắt buộc
         type: string
       payer_id:
         description: ID người trả tiền bù, bắt buộc khi require_compensation=true
@@ -4622,7 +4640,16 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a 1-1 exchange offer with optional compensation.
+      description: |-
+        Create a new exchange offer for trading multiple Gundams between users with optional compensation.
+
+        **Business Rules:**
+        - Không thể tạo offer cho bài đăng của chính mình
+        - Mỗi user chỉ có 1 offer cho mỗi bài đăng
+        - Gundam của chủ bài đăng phải có status "for exchange"
+        - Gundam của người đề xuất phải có status "in store" (sẽ được chuyển thành "for exchange" sau khi tạo offer)
+        - Nếu có compensation, người trả phải có đủ số dư (chỉ kiểm tra nếu người đề xuất là người trả)
+        - Compensation chỉ được trừ tiền khi offer được chấp nhận, không trừ ngay
       parameters:
       - description: Create exchange offer request
         in: body
@@ -4634,7 +4661,7 @@ paths:
       - application/json
       responses:
         "201":
-          description: Create exchange offer response
+          description: Exchange offer created successfully
           schema:
             $ref: '#/definitions/db.CreateExchangeOfferTxResult'
       security:

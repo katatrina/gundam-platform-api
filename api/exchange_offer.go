@@ -16,22 +16,41 @@ import (
 )
 
 type createExchangeOfferRequest struct {
-	ExchangePostID     string  `json:"exchange_post_id" binding:"required,uuid"` // ID bài đăng trao đổi
-	PosterGundamID     int64   `json:"poster_gundam_id" binding:"required"`      // ID Gundam của người đăng bài
-	OffererGundamID    int64   `json:"offerer_gundam_id" binding:"required"`     // ID Gundam của người đề xuất
-	PayerID            *string `json:"payer_id"`                                 // ID người bù tiền (poster_id hoặc offerer_id, hoặc null)
-	CompensationAmount *int64  `json:"compensation_amount"`                      // Số tiền bù (null nếu không có bù tiền)
-	Note               *string `json:"note"`                                     // Ghi chú người đề xuất muốn gửi cho người đăng (tùy chọn)
+	// UUID của bài đăng trao đổi mà bạn muốn tạo offer
+	ExchangePostID string `json:"exchange_post_id" binding:"required,uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	
+	// Danh sách ID các Gundam của chủ bài đăng mà bạn muốn nhận về (phải thuộc bài đăng này và có status "for exchange")
+	PosterGundamIDs []int64 `json:"poster_gundam_ids" binding:"required" example:"123,456"`
+	
+	// Danh sách ID các Gundam của bạn để đưa ra trao đổi (phải thuộc về bạn và có status "in store")
+	OffererGundamIDs []int64 `json:"offerer_gundam_ids" binding:"required" example:"789,321"`
+	
+	// ID người phải trả tiền bù (chỉ có thể là bạn hoặc chủ bài đăng, để null nếu không có ai bù)
+	PayerID *string `json:"payer_id" example:"user_abc123"`
+	
+	// Số tiền bù theo VND (bắt buộc nếu có payer_id, phải > 0, chỉ trừ tiền khi offer được chấp nhận)
+	CompensationAmount *int64 `json:"compensation_amount" example:"50000"`
+	
+	// Tin nhắn gửi kèm cho chủ bài đăng (tùy chọn)
+	Note *string `json:"note" example:"Tôi rất thích RG Unicorn của bạn!"`
 }
 
 //	@Summary		Create an exchange offer
-//	@Description	Create a 1-1 exchange offer with optional compensation.
+//	@Description	Create a new exchange offer for trading multiple Gundams between users with optional compensation.
+//	@Description
+//	@Description	**Business Rules:**
+//	@Description	- Không thể tạo offer cho bài đăng của chính mình
+//	@Description	- Mỗi user chỉ có 1 offer cho mỗi bài đăng
+//	@Description	- Gundam của chủ bài đăng phải có status "for exchange"
+//	@Description	- Gundam của người đề xuất phải có status "in store" (sẽ được chuyển thành "for exchange" sau khi tạo offer)
+//	@Description	- Nếu có compensation, người trả phải có đủ số dư (chỉ kiểm tra nếu người đề xuất là người trả)
+//	@Description	- Compensation chỉ được trừ tiền khi offer được chấp nhận, không trừ ngay
 //	@Tags			exchanges
 //	@Accept			json
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			request	body		createExchangeOfferRequest		true	"Create exchange offer request"
-//	@Success		201		{object}	db.CreateExchangeOfferTxResult	"Create exchange offer response"
+//	@Success		201		{object}	db.CreateExchangeOfferTxResult	"Exchange offer created successfully"
 //	@Router			/users/me/exchange-offers [post]
 func (server *Server) createExchangeOffer(c *gin.Context) {
 	// Lấy thông tin người dùng đã đăng nhập
@@ -41,6 +60,17 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	var req createExchangeOfferRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Validate input arrays are not empty
+	if len(req.PosterGundamIDs) == 0 {
+		c.JSON(http.StatusBadRequest, errorResponse(errors.New("poster_gundam_ids cannot be empty")))
+		return
+	}
+	
+	if len(req.OffererGundamIDs) == 0 {
+		c.JSON(http.StatusBadRequest, errorResponse(errors.New("offerer_gundam_ids cannot be empty")))
 		return
 	}
 	
@@ -98,7 +128,8 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		return
 	}
 	
-	// Chỉ kiểm tra số dư, không trừ tiền ngay. Tiền sẽ được trừ khi đề xuất được chấp nhận.
+	// Chỉ kiểm tra số dư nếu người bù là người đề xuất.
+	// Không trừ tiền ngay. Tiền sẽ được trừ khi đề xuất được chấp nhận.
 	if req.PayerID != nil && *req.PayerID == offererID && req.CompensationAmount != nil {
 		wallet, err := server.dbStore.GetWalletByUserID(c.Request.Context(), offererID)
 		if err != nil {
@@ -119,73 +150,79 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		}
 	}
 	
-	// Kiểm tra xem Gundam từ bài đăng có thuộc bài đăng này không
-	_, err = server.dbStore.GetExchangePostItemByGundamID(c.Request.Context(), db.GetExchangePostItemByGundamIDParams{
-		PostID:   postID,
-		GundamID: req.PosterGundamID,
-	})
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d is not part of the exchange post %s", req.PosterGundamID, postID)
+	// Kiểm tra các Gundam từ bài đăng
+	for _, gundamID := range req.PosterGundamIDs {
+		_, err = server.dbStore.GetExchangePostItemByGundamID(c.Request.Context(), db.GetExchangePostItemByGundamIDParams{
+			PostID:   postID,
+			GundamID: gundamID,
+		})
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("poster gundam ID %d is not part of the exchange post %s", gundamID, postID)
+				c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Kiểm tra Gundam có tồn tại và có status phù hợp không
+		posterGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("poster gundam ID %d not found", gundamID)
+				c.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		// Kiểm tra Gundam có thuộc về người đăng bài không
+		if posterGundam.OwnerID != post.UserID {
+			err = fmt.Errorf("gundam ID %d does not belong to poster ID %s", gundamID, post.UserID)
+			c.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
+		
+		// Kiểm tra Gundam có được phép trao đổi không
+		if posterGundam.Status != db.GundamStatusForexchange {
+			err = fmt.Errorf("poster gundam ID %d is not available for exchange, current status: %s", gundamID, posterGundam.Status)
 			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
 			return
 		}
-		
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
 	}
 	
-	// Kiểm tra Gundam của người đề xuất có tồn tại không
-	offererGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), req.OffererGundamID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("gundam ID %d not found", req.OffererGundamID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
+	// Kiểm tra các Gundam của người đề xuất
+	for _, gundamID := range req.OffererGundamIDs {
+		// Kiểm tra Gundam có tồn tại không
+		offererGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), gundamID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("gundam ID %d not found", gundamID)
+				c.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
 		
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// Kiểm tra Gundam có thuộc về người đề xuất không
-	if offererGundam.OwnerID != offererID {
-		err = fmt.Errorf("user ID %s does not own gundam ID %d", offererID, req.OffererGundamID)
-		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-		return
-	}
-	
-	// Kiểm tra Gundam có được phép trao đổi không
-	if offererGundam.Status != db.GundamStatusInstore {
-		err = fmt.Errorf("gundam ID %d is not available for exchange, current status: %s", req.OffererGundamID, offererGundam.Status)
-		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-		return
-	}
-	
-	// Kiểm tra Gundam của người đăng bài có tồn tại không
-	posterGundam, err := server.dbStore.GetGundamByID(c.Request.Context(), req.PosterGundamID)
-	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			err = fmt.Errorf("poster gundam ID %d not found", req.PosterGundamID)
-			c.JSON(http.StatusNotFound, errorResponse(err))
+		// Kiểm tra Gundam có thuộc về người đề xuất không
+		if offererGundam.OwnerID != offererID {
+			err = fmt.Errorf("offerer ID %s does not own gundam ID %d", offererID, gundamID)
+			c.JSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
 		
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-	
-	// Kiểm tra Gundam có thuộc về người đăng bài không
-	if posterGundam.OwnerID != post.UserID {
-		err = fmt.Errorf("gundam ID %d does not belong to user ID %s", req.PosterGundamID, post.UserID)
-		c.JSON(http.StatusForbidden, errorResponse(err))
-		return
-	}
-	
-	if posterGundam.Status != db.GundamStatusForexchange {
-		err = fmt.Errorf("poster gundam ID %d is not available for exchange", req.PosterGundamID)
-		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
-		return
+		// Kiểm tra Gundam có được phép trao đổi không
+		if offererGundam.Status != db.GundamStatusInstore {
+			err = fmt.Errorf("offerer gundam ID %d is not available for exchange, current status: %s", gundamID, offererGundam.Status)
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
 	}
 	
 	// TODO: Có thể kiểm tra Gundam đã tham gia các đề xuất khác chưa? Nếu có thì không cho phép tạo đề xuất mới.
@@ -195,8 +232,8 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 	result, err := server.dbStore.CreateExchangeOfferTx(c.Request.Context(), db.CreateExchangeOfferTxParams{
 		PostID:             postID,
 		OffererID:          offererID,
-		PosterGundamID:     req.PosterGundamID,
-		OffererGundamID:    req.OffererGundamID,
+		PosterGundamIDs:    req.PosterGundamIDs,
+		OffererGundamIDs:   req.OffererGundamIDs,
 		CompensationAmount: req.CompensationAmount,
 		PayerID:            req.PayerID,
 		Note:               req.Note,
@@ -217,11 +254,25 @@ func (server *Server) createExchangeOffer(c *gin.Context) {
 		asynq.Queue(worker.QueueCritical),
 	}
 	
+	// Tạo thông báo ngắn gọn
+	var message string
+	if len(req.PosterGundamIDs) == 1 {
+		// Lấy tên Gundam đầu tiên để hiển thị
+		gundam, err := server.dbStore.GetGundamByID(c.Request.Context(), req.PosterGundamIDs[0])
+		if err == nil {
+			message = fmt.Sprintf("Có đề xuất trao đổi mới cho %s của bạn", gundam.Name)
+		} else {
+			message = "Có đề xuất trao đổi mới cho Gundam của bạn"
+		}
+	} else {
+		message = fmt.Sprintf("Có đề xuất trao đổi mới cho %d Gundam của bạn", len(req.PosterGundamIDs))
+	}
+	
 	// Gửi thông báo cho người đăng bài về đề xuất trao đổi mới
 	err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
 		RecipientID: post.UserID,
 		Title:       "Đề xuất trao đổi mới",
-		Message:     fmt.Sprintf("Có người muốn trao đổi Gundam lấy %s của bạn. Bạn có thể xem chi tiết đề xuất trong trang Trao đổi của tôi.", posterGundam.Name),
+		Message:     message,
 		Type:        "exchange",
 		ReferenceID: result.Offer.ID.String(),
 	}, opts...)
@@ -397,7 +448,7 @@ type updateExchangeOfferRequest struct {
 	RequireCompensation bool    `json:"require_compensation" binding:"required"` // true = yêu cầu bù tiền, false = không yêu cầu bù tiền
 	CompensationAmount  *int64  `json:"compensation_amount"`                     // Bắt buộc khi require_compensation=true
 	PayerID             *string `json:"payer_id"`                                // ID người trả tiền bù, bắt buộc khi require_compensation=true
-	Note                *string `json:"note"`                                    // Ghi chú thương lượng, không bắt buộc
+	Note                *string `json:"note"`                                    // Tin nhắn thương lượng, không bắt buộc
 }
 
 //	@Summary		Update an exchange offer

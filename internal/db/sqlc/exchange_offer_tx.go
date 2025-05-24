@@ -13,8 +13,8 @@ import (
 type CreateExchangeOfferTxParams struct {
 	PostID             uuid.UUID // ID bài đăng trao đổi
 	OffererID          string    // ID người đề xuất
-	PosterGundamID     int64     // ID Gundam của người đăng bài
-	OffererGundamID    int64     // ID Gundam của người đề xuất
+	PosterGundamIDs    []int64   // Danh sách ID Gundam của người đăng bài
+	OffererGundamIDs   []int64   // Danh sách ID Gundam của người đề xuất
 	PayerID            *string   // ID người bù tiền (có thể là người đề xuất hoặc người đăng bài, nếu không có thì là nil)
 	CompensationAmount *int64    // Số tiền bồi thường (có thể là nil nếu không có bù tiền)
 	Note               *string   // Ghi chú đề xuất
@@ -28,12 +28,13 @@ type CreateExchangeOfferTxResult struct {
 func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExchangeOfferTxParams) (CreateExchangeOfferTxResult, error) {
 	var result CreateExchangeOfferTxResult
 	err := store.ExecTx(ctx, func(qTx *Queries) error {
-		// 1. Tạo đề xuất trao đổi mới
+		
 		offerID, err := uuid.NewV7()
 		if err != nil {
 			return fmt.Errorf("failed to generate offer ID: %w", err)
 		}
 		
+		// 1. Tạo đề xuất trao đổi mới
 		offer, err := qTx.CreateExchangeOffer(ctx, CreateExchangeOfferParams{
 			ID:                   offerID,
 			PostID:               arg.PostID,
@@ -56,51 +57,56 @@ func (store *SQLStore) CreateExchangeOfferTx(ctx context.Context, arg CreateExch
 		}
 		result.Offer = offer
 		
-		// 2. Thêm Gundam của người đề xuất vào đề xuất
-		offererItemID, err := uuid.NewV7()
-		if err != nil {
-			return fmt.Errorf("failed to generate offerer item ID: %w", err)
+		// 2. Thêm các Gundam của người đề xuất vào đề xuất và cập nhật trạng thái
+		for _, gundamID := range arg.OffererGundamIDs {
+			offererItemID, err := uuid.NewV7()
+			if err != nil {
+				return fmt.Errorf("failed to generate offerer item ID: %w", err)
+			}
+			
+			offererItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
+				ID:           offererItemID,
+				OfferID:      offerID,
+				GundamID:     gundamID,
+				IsFromPoster: false,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create offerer exchange item for gundam ID %d: %w", gundamID, err)
+			}
+			
+			result.OfferItems = append(result.OfferItems, offererItem)
+			
+			// Cập nhật trạng thái Gundam thành "for exchange"
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: gundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusForexchange,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam ID %d status to \"for exchange\": %w", gundamID, err)
+			}
 		}
 		
-		offererItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
-			ID:           offererItemID,
-			OfferID:      offerID,
-			GundamID:     arg.OffererGundamID,
-			IsFromPoster: false,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create offerer exchange item: %w", err)
-		}
-		
-		// 3. Thêm Gundam của người đăng bài (mà người đề xuất muốn trao đổi) vào đề xuất
-		posterItemID, err := uuid.NewV7()
-		if err != nil {
-			return fmt.Errorf("failed to generate poster item ID: %w", err)
-		}
-		
-		posterItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
-			ID:           posterItemID,
-			OfferID:      offerID,
-			GundamID:     arg.PosterGundamID,
-			IsFromPoster: true,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create poster exchange item: %w", err)
-		}
-		
-		// Thêm cả hai item vào kết quả
-		result.OfferItems = []ExchangeOfferItem{offererItem, posterItem}
-		
-		// 3. Cập nhật trạng thái Gundam của người đề xuất thành "for exchange"
-		err = qTx.UpdateGundam(ctx, UpdateGundamParams{
-			ID: arg.OffererGundamID,
-			Status: NullGundamStatus{
-				GundamStatus: GundamStatusForexchange,
-				Valid:        true,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to update gundam status to \"for exchange\": %w", err)
+		// 3. Thêm các Gundam của người đăng bài (mà người đề xuất muốn trao đổi) vào đề xuất
+		for _, gundamID := range arg.PosterGundamIDs {
+			posterItemID, err := uuid.NewV7()
+			if err != nil {
+				return fmt.Errorf("failed to generate poster item ID: %w", err)
+			}
+			
+			posterItem, err := qTx.CreateExchangeOfferItem(ctx, CreateExchangeOfferItemParams{
+				ID:           posterItemID,
+				OfferID:      offerID,
+				GundamID:     gundamID,
+				IsFromPoster: true,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create poster exchange item for gundam ID %d: %w", gundamID, err)
+			}
+			
+			result.OfferItems = append(result.OfferItems, posterItem)
 		}
 		
 		// Việc trừ tiền bù sẽ được thực hiện khi đề xuất được chấp nhận, không trừ ngay tại đây.
