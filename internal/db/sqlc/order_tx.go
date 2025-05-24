@@ -87,13 +87,14 @@ func (store *SQLStore) CreateOrderTx(ctx context.Context, arg CreateOrderTxParam
 			return fmt.Errorf("failed to deduct balance: %w", err)
 		}
 		
-		// Tạo wallet entry cho người mua
+		// Tạo wallet entry cho người mua ✅
 		buyerEntry, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      buyerWallet.UserID,
 			ReferenceID:   &order.Code,
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypePayment,
-			Amount:        -arg.TotalAmount, // Số âm (-) vì đây là bút toán trừ tiền
+			AffectedField: WalletAffectedFieldBalance,
+			Amount:        -arg.TotalAmount, // Trừ tiền từ ví người mua
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
 		})
@@ -513,12 +514,13 @@ func (store *SQLStore) CancelOrderByBuyerTx(ctx context.Context, arg CancelOrder
 			return fmt.Errorf("failed to get buyer wallet: %w", err)
 		}
 		
-		// 4. Tạo bút toán hoàn tiền cho người mua
+		// 4. Tạo bút toán hoàn tiền cho người mua ✅
 		refundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      buyerWallet.UserID,
 			ReferenceID:   &updatedOrder.Code,
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypeRefund,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        orderTrans.Amount, // Số dương (+) vì đây là bút toán hoàn tiền
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -600,12 +602,13 @@ func (store *SQLStore) FailRegularOrderTx(ctx context.Context, arg FailRegularOr
 			return err
 		}
 		
-		// 2. Tạo bút toán hoàn tiền cho người mua
+		// 2. Tạo bút toán hoàn tiền cho người mua ✅
 		buyerRefundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.FailedOrder.BuyerID,
 			ReferenceID:   util.StringPointer(arg.FailedOrder.ID.String()),
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypeRefund,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        refundAmount,
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -640,12 +643,13 @@ func (store *SQLStore) FailRegularOrderTx(ctx context.Context, arg FailRegularOr
 			return err
 		}
 		
-		// 4. Tạo bút toán cập nhật non_withdrawable_amount của người bán
+		// 4. Tạo bút toán cập nhật non_withdrawable_amount của người bán ✅
 		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.FailedOrder.SellerID,
 			ReferenceID:   util.StringPointer(arg.FailedOrder.ID.String()),
 			ReferenceType: WalletReferenceTypeOrder,
-			EntryType:     WalletEntryTypeRefundDeduction,
+			EntryType:     WalletEntryTypeReleaseFunds,
+			AffectedField: WalletAffectedFieldNonWithdrawableAmount,
 			Amount:        -arg.SellerEntry.Amount,
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -731,12 +735,13 @@ func (store *SQLStore) FailAuctionOrderTx(ctx context.Context, arg FailAuctionOr
 			return err
 		}
 		
-		// 2. Tạo bút toán hoàn tiền cho người mua
+		// 2. Tạo bút toán hoàn tiền cho người mua ✅
 		buyerRefundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.Order.BuyerID,
 			ReferenceID:   util.StringPointer(arg.Order.ID.String()),
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypeRefund,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        refundAmount,
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -771,12 +776,13 @@ func (store *SQLStore) FailAuctionOrderTx(ctx context.Context, arg FailAuctionOr
 			return err
 		}
 		
-		// 3. Tạo bút toán cập nhật non_withdrawable_amount của người bán
+		// 3. Tạo bút toán cập nhật non_withdrawable_amount của người bán ✅
 		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.Order.SellerID,
 			ReferenceID:   util.StringPointer(arg.Order.ID.String()),
 			ReferenceType: WalletReferenceTypeOrder,
-			EntryType:     WalletEntryTypeRefundDeduction,
+			EntryType:     WalletEntryTypeReleaseFunds,
+			AffectedField: WalletAffectedFieldNonWithdrawableAmount,
 			Amount:        -arg.SellerEntry.Amount,
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),

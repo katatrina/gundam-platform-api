@@ -2287,8 +2287,20 @@ definitions:
     - updated_at
     - user_id
     type: object
+  db.WalletAffectedField:
+    enum:
+    - balance
+    - non_withdrawable_amount
+    - both
+    type: string
+    x-enum-varnames:
+    - WalletAffectedFieldBalance
+    - WalletAffectedFieldNonWithdrawableAmount
+    - WalletAffectedFieldBoth
   db.WalletEntry:
     properties:
+      affected_field:
+        $ref: '#/definitions/db.WalletAffectedField'
       amount:
         type: integer
       completed_at:
@@ -2310,6 +2322,7 @@ definitions:
       wallet_id:
         type: string
     required:
+    - affected_field
     - amount
     - completed_at
     - created_at
@@ -2338,10 +2351,13 @@ definitions:
     - deposit
     - withdrawal
     - payment
-    - payment received
-    - non_withdrawable
+    - payment_received
     - refund
-    - refund_deduction
+    - hold_funds
+    - release_funds
+    - exchange_compensation_hold
+    - exchange_compensation_transfer
+    - exchange_compensation_release
     - auction_deposit
     - auction_deposit_refund
     - auction_compensation
@@ -2352,10 +2368,13 @@ definitions:
     - WalletEntryTypeDeposit
     - WalletEntryTypeWithdrawal
     - WalletEntryTypePayment
-    - WalletEntryTypePaymentreceived
-    - WalletEntryTypeNonWithdrawable
+    - WalletEntryTypePaymentReceived
     - WalletEntryTypeRefund
-    - WalletEntryTypeRefundDeduction
+    - WalletEntryTypeHoldFunds
+    - WalletEntryTypeReleaseFunds
+    - WalletEntryTypeExchangeCompensationHold
+    - WalletEntryTypeExchangeCompensationTransfer
+    - WalletEntryTypeExchangeCompensationRelease
     - WalletEntryTypeAuctionDeposit
     - WalletEntryTypeAuctionDepositRefund
     - WalletEntryTypeAuctionCompensation
@@ -2365,17 +2384,15 @@ definitions:
     enum:
     - order
     - auction
-    - withdrawal request
-    - deposit request
-    - zalopay
+    - withdrawal_request
+    - deposit_request
     - exchange
     type: string
     x-enum-varnames:
     - WalletReferenceTypeOrder
     - WalletReferenceTypeAuction
-    - WalletReferenceTypeWithdrawalrequest
-    - WalletReferenceTypeDepositrequest
-    - WalletReferenceTypeZalopay
+    - WalletReferenceTypeWithdrawalRequest
+    - WalletReferenceTypeDepositRequest
     - WalletReferenceTypeExchange
   multipart.FileHeader:
     properties:

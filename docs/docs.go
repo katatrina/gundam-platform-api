@@ -7045,9 +7045,23 @@ const docTemplate = `{
                 }
             }
         },
+        "db.WalletAffectedField": {
+            "type": "string",
+            "enum": [
+                "balance",
+                "non_withdrawable_amount",
+                "both"
+            ],
+            "x-enum-varnames": [
+                "WalletAffectedFieldBalance",
+                "WalletAffectedFieldNonWithdrawableAmount",
+                "WalletAffectedFieldBoth"
+            ]
+        },
         "db.WalletEntry": {
             "type": "object",
             "required": [
+                "affected_field",
                 "amount",
                 "completed_at",
                 "created_at",
@@ -7060,6 +7074,9 @@ const docTemplate = `{
                 "wallet_id"
             ],
             "properties": {
+                "affected_field": {
+                    "$ref": "#/definitions/db.WalletAffectedField"
+                },
                 "amount": {
                     "type": "integer"
                 },
@@ -7113,10 +7130,13 @@ const docTemplate = `{
                 "deposit",
                 "withdrawal",
                 "payment",
-                "payment received",
-                "non_withdrawable",
+                "payment_received",
                 "refund",
-                "refund_deduction",
+                "hold_funds",
+                "release_funds",
+                "exchange_compensation_hold",
+                "exchange_compensation_transfer",
+                "exchange_compensation_release",
                 "auction_deposit",
                 "auction_deposit_refund",
                 "auction_compensation",
@@ -7127,10 +7147,13 @@ const docTemplate = `{
                 "WalletEntryTypeDeposit",
                 "WalletEntryTypeWithdrawal",
                 "WalletEntryTypePayment",
-                "WalletEntryTypePaymentreceived",
-                "WalletEntryTypeNonWithdrawable",
+                "WalletEntryTypePaymentReceived",
                 "WalletEntryTypeRefund",
-                "WalletEntryTypeRefundDeduction",
+                "WalletEntryTypeHoldFunds",
+                "WalletEntryTypeReleaseFunds",
+                "WalletEntryTypeExchangeCompensationHold",
+                "WalletEntryTypeExchangeCompensationTransfer",
+                "WalletEntryTypeExchangeCompensationRelease",
                 "WalletEntryTypeAuctionDeposit",
                 "WalletEntryTypeAuctionDepositRefund",
                 "WalletEntryTypeAuctionCompensation",
@@ -7143,17 +7166,15 @@ const docTemplate = `{
             "enum": [
                 "order",
                 "auction",
-                "withdrawal request",
-                "deposit request",
-                "zalopay",
+                "withdrawal_request",
+                "deposit_request",
                 "exchange"
             ],
             "x-enum-varnames": [
                 "WalletReferenceTypeOrder",
                 "WalletReferenceTypeAuction",
-                "WalletReferenceTypeWithdrawalrequest",
-                "WalletReferenceTypeDepositrequest",
-                "WalletReferenceTypeZalopay",
+                "WalletReferenceTypeWithdrawalRequest",
+                "WalletReferenceTypeDepositRequest",
                 "WalletReferenceTypeExchange"
             ]
         },

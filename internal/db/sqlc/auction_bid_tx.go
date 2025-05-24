@@ -146,13 +146,14 @@ func (store *SQLStore) PlaceBidTx(ctx context.Context, arg PlaceBidTxParams) (Pl
 			
 			result.RefundedUserIDs = make([]string, 0, len(participants))
 			for _, p := range participants {
-				// Hoàn tiền đặt cọc
+				// Hoàn tiền đặt cọc ✅
 				_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 					WalletID:      p.UserID,
 					ReferenceID:   util.StringPointer(auction.ID.String()),
 					ReferenceType: WalletReferenceTypeAuction,
 					EntryType:     WalletEntryTypeAuctionDepositRefund,
-					Amount:        p.DepositAmount, // Số tiền dương để cộng
+					AffectedField: WalletAffectedFieldBalance,
+					Amount:        p.DepositAmount, // Cộng tiền vào số dư ví
 					Status:        WalletEntryStatusCompleted,
 					CompletedAt:   util.TimePointer(time.Now()),
 				})

@@ -915,7 +915,7 @@ func AllPaymentTransactionStatusValues() []PaymentTransactionStatus {
 type PaymentTransactionType string
 
 const (
-	PaymentTransactionTypeWalletdeposit PaymentTransactionType = "wallet deposit"
+	PaymentTransactionTypeWalletDeposit PaymentTransactionType = "wallet_deposit"
 )
 
 func (e *PaymentTransactionType) Scan(src interface{}) error {
@@ -955,7 +955,7 @@ func (ns NullPaymentTransactionType) Value() (driver.Value, error) {
 
 func (e PaymentTransactionType) Valid() bool {
 	switch e {
-	case PaymentTransactionTypeWalletdeposit:
+	case PaymentTransactionTypeWalletDeposit:
 		return true
 	}
 	return false
@@ -963,7 +963,7 @@ func (e PaymentTransactionType) Valid() bool {
 
 func AllPaymentTransactionTypeValues() []PaymentTransactionType {
 	return []PaymentTransactionType{
-		PaymentTransactionTypeWalletdeposit,
+		PaymentTransactionTypeWalletDeposit,
 	}
 }
 
@@ -1028,6 +1028,67 @@ func AllUserRoleValues() []UserRole {
 		UserRoleSeller,
 		UserRoleModerator,
 		UserRoleAdmin,
+	}
+}
+
+type WalletAffectedField string
+
+const (
+	WalletAffectedFieldBalance               WalletAffectedField = "balance"
+	WalletAffectedFieldNonWithdrawableAmount WalletAffectedField = "non_withdrawable_amount"
+	WalletAffectedFieldBoth                  WalletAffectedField = "both"
+)
+
+func (e *WalletAffectedField) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WalletAffectedField(s)
+	case string:
+		*e = WalletAffectedField(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WalletAffectedField: %T", src)
+	}
+	return nil
+}
+
+type NullWalletAffectedField struct {
+	WalletAffectedField WalletAffectedField `json:"wallet_affected_field"`
+	Valid               bool                `json:"valid"` // Valid is true if WalletAffectedField is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWalletAffectedField) Scan(value interface{}) error {
+	if value == nil {
+		ns.WalletAffectedField, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WalletAffectedField.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWalletAffectedField) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WalletAffectedField), nil
+}
+
+func (e WalletAffectedField) Valid() bool {
+	switch e {
+	case WalletAffectedFieldBalance,
+		WalletAffectedFieldNonWithdrawableAmount,
+		WalletAffectedFieldBoth:
+		return true
+	}
+	return false
+}
+
+func AllWalletAffectedFieldValues() []WalletAffectedField {
+	return []WalletAffectedField{
+		WalletAffectedFieldBalance,
+		WalletAffectedFieldNonWithdrawableAmount,
+		WalletAffectedFieldBoth,
 	}
 }
 
@@ -1098,18 +1159,21 @@ func AllWalletEntryStatusValues() []WalletEntryStatus {
 type WalletEntryType string
 
 const (
-	WalletEntryTypeDeposit              WalletEntryType = "deposit"
-	WalletEntryTypeWithdrawal           WalletEntryType = "withdrawal"
-	WalletEntryTypePayment              WalletEntryType = "payment"
-	WalletEntryTypePaymentreceived      WalletEntryType = "payment received"
-	WalletEntryTypeNonWithdrawable      WalletEntryType = "non_withdrawable"
-	WalletEntryTypeRefund               WalletEntryType = "refund"
-	WalletEntryTypeRefundDeduction      WalletEntryType = "refund_deduction"
-	WalletEntryTypeAuctionDeposit       WalletEntryType = "auction_deposit"
-	WalletEntryTypeAuctionDepositRefund WalletEntryType = "auction_deposit_refund"
-	WalletEntryTypeAuctionCompensation  WalletEntryType = "auction_compensation"
-	WalletEntryTypeAuctionWinnerPayment WalletEntryType = "auction_winner_payment"
-	WalletEntryTypeAuctionSellerPayment WalletEntryType = "auction_seller_payment"
+	WalletEntryTypeDeposit                      WalletEntryType = "deposit"
+	WalletEntryTypeWithdrawal                   WalletEntryType = "withdrawal"
+	WalletEntryTypePayment                      WalletEntryType = "payment"
+	WalletEntryTypePaymentReceived              WalletEntryType = "payment_received"
+	WalletEntryTypeRefund                       WalletEntryType = "refund"
+	WalletEntryTypeHoldFunds                    WalletEntryType = "hold_funds"
+	WalletEntryTypeReleaseFunds                 WalletEntryType = "release_funds"
+	WalletEntryTypeExchangeCompensationHold     WalletEntryType = "exchange_compensation_hold"
+	WalletEntryTypeExchangeCompensationTransfer WalletEntryType = "exchange_compensation_transfer"
+	WalletEntryTypeExchangeCompensationRelease  WalletEntryType = "exchange_compensation_release"
+	WalletEntryTypeAuctionDeposit               WalletEntryType = "auction_deposit"
+	WalletEntryTypeAuctionDepositRefund         WalletEntryType = "auction_deposit_refund"
+	WalletEntryTypeAuctionCompensation          WalletEntryType = "auction_compensation"
+	WalletEntryTypeAuctionWinnerPayment         WalletEntryType = "auction_winner_payment"
+	WalletEntryTypeAuctionSellerPayment         WalletEntryType = "auction_seller_payment"
 )
 
 func (e *WalletEntryType) Scan(src interface{}) error {
@@ -1152,10 +1216,13 @@ func (e WalletEntryType) Valid() bool {
 	case WalletEntryTypeDeposit,
 		WalletEntryTypeWithdrawal,
 		WalletEntryTypePayment,
-		WalletEntryTypePaymentreceived,
-		WalletEntryTypeNonWithdrawable,
+		WalletEntryTypePaymentReceived,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefundDeduction,
+		WalletEntryTypeHoldFunds,
+		WalletEntryTypeReleaseFunds,
+		WalletEntryTypeExchangeCompensationHold,
+		WalletEntryTypeExchangeCompensationTransfer,
+		WalletEntryTypeExchangeCompensationRelease,
 		WalletEntryTypeAuctionDeposit,
 		WalletEntryTypeAuctionDepositRefund,
 		WalletEntryTypeAuctionCompensation,
@@ -1171,10 +1238,13 @@ func AllWalletEntryTypeValues() []WalletEntryType {
 		WalletEntryTypeDeposit,
 		WalletEntryTypeWithdrawal,
 		WalletEntryTypePayment,
-		WalletEntryTypePaymentreceived,
-		WalletEntryTypeNonWithdrawable,
+		WalletEntryTypePaymentReceived,
 		WalletEntryTypeRefund,
-		WalletEntryTypeRefundDeduction,
+		WalletEntryTypeHoldFunds,
+		WalletEntryTypeReleaseFunds,
+		WalletEntryTypeExchangeCompensationHold,
+		WalletEntryTypeExchangeCompensationTransfer,
+		WalletEntryTypeExchangeCompensationRelease,
 		WalletEntryTypeAuctionDeposit,
 		WalletEntryTypeAuctionDepositRefund,
 		WalletEntryTypeAuctionCompensation,
@@ -1188,9 +1258,8 @@ type WalletReferenceType string
 const (
 	WalletReferenceTypeOrder             WalletReferenceType = "order"
 	WalletReferenceTypeAuction           WalletReferenceType = "auction"
-	WalletReferenceTypeWithdrawalrequest WalletReferenceType = "withdrawal request"
-	WalletReferenceTypeDepositrequest    WalletReferenceType = "deposit request"
-	WalletReferenceTypeZalopay           WalletReferenceType = "zalopay"
+	WalletReferenceTypeWithdrawalRequest WalletReferenceType = "withdrawal_request"
+	WalletReferenceTypeDepositRequest    WalletReferenceType = "deposit_request"
 	WalletReferenceTypeExchange          WalletReferenceType = "exchange"
 )
 
@@ -1233,9 +1302,8 @@ func (e WalletReferenceType) Valid() bool {
 	switch e {
 	case WalletReferenceTypeOrder,
 		WalletReferenceTypeAuction,
-		WalletReferenceTypeWithdrawalrequest,
-		WalletReferenceTypeDepositrequest,
-		WalletReferenceTypeZalopay,
+		WalletReferenceTypeWithdrawalRequest,
+		WalletReferenceTypeDepositRequest,
 		WalletReferenceTypeExchange:
 		return true
 	}
@@ -1246,9 +1314,8 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 	return []WalletReferenceType{
 		WalletReferenceTypeOrder,
 		WalletReferenceTypeAuction,
-		WalletReferenceTypeWithdrawalrequest,
-		WalletReferenceTypeDepositrequest,
-		WalletReferenceTypeZalopay,
+		WalletReferenceTypeWithdrawalRequest,
+		WalletReferenceTypeDepositRequest,
 		WalletReferenceTypeExchange,
 	}
 }
@@ -1270,9 +1337,9 @@ type Auction struct {
 	CurrentPrice          int64           `json:"current_price"`
 	DepositRate           decimal.Decimal `json:"deposit_rate"`
 	DepositAmount         int64           `json:"deposit_amount"`
-	WinnerPaymentDeadline *time.Time      `json:"winner_payment_deadline"`
 	TotalParticipants     int32           `json:"total_participants"`
 	TotalBids             int32           `json:"total_bids"`
+	WinnerPaymentDeadline *time.Time      `json:"winner_payment_deadline"`
 	OrderID               *uuid.UUID      `json:"order_id"`
 	CanceledBy            *string         `json:"canceled_by"`
 	CanceledReason        *string         `json:"canceled_reason"`
@@ -1642,6 +1709,7 @@ type WalletEntry struct {
 	ReferenceID   *string             `json:"reference_id"`
 	ReferenceType WalletReferenceType `json:"reference_type"`
 	EntryType     WalletEntryType     `json:"entry_type"`
+	AffectedField WalletAffectedField `json:"affected_field"`
 	Amount        int64               `json:"amount"`
 	Status        WalletEntryStatus   `json:"status"`
 	CreatedAt     time.Time           `json:"created_at"`

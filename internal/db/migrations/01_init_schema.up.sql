@@ -61,10 +61,13 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
   'deposit',
   'withdrawal',
   'payment',
-  'payment received',
-  'non_withdrawable',
+  'payment_received',
   'refund',
-  'refund_deduction',
+  'hold_funds',
+  'release_funds',
+  'exchange_compensation_hold',
+  'exchange_compensation_transfer',
+  'exchange_compensation_release',
   'auction_deposit',
   'auction_deposit_refund',
   'auction_compensation',
@@ -75,9 +78,8 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
 CREATE TYPE "wallet_reference_type" AS ENUM (
   'order',
   'auction',
-  'withdrawal request',
-  'deposit request',
-  'zalopay',
+  'withdrawal_request',
+  'deposit_request',
   'exchange'
 );
 
@@ -86,6 +88,12 @@ CREATE TYPE "wallet_entry_status" AS ENUM (
   'completed',
   'canceled',
   'failed'
+);
+
+CREATE TYPE "wallet_affected_field" AS ENUM (
+  'balance',
+  'non_withdrawable_amount',
+  'both'
 );
 
 CREATE TYPE "order_transaction_status" AS ENUM (
@@ -106,7 +114,7 @@ CREATE TYPE "payment_transaction_status" AS ENUM (
 );
 
 CREATE TYPE "payment_transaction_type" AS ENUM (
-  'wallet deposit'
+  'wallet_deposit'
 );
 
 CREATE TYPE "exchange_post_status" AS ENUM (
@@ -361,6 +369,7 @@ CREATE TABLE "wallet_entries"
     "reference_id"   text,
     "reference_type" wallet_reference_type NOT NULL,
     "entry_type"     wallet_entry_type     NOT NULL,
+    "affected_field" wallet_affected_field NOT NULL DEFAULT 'balance',
     "amount"         bigint                NOT NULL,
     "status"         wallet_entry_status   NOT NULL DEFAULT 'pending',
     "created_at"     timestamptz           NOT NULL DEFAULT (now()),
@@ -533,9 +542,9 @@ CREATE TABLE "auctions"
     "current_price"           bigint         NOT NULL,
     "deposit_rate"            numeric(5, 4)  NOT NULL,
     "deposit_amount"          bigint         NOT NULL,
-    "winner_payment_deadline" timestamptz,
     "total_participants"      int            NOT NULL DEFAULT 0,
     "total_bids"              int            NOT NULL DEFAULT 0,
+    "winner_payment_deadline" timestamptz,
     "order_id"                uuid,
     "canceled_by"             text,
     "canceled_reason"         text,

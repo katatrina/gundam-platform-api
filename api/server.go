@@ -203,6 +203,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 	}
 	
+	// Nhóm các API liên quan đến cuộc trao đổi
 	exchangeGroup := v1.Group("/exchanges", authMiddleware(server.tokenMaker))
 	{
 		exchangeGroup.GET("", server.listUserExchanges)                                              // ✅ Liệt kê các giao dịch trao đổi của người dùng
@@ -327,6 +328,8 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			zalopayGroup.POST("/create", server.createZalopayOrder)
 		}
+		
+		// walletEntryGroup := walletGroup.Group("/entries")
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)

@@ -141,13 +141,14 @@ func (store *SQLStore) PayExchangeDeliveryFeeTx(ctx context.Context, arg PayExch
 			return err
 		}
 		
-		// 3. Tạo wallet entry để ghi lại giao dịch
+		// 3. Tạo wallet entry để ghi lại giao dịch ✅
 		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.UserID,
 			ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 			ReferenceType: WalletReferenceTypeExchange,
 			EntryType:     WalletEntryTypePayment,
-			Amount:        -arg.DeliveryFee, // Số âm vì đây là giao dịch trừ tiền
+			AffectedField: WalletAffectedFieldBalance,
+			Amount:        -arg.DeliveryFee,
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
 		})
@@ -414,11 +415,9 @@ func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg Complete
 			// 4.2. Xử lý tiền bù (nếu có)
 			if arg.Exchange.PayerID != nil && arg.Exchange.CompensationAmount != nil {
 				// Xác định người nhận tiền bù
-				var receiverID string
+				receiverID := arg.Exchange.PosterID
 				if *arg.Exchange.PayerID == arg.Exchange.PosterID {
 					receiverID = arg.Exchange.OffererID
-				} else {
-					receiverID = arg.Exchange.PosterID
 				}
 				
 				// Chuyển tiền từ non_withdrawable_amount sang balance
@@ -427,21 +426,29 @@ func (store *SQLStore) CompleteExchangeOrderTx(ctx context.Context, arg Complete
 					Amount: *arg.Exchange.CompensationAmount,
 				})
 				if err != nil {
-					return fmt.Errorf("failed to transfer compensation amount: %w", err)
+					return fmt.Errorf("failed to transfer compensation amount from non_withdrawable_amount to balance: %w", err)
 				}
 				
-				// Ghi lại giao dịch nhận tiền bù
-				_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
-					WalletID:      receiverID,
-					ReferenceID:   util.StringPointer(arg.Exchange.ID.String()),
-					ReferenceType: WalletReferenceTypeExchange,
-					EntryType:     WalletEntryTypePaymentreceived,
-					Amount:        *arg.Exchange.CompensationAmount,
-					Status:        WalletEntryStatusCompleted,
-					CompletedAt:   util.TimePointer(time.Now()),
+				// Tìm bút toán pending nhận tiền bù để cập nhật trạng thái
+				receiverEntry, err := qTx.GetPendingExchangeCompensationEntry(ctx, GetPendingExchangeCompensationEntryParams{
+					ReferenceID: util.StringPointer(arg.Exchange.ID.String()),
+					WalletID:    receiverID,
 				})
 				if err != nil {
-					return fmt.Errorf("failed to create wallet entry for compensation: %w", err)
+					return fmt.Errorf("failed to get pending compensation entry: %w", err)
+				}
+				
+				// Cập nhật trạng thái bút toán thành "completed"
+				_, err = qTx.UpdateWalletEntryByID(ctx, UpdateWalletEntryByIDParams{
+					ID: receiverEntry.ID,
+					Status: NullWalletEntryStatus{
+						WalletEntryStatus: WalletEntryStatusCompleted,
+						Valid:             true,
+					},
+					CompletedAt: util.TimePointer(time.Now()),
+				})
+				if err != nil {
+					return fmt.Errorf("failed to update wallet entry status: %w", err)
 				}
 				
 				log.Info().
@@ -609,12 +616,13 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to update receiver wallet: %w", err)
 			}
 			
-			// Tạo wallet entry cho việc trừ tiền từ non_withdrawable_amount của người nhận
+			// Tạo wallet entry cho việc trừ tiền từ non_withdrawable_amount của người nhận tiền bù ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      receiverID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypeRefundDeduction,       // Loại bút toán trừ tiền hoàn lại
+				EntryType:     WalletEntryTypeReleaseFunds,
+				AffectedField: WalletAffectedFieldNonWithdrawableAmount,
 				Amount:        -*updatedExchange.CompensationAmount, // Số âm vì đây là khoản trừ
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
@@ -632,12 +640,13 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to add balance to payer wallet: %w", err)
 			}
 			
-			// Tạo bút toán hoàn trả tiền bù
+			// Tạo bút toán hoàn trả tiền bù cho người trả tiền bù ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      *updatedExchange.PayerID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypeRefund,
+				EntryType:     WalletEntryTypeExchangeCompensationRelease,
+				AffectedField: WalletAffectedFieldBalance,
 				Amount:        *updatedExchange.CompensationAmount,
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
@@ -667,12 +676,13 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to refund delivery fee to poster: %w", err)
 			}
 			
-			// Tạo wallet entry cho giao dịch hoàn tiền
+			// Tạo bút toán cho việc hoàn tiền phí vận chuyển cho poster ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      updatedExchange.PosterID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
 				EntryType:     WalletEntryTypeRefund,
+				AffectedField: WalletAffectedFieldBalance,
 				Amount:        *updatedExchange.PosterDeliveryFee,
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
@@ -701,12 +711,13 @@ func (store *SQLStore) CancelExchangeTx(ctx context.Context, arg CancelExchangeT
 				return fmt.Errorf("failed to refund delivery fee to offerer: %w", err)
 			}
 			
-			// Tạo wallet entry cho giao dịch hoàn tiền
+			// Tạo wallet entry cho giao dịch hoàn tiền phí vận chuyển cho offerer ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      updatedExchange.OffererID,
 				ReferenceID:   util.StringPointer(arg.ExchangeID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
 				EntryType:     WalletEntryTypeRefund,
+				AffectedField: WalletAffectedFieldBalance,
 				Amount:        *updatedExchange.OffererDeliveryFee,
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),

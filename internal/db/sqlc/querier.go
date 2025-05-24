@@ -87,6 +87,7 @@ type Querier interface {
 	GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDetailsRow, error)
 	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
+	GetPendingExchangeCompensationEntry(ctx context.Context, arg GetPendingExchangeCompensationEntryParams) (WalletEntry, error)
 	GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)

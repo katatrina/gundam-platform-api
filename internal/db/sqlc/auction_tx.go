@@ -39,12 +39,13 @@ func (store *SQLStore) ParticipateInAuctionTx(ctx context.Context, arg Participa
 			return ErrInsufficientBalance
 		}
 		
-		// 2. Tạo bút toán trừ tiền đặt cọc
+		// 2. Tạo bút toán trừ tiền đặt cọc ✅
 		depositEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.Wallet.UserID,
 			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
 			ReferenceType: WalletReferenceTypeAuction,
 			EntryType:     WalletEntryTypeAuctionDeposit,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        -arg.Auction.DepositAmount, // Tiền đặt cọc, âm để trừ
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -195,13 +196,14 @@ func (store *SQLStore) EndAuctionTx(ctx context.Context, arg EndAuctionTxParams)
 					continue
 				}
 				
-				// Hoàn tiền đặt cọc
+				// Hoàn tiền đặt cọc ✅
 				_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 					WalletID:      p.UserID,
 					ReferenceID:   util.StringPointer(auction.ID.String()),
 					ReferenceType: WalletReferenceTypeAuction,
 					EntryType:     WalletEntryTypeAuctionDepositRefund,
-					Amount:        p.DepositAmount, // Số tiền dương để cộng
+					AffectedField: WalletAffectedFieldBalance,
+					Amount:        p.DepositAmount, // Cộng tiền vào số dư ví
 					Status:        WalletEntryStatusCompleted,
 					CompletedAt:   util.TimePointer(time.Now()),
 				})
@@ -274,12 +276,13 @@ func (store *SQLStore) EndAuctionTx(ctx context.Context, arg EndAuctionTxParams)
 				continue
 			}
 			
-			// Hoàn tiền đặt cọc
+			// Hoàn tiền đặt cọc ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      p.UserID,
 				ReferenceID:   util.StringPointer(auction.ID.String()),
 				ReferenceType: WalletReferenceTypeAuction,
 				EntryType:     WalletEntryTypeAuctionDepositRefund,
+				AffectedField: WalletAffectedFieldBalance,
 				Amount:        p.DepositAmount, // Số tiền dương để cộng
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
@@ -383,12 +386,13 @@ func (store *SQLStore) HandleAuctionNonPaymentTx(ctx context.Context, arg Handle
 		// Gán giá trị cho result để có thể sử dụng sau transaction
 		result.CompensationAmount = compensationAmount
 		
-		// 6. Tạo bút toán bồi thường cho người bán (cộng tiền)
+		// 6. Tạo bút toán bồi thường cho người bán (cộng tiền balance) ✅
 		_, err = q.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.SellerID,
 			ReferenceID:   util.StringPointer(auction.ID.String()),
 			ReferenceType: WalletReferenceTypeAuction,
 			EntryType:     WalletEntryTypeAuctionCompensation,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        compensationAmount, // Số tiền dương để cộng
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -490,12 +494,13 @@ func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctio
 			return fmt.Errorf("failed to deduct balance: %w", err)
 		}
 		
-		// 4. Tạo bút toán trừ tiền số dư cho người thắng đấu giá
+		// 4. Tạo bút toán trừ tiền số dư cho người thắng đấu giá ✅
 		walletEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.User.ID,
 			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
 			ReferenceType: WalletReferenceTypeAuction,
 			EntryType:     WalletEntryTypeAuctionWinnerPayment,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        -totalPayment, // Số âm vì đây là bút toán trừ tiền
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -520,12 +525,13 @@ func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctio
 			return fmt.Errorf("failed to add non-withdrawable amount: %w", err)
 		}
 		
-		// 6. Tạo bút toán cộng tiền vào non_withdrawable cho người bán
+		// 6. Tạo bút toán cộng tiền vào non_withdrawable cho người bán ✅
 		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      sellerWallet.UserID,
 			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
 			ReferenceType: WalletReferenceTypeAuction,
-			EntryType:     WalletEntryTypeNonWithdrawable,
+			EntryType:     WalletEntryTypeHoldFunds,
+			AffectedField: WalletAffectedFieldNonWithdrawableAmount,
 			Amount:        arg.WinningBid.Amount, // Số dương vì đây là bút toán cộng tiền
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -534,12 +540,13 @@ func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctio
 			return fmt.Errorf("failed to create non-withdrawable winnerWallet entry: %w", err)
 		}
 		
-		// 7. Tạo bút toán cộng tiền vào số dư cho người bán (trạng thái pending)
+		// 7. Tạo bút toán cộng tiền vào số dư cho người bán (trạng thái pending, sẽ hoàn tất khi đơn hàng hoàn thành) ✅
 		sellerEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      arg.Auction.SellerID,
 			ReferenceID:   util.StringPointer(arg.Auction.ID.String()),
 			ReferenceType: WalletReferenceTypeAuction,
-			EntryType:     WalletEntryTypePaymentreceived,
+			EntryType:     WalletEntryTypeAuctionSellerPayment,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        arg.WinningBid.Amount, // Tổng số tiền đấu giá (không bao gồm phí vận chuyển)
 			Status:        WalletEntryStatusPending,
 		})

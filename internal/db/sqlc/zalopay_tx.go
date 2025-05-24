@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	
+	"github.com/katatrina/gundam-BE/internal/util"
 )
 
 type HandleZalopayCallbackTxParams struct {
@@ -27,7 +29,7 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 		}
 		
 		switch transaction.TransactionType {
-		case PaymentTransactionTypeWalletdeposit:
+		case PaymentTransactionTypeWalletDeposit:
 			// Lấy thông tin ví người dùng
 			wallet, err := qTx.GetWalletForUpdate(ctx, arg.AppUser)
 			if err != nil {
@@ -47,10 +49,12 @@ func (store *SQLStore) HandleZalopayCallbackTx(ctx context.Context, arg HandleZa
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      wallet.UserID,
 				ReferenceID:   &transaction.ProviderTransactionID,
-				ReferenceType: WalletReferenceTypeZalopay,
+				ReferenceType: WalletReferenceTypeDepositRequest,
 				EntryType:     WalletEntryTypeDeposit,
-				Amount:        transaction.Amount,
+				AffectedField: WalletAffectedFieldBalance,
+				Amount:        transaction.Amount, // Số tiền nạp vào ví
 				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(transaction.CreatedAt),
 			})
 			if err != nil {
 				return err

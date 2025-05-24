@@ -15,10 +15,11 @@ INSERT INTO wallet_entries (wallet_id,
                             reference_id,
                             reference_type,
                             entry_type,
+                            affected_field,
                             amount,
                             status,
                             completed_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
 `
 
 type CreateWalletEntryParams struct {
@@ -26,6 +27,7 @@ type CreateWalletEntryParams struct {
 	ReferenceID   *string             `json:"reference_id"`
 	ReferenceType WalletReferenceType `json:"reference_type"`
 	EntryType     WalletEntryType     `json:"entry_type"`
+	AffectedField WalletAffectedField `json:"affected_field"`
 	Amount        int64               `json:"amount"`
 	Status        WalletEntryStatus   `json:"status"`
 	CompletedAt   *time.Time          `json:"completed_at"`
@@ -37,6 +39,7 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 		arg.ReferenceID,
 		arg.ReferenceType,
 		arg.EntryType,
+		arg.AffectedField,
 		arg.Amount,
 		arg.Status,
 		arg.CompletedAt,
@@ -48,6 +51,41 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 		&i.ReferenceID,
 		&i.ReferenceType,
 		&i.EntryType,
+		&i.AffectedField,
+		&i.Amount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const getPendingExchangeCompensationEntry = `-- name: GetPendingExchangeCompensationEntry :one
+SELECT id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
+FROM wallet_entries
+WHERE reference_id = $1
+  AND reference_type = 'exchange'
+  AND entry_type = 'exchange_compensation_transfer'
+  AND status = 'pending'
+  AND wallet_id = $2 LIMIT 1
+`
+
+type GetPendingExchangeCompensationEntryParams struct {
+	ReferenceID *string `json:"reference_id"`
+	WalletID    string  `json:"wallet_id"`
+}
+
+func (q *Queries) GetPendingExchangeCompensationEntry(ctx context.Context, arg GetPendingExchangeCompensationEntryParams) (WalletEntry, error) {
+	row := q.db.QueryRow(ctx, getPendingExchangeCompensationEntry, arg.ReferenceID, arg.WalletID)
+	var i WalletEntry
+	err := row.Scan(
+		&i.ID,
+		&i.WalletID,
+		&i.ReferenceID,
+		&i.ReferenceType,
+		&i.EntryType,
+		&i.AffectedField,
 		&i.Amount,
 		&i.Status,
 		&i.CreatedAt,
@@ -58,7 +96,7 @@ func (q *Queries) CreateWalletEntry(ctx context.Context, arg CreateWalletEntryPa
 }
 
 const getWalletEntryByID = `-- name: GetWalletEntryByID :one
-SELECT id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+SELECT id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
 FROM wallet_entries
 WHERE id = $1
 `
@@ -72,6 +110,7 @@ func (q *Queries) GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry
 		&i.ReferenceID,
 		&i.ReferenceType,
 		&i.EntryType,
+		&i.AffectedField,
 		&i.Amount,
 		&i.Status,
 		&i.CreatedAt,
@@ -83,39 +122,20 @@ func (q *Queries) GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry
 
 const updateWalletEntryByID = `-- name: UpdateWalletEntryByID :one
 UPDATE wallet_entries
-SET wallet_id        = COALESCE($1, wallet_id),
-    reference_id      = COALESCE($2, reference_id),
-    reference_type    = COALESCE($3, reference_type),
-    entry_type        = COALESCE($4, entry_type),
-    amount            = COALESCE($5, amount),
-    status            = COALESCE($6, status),
-    completed_at      = COALESCE($7, completed_at),
-    updated_at        = now()
-WHERE id = $8 RETURNING id, wallet_id, reference_id, reference_type, entry_type, amount, status, created_at, updated_at, completed_at
+SET status       = COALESCE($1, status),
+    completed_at = COALESCE($2, completed_at),
+    updated_at   = now()
+WHERE id = $3 RETURNING id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
 `
 
 type UpdateWalletEntryByIDParams struct {
-	WalletID      *string                 `json:"wallet_id"`
-	ReferenceID   *string                 `json:"reference_id"`
-	ReferenceType NullWalletReferenceType `json:"reference_type"`
-	EntryType     NullWalletEntryType     `json:"entry_type"`
-	Amount        *int64                  `json:"amount"`
-	Status        NullWalletEntryStatus   `json:"status"`
-	CompletedAt   *time.Time              `json:"completed_at"`
-	ID            int64                   `json:"id"`
+	Status      NullWalletEntryStatus `json:"status"`
+	CompletedAt *time.Time            `json:"completed_at"`
+	ID          int64                 `json:"id"`
 }
 
 func (q *Queries) UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error) {
-	row := q.db.QueryRow(ctx, updateWalletEntryByID,
-		arg.WalletID,
-		arg.ReferenceID,
-		arg.ReferenceType,
-		arg.EntryType,
-		arg.Amount,
-		arg.Status,
-		arg.CompletedAt,
-		arg.ID,
-	)
+	row := q.db.QueryRow(ctx, updateWalletEntryByID, arg.Status, arg.CompletedAt, arg.ID)
 	var i WalletEntry
 	err := row.Scan(
 		&i.ID,
@@ -123,6 +143,7 @@ func (q *Queries) UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEnt
 		&i.ReferenceID,
 		&i.ReferenceType,
 		&i.EntryType,
+		&i.AffectedField,
 		&i.Amount,
 		&i.Status,
 		&i.CreatedAt,

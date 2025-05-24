@@ -140,12 +140,13 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 			return fmt.Errorf("failed to add non-withdrawable amount: %w", err)
 		}
 		
-		// Tạo bút toán cho non_withdrawable_amount với status completed
+		// Tạo bút toán cho non_withdrawable_amount với status completed ✅
 		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      sellerWallet.UserID,
 			ReferenceID:   &updatedOrder.Code,
 			ReferenceType: WalletReferenceTypeOrder,
-			EntryType:     WalletEntryTypeNonWithdrawable,
+			EntryType:     WalletEntryTypeHoldFunds,
+			AffectedField: WalletAffectedFieldNonWithdrawableAmount,
 			Amount:        updatedOrder.ItemsSubtotal,
 			Status:        WalletEntryStatusCompleted, // Completed vì đã cộng ngay
 			CompletedAt:   util.TimePointer(time.Now()),
@@ -155,12 +156,13 @@ func (store *SQLStore) ConfirmOrderBySellerTx(ctx context.Context, arg ConfirmOr
 		}
 		
 		// 5. Tạo bút toán (wallet entry) cho người bán với trạng thái pending
-		// Amount là số dương (+) vì đây là bút toán cộng tiền
+		// Amount là số dương (+) vì đây là bút toán cộng tiền ✅
 		sellerEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      sellerWallet.UserID,
 			ReferenceID:   &updatedOrder.Code,
 			ReferenceType: WalletReferenceTypeOrder,
-			EntryType:     WalletEntryTypePaymentreceived,
+			EntryType:     WalletEntryTypePaymentReceived,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        updatedOrder.ItemsSubtotal, // Số dương (+)
 			Status:        WalletEntryStatusPending,   // Chờ người mua xác nhận nhận hàng thành công
 		})
@@ -236,12 +238,13 @@ func (store *SQLStore) CancelOrderBySellerTx(ctx context.Context, arg CancelOrde
 			return fmt.Errorf("failed to get buyer wallet: %w", err)
 		}
 		
-		// 4. Tạo bút toán hoàn tiền cho người mua
+		// 4. Tạo bút toán hoàn tiền cho người mua ✅
 		refundEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 			WalletID:      buyerWallet.UserID,
 			ReferenceID:   &updatedOrder.Code,
 			ReferenceType: WalletReferenceTypeOrder,
 			EntryType:     WalletEntryTypeRefund,
+			AffectedField: WalletAffectedFieldBalance,
 			Amount:        orderTrans.Amount, // Số dương (+) vì đây là bút toán hoàn tiền
 			Status:        WalletEntryStatusCompleted,
 			CompletedAt:   util.TimePointer(time.Now()),

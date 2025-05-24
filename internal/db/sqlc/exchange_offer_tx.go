@@ -263,13 +263,14 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 		
 		// 2. Xử lý thanh toán tiền bù (nếu có)
 		if arg.PayerID != nil && arg.CompensationAmount != nil && *arg.CompensationAmount > 0 {
-			// Trừ tiền từ người bù
+			// 2.1 Trừ tiền từ balance của người bù ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      *arg.PayerID,
 				ReferenceID:   util.StringPointer(exchange.ID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypePayment,
-				Amount:        -*arg.CompensationAmount, // Truyền âm số âm để trừ tiền
+				EntryType:     WalletEntryTypeExchangeCompensationHold,
+				AffectedField: WalletAffectedFieldBalance,
+				Amount:        -*arg.CompensationAmount,
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
 			})
@@ -277,7 +278,7 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 				return fmt.Errorf("failed to create wallet entry for payer: %w", err)
 			}
 			
-			// Cập nhật số dư ví của người bù
+			// Cập nhật balance của người bù
 			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
 				Amount: -*arg.CompensationAmount,
 				UserID: *arg.PayerID,
@@ -289,12 +290,14 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 				receiverID = arg.OffererID
 			}
 			
+			// Tạo bút toán cho việc cộng vào non_withdrawable_amount ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      receiverID,
 				ReferenceID:   util.StringPointer(exchange.ID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypeNonWithdrawable,
-				Amount:        *arg.CompensationAmount, // Truyền dương số dương để cộng tiền
+				EntryType:     WalletEntryTypeHoldFunds,
+				AffectedField: WalletAffectedFieldNonWithdrawableAmount,
+				Amount:        *arg.CompensationAmount,
 				Status:        WalletEntryStatusCompleted,
 				CompletedAt:   util.TimePointer(time.Now()),
 			})
@@ -310,12 +313,13 @@ func (store *SQLStore) AcceptExchangeOfferTx(ctx context.Context, arg AcceptExch
 				return fmt.Errorf("failed to add non withdrawable amount: %w", err)
 			}
 			
-			// Tạo wallet entry cho người nhận tiền bù với status pending
+			// Tạo bút toán cho người nhận tiền bù với status pending (sẽ được complete khi exchange hoàn tất) ✅
 			_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
 				WalletID:      receiverID,
 				ReferenceID:   util.StringPointer(exchange.ID.String()),
 				ReferenceType: WalletReferenceTypeExchange,
-				EntryType:     WalletEntryTypePaymentreceived,
+				EntryType:     WalletEntryTypeExchangeCompensationTransfer,
+				AffectedField: WalletAffectedFieldBalance,
 				Amount:        *arg.CompensationAmount,
 				Status:        WalletEntryStatusPending,
 			})
