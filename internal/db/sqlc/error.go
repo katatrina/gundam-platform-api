@@ -109,3 +109,12 @@ func IsValidAuctionStatus(status string) error {
 	
 	return nil
 }
+
+func IsValidWalletEntryStatus(status string) error {
+	if !WalletEntryStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllWalletEntryStatusValues())
+		return err
+	}
+	
+	return nil
+}

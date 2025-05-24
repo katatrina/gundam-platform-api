@@ -328,8 +328,12 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			zalopayGroup.POST("/create", server.createZalopayOrder)
 		}
-		
-		// walletEntryGroup := walletGroup.Group("/entries")
+	}
+	
+	userWalletGroup := v1.Group("/users/me/wallet", authMiddleware(server.tokenMaker))
+	{
+		// Liệt kê tất cả các bút toán ví của người dùng
+		userWalletGroup.GET("/entries", server.listUserWalletEntries)
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)

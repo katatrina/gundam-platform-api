@@ -120,6 +120,51 @@ func (q *Queries) GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry
 	return i, err
 }
 
+const listUserWalletEntries = `-- name: ListUserWalletEntries :many
+SELECT id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
+FROM wallet_entries
+WHERE wallet_id = $1
+  AND status = COALESCE($2, status)
+ORDER BY created_at DESC
+`
+
+type ListUserWalletEntriesParams struct {
+	WalletID string                `json:"wallet_id"`
+	Status   NullWalletEntryStatus `json:"status"`
+}
+
+func (q *Queries) ListUserWalletEntries(ctx context.Context, arg ListUserWalletEntriesParams) ([]WalletEntry, error) {
+	rows, err := q.db.Query(ctx, listUserWalletEntries, arg.WalletID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WalletEntry{}
+	for rows.Next() {
+		var i WalletEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.WalletID,
+			&i.ReferenceID,
+			&i.ReferenceType,
+			&i.EntryType,
+			&i.AffectedField,
+			&i.Amount,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateWalletEntryByID = `-- name: UpdateWalletEntryByID :one
 UPDATE wallet_entries
 SET status       = COALESCE($1, status),

@@ -29,3 +29,10 @@ WHERE reference_id = $1
   AND entry_type = 'exchange_compensation_transfer'
   AND status = 'pending'
   AND wallet_id = $2 LIMIT 1;
+
+-- name: ListUserWalletEntries :many
+SELECT *
+FROM wallet_entries
+WHERE wallet_id = $1
+  AND status = COALESCE(sqlc.narg('status'), status)
+ORDER BY created_at DESC;
