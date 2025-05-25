@@ -10,6 +10,51 @@ import (
 	"time"
 )
 
+const createSellerSubscription = `-- name: CreateSellerSubscription :one
+INSERT INTO seller_subscriptions (seller_id,
+                                  plan_id,
+                                  start_date,
+                                  end_date,
+                                  listings_used,
+                                  open_auctions_used,
+                                  is_active)
+VALUES ($1, $2, NOW(), $3, $4, $5, $6) RETURNING id, seller_id, plan_id, start_date, end_date, listings_used, open_auctions_used, is_active, created_at, updated_at
+`
+
+type CreateSellerSubscriptionParams struct {
+	SellerID         string     `json:"seller_id"`
+	PlanID           int64      `json:"plan_id"`
+	EndDate          *time.Time `json:"end_date"`
+	ListingsUsed     int64      `json:"listings_used"`
+	OpenAuctionsUsed int64      `json:"open_auctions_used"`
+	IsActive         bool       `json:"is_active"`
+}
+
+func (q *Queries) CreateSellerSubscription(ctx context.Context, arg CreateSellerSubscriptionParams) (SellerSubscription, error) {
+	row := q.db.QueryRow(ctx, createSellerSubscription,
+		arg.SellerID,
+		arg.PlanID,
+		arg.EndDate,
+		arg.ListingsUsed,
+		arg.OpenAuctionsUsed,
+		arg.IsActive,
+	)
+	var i SellerSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.SellerID,
+		&i.PlanID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.ListingsUsed,
+		&i.OpenAuctionsUsed,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createTrialSubscriptionForSeller = `-- name: CreateTrialSubscriptionForSeller :exec
 WITH trial_plan AS (SELECT id
                     FROM subscription_plans
@@ -34,24 +79,18 @@ func (q *Queries) CreateTrialSubscriptionForSeller(ctx context.Context, sellerID
 const getCurrentActiveSubscriptionDetailsForSeller = `-- name: GetCurrentActiveSubscriptionDetailsForSeller :one
 SELECT ss.id,
        ss.plan_id,
-       p.name                                        AS subscription_name,
-       p.price                                       AS subscription_price, -- ✨ Thêm giá gói
+       p.name  AS subscription_name,
+       p.price AS subscription_price,
        ss.seller_id,
        p.max_listings,
        ss.listings_used,
-       (p.max_listings - ss.listings_used)           AS listings_remaining, -- ✨ Số lượt còn lại
        p.max_open_auctions,
        ss.open_auctions_used,
-       (p.max_open_auctions - ss.open_auctions_used) AS auctions_remaining, -- ✨ Số lượt đấu giá còn lại
        ss.is_active,
        p.is_unlimited,
-       p.duration_days,                                                     -- ✨ Thời hạn gói
+       p.duration_days,
        ss.start_date,
-       ss.end_date,
-       CASE
-           WHEN ss.end_date IS NULL THEN NULL
-           ELSE (ss.end_date - NOW())
-           END                                       AS days_remaining      -- ✨ Số ngày còn lại
+       ss.end_date
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id
 WHERE ss.seller_id = $1
@@ -59,23 +98,20 @@ WHERE ss.seller_id = $1
 `
 
 type GetCurrentActiveSubscriptionDetailsForSellerRow struct {
-	ID                int64       `json:"id"`
-	PlanID            int64       `json:"plan_id"`
-	SubscriptionName  string      `json:"subscription_name"`
-	SubscriptionPrice int64       `json:"subscription_price"`
-	SellerID          string      `json:"seller_id"`
-	MaxListings       *int64      `json:"max_listings"`
-	ListingsUsed      int64       `json:"listings_used"`
-	ListingsRemaining int32       `json:"listings_remaining"`
-	MaxOpenAuctions   *int64      `json:"max_open_auctions"`
-	OpenAuctionsUsed  int64       `json:"open_auctions_used"`
-	AuctionsRemaining int32       `json:"auctions_remaining"`
-	IsActive          bool        `json:"is_active"`
-	IsUnlimited       bool        `json:"is_unlimited"`
-	DurationDays      *int64      `json:"duration_days"`
-	StartDate         time.Time   `json:"start_date"`
-	EndDate           *time.Time  `json:"end_date"`
-	DaysRemaining     interface{} `json:"days_remaining"`
+	ID                int64      `json:"id"`
+	PlanID            int64      `json:"plan_id"`
+	SubscriptionName  string     `json:"subscription_name"`
+	SubscriptionPrice int64      `json:"subscription_price"`
+	SellerID          string     `json:"seller_id"`
+	MaxListings       *int64     `json:"max_listings"`
+	ListingsUsed      int64      `json:"listings_used"`
+	MaxOpenAuctions   *int64     `json:"max_open_auctions"`
+	OpenAuctionsUsed  int64      `json:"open_auctions_used"`
+	IsActive          bool       `json:"is_active"`
+	IsUnlimited       bool       `json:"is_unlimited"`
+	DurationDays      *int64     `json:"duration_days"`
+	StartDate         time.Time  `json:"start_date"`
+	EndDate           *time.Time `json:"end_date"`
 }
 
 func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error) {
@@ -89,43 +125,111 @@ func (q *Queries) GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Conte
 		&i.SellerID,
 		&i.MaxListings,
 		&i.ListingsUsed,
-		&i.ListingsRemaining,
 		&i.MaxOpenAuctions,
 		&i.OpenAuctionsUsed,
-		&i.AuctionsRemaining,
 		&i.IsActive,
 		&i.IsUnlimited,
 		&i.DurationDays,
 		&i.StartDate,
 		&i.EndDate,
-		&i.DaysRemaining,
 	)
 	return i, err
 }
 
-const updateCurrentActiveSubscriptionForSeller = `-- name: UpdateCurrentActiveSubscriptionForSeller :exec
+const listSubscriptionHistory = `-- name: ListSubscriptionHistory :many
+SELECT ss.id,
+       ss.plan_id,
+       p.name  AS subscription_name,
+       p.price AS subscription_price,
+       ss.start_date,
+       ss.end_date,
+       ss.is_active,
+       ss.created_at
+FROM seller_subscriptions ss
+         JOIN subscription_plans p ON ss.plan_id = p.id
+WHERE ss.seller_id = $1
+ORDER BY ss.created_at DESC
+`
+
+type ListSubscriptionHistoryRow struct {
+	ID                int64      `json:"id"`
+	PlanID            int64      `json:"plan_id"`
+	SubscriptionName  string     `json:"subscription_name"`
+	SubscriptionPrice int64      `json:"subscription_price"`
+	StartDate         time.Time  `json:"start_date"`
+	EndDate           *time.Time `json:"end_date"`
+	IsActive          bool       `json:"is_active"`
+	CreatedAt         time.Time  `json:"created_at"`
+}
+
+func (q *Queries) ListSubscriptionHistory(ctx context.Context, sellerID string) ([]ListSubscriptionHistoryRow, error) {
+	rows, err := q.db.Query(ctx, listSubscriptionHistory, sellerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSubscriptionHistoryRow{}
+	for rows.Next() {
+		var i ListSubscriptionHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlanID,
+			&i.SubscriptionName,
+			&i.SubscriptionPrice,
+			&i.StartDate,
+			&i.EndDate,
+			&i.IsActive,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCurrentActiveSubscriptionForSeller = `-- name: UpdateCurrentActiveSubscriptionForSeller :one
 UPDATE seller_subscriptions
 SET listings_used      = COALESCE($1, listings_used),
     open_auctions_used = COALESCE($2, open_auctions_used),
+    is_active          = COALESCE($3, is_active),
     updated_at         = now()
-WHERE id = $3
-  AND seller_id = $4
-  AND is_active = true
+WHERE id = $4
+  AND seller_id = $5
+  AND is_active = true RETURNING id, seller_id, plan_id, start_date, end_date, listings_used, open_auctions_used, is_active, created_at, updated_at
 `
 
 type UpdateCurrentActiveSubscriptionForSellerParams struct {
 	ListingsUsed     *int64 `json:"listings_used"`
 	OpenAuctionsUsed *int64 `json:"open_auctions_used"`
+	IsActive         *bool  `json:"is_active"`
 	SubscriptionID   int64  `json:"subscription_id"`
 	SellerID         string `json:"seller_id"`
 }
 
-func (q *Queries) UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error {
-	_, err := q.db.Exec(ctx, updateCurrentActiveSubscriptionForSeller,
+func (q *Queries) UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) (SellerSubscription, error) {
+	row := q.db.QueryRow(ctx, updateCurrentActiveSubscriptionForSeller,
 		arg.ListingsUsed,
 		arg.OpenAuctionsUsed,
+		arg.IsActive,
 		arg.SubscriptionID,
 		arg.SellerID,
 	)
-	return err
+	var i SellerSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.SellerID,
+		&i.PlanID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.ListingsUsed,
+		&i.OpenAuctionsUsed,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

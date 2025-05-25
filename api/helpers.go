@@ -643,38 +643,6 @@ func (server *Server) generateRandomAvatar(ctx context.Context, fullName string)
 	return uploadedAvatarURL, nil
 }
 
-type SubscriptionDetailsResponse struct {
-	ID                int64  `json:"id"`
-	PlanID            int64  `json:"plan_id"`
-	SubscriptionName  string `json:"subscription_name"`
-	SubscriptionPrice int64  `json:"subscription_price"`
-	SellerID          string `json:"seller_id"`
-	
-	// Listing information
-	MaxListings       *int64 `json:"max_listings"`
-	ListingsUsed      int64  `json:"listings_used"`
-	ListingsRemaining *int64 `json:"listings_remaining"`
-	
-	// Auction information
-	MaxOpenAuctions   *int64 `json:"max_open_auctions"`
-	OpenAuctionsUsed  int64  `json:"open_auctions_used"`
-	AuctionsRemaining *int64 `json:"auctions_remaining"`
-	
-	// Plan details
-	IsActive     bool   `json:"is_active"`
-	IsUnlimited  bool   `json:"is_unlimited"`
-	DurationDays *int64 `json:"duration_days"`
-	
-	// Time information
-	StartDate     time.Time  `json:"start_date"`
-	EndDate       *time.Time `json:"end_date"`
-	DaysRemaining *int       `json:"days_remaining"`
-	
-	// Status indicators
-	IsExpiringSoon bool `json:"is_expiring_soon"` // < 7 ngày
-}
-
-// Helper function để transform data
 func transformSubscriptionDetails(sub db.GetCurrentActiveSubscriptionDetailsForSellerRow) SubscriptionDetailsResponse {
 	response := SubscriptionDetailsResponse{
 		ID:                sub.ID,
@@ -695,13 +663,21 @@ func transformSubscriptionDetails(sub db.GetCurrentActiveSubscriptionDetailsForS
 	
 	// Calculate remaining counts for non-unlimited plans
 	if !sub.IsUnlimited {
+		// Calculate listings remaining
 		if sub.MaxListings != nil {
 			remaining := *sub.MaxListings - sub.ListingsUsed
+			if remaining < 0 {
+				remaining = 0
+			}
 			response.ListingsRemaining = &remaining
 		}
 		
+		// Calculate auctions remaining
 		if sub.MaxOpenAuctions != nil {
 			remaining := *sub.MaxOpenAuctions - sub.OpenAuctionsUsed
+			if remaining < 0 {
+				remaining = 0
+			}
 			response.AuctionsRemaining = &remaining
 		}
 		
@@ -711,6 +687,8 @@ func transformSubscriptionDetails(sub db.GetCurrentActiveSubscriptionDetailsForS
 			response.DaysRemaining = &days
 			response.IsExpiringSoon = days <= 7 && days > 0
 		}
+		
+		response.CanUpgrade = true // Always allow upgrade for non-unlimited plans
 	}
 	
 	return response

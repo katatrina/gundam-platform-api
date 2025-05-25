@@ -54,48 +54,96 @@ definitions:
   api.SubscriptionDetailsResponse:
     properties:
       auctions_remaining:
+        description: AuctionsRemaining là số phiên đấu giá còn có thể mở (null nếu
+          unlimited)
+        example: 25
         type: integer
+      can_upgrade:
+        description: CanUpgrade cho biết có thể nâng cấp lên gói cao hơn không
+        example: true
+        type: boolean
       days_remaining:
+        description: DaysRemaining là số ngày còn lại của subscription (null nếu vĩnh
+          viễn)
+        example: 45
         type: integer
       duration_days:
+        description: DurationDays là thời hạn của gói (ngày), null nếu vĩnh viễn
+        example: 90
         type: integer
       end_date:
+        description: EndDate là thời gian kết thúc subscription (null nếu vĩnh viễn)
+        example: "2024-03-01T10:00:00Z"
         type: string
       id:
+        description: ID là ID duy nhất của subscription
+        example: 1
         type: integer
       is_active:
-        description: Plan details
+        description: |-
+          Plan details
+          IsActive cho biết subscription có đang hoạt động không
+        example: true
         type: boolean
       is_expiring_soon:
-        description: Status indicators
+        description: |-
+          Status indicators
+          IsExpiringSoon cho biết subscription có sắp hết hạn không (< 7 ngày)
+        example: false
         type: boolean
       is_unlimited:
+        description: IsUnlimited cho biết có phải gói không giới hạn không
+        example: false
         type: boolean
       listings_remaining:
+        description: ListingsRemaining là số lượt đăng bán còn lại (null nếu unlimited)
+        example: 38
         type: integer
       listings_used:
+        description: ListingsUsed là số lượt đăng bán đã sử dụng
+        example: 12
         type: integer
       max_listings:
-        description: Listing information
+        description: |-
+          Listing information
+          MaxListings là số lượt đăng bán tối đa (null nếu unlimited)
+        example: 50
         type: integer
       max_open_auctions:
-        description: Auction information
+        description: |-
+          Auction information
+          MaxOpenAuctions là số phiên đấu giá tối đa có thể mở cùng lúc (null nếu unlimited)
+        example: 30
         type: integer
       open_auctions_used:
+        description: OpenAuctionsUsed là số phiên đấu giá đang mở
+        example: 5
         type: integer
       plan_id:
+        description: PlanID là ID của gói đăng ký
+        example: 2
         type: integer
       seller_id:
+        description: SellerID là ID của người bán
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       start_date:
-        description: Time information
+        description: |-
+          Time information
+          StartDate là thời gian bắt đầu subscription
+        example: "2023-12-01T10:00:00Z"
         type: string
       subscription_name:
+        description: SubscriptionName là tên của gói đăng ký
+        example: GÓI NÂNG CẤP
         type: string
       subscription_price:
+        description: SubscriptionPrice là giá của gói đăng ký (VND)
+        example: 359000
         type: integer
     required:
     - auctions_remaining
+    - can_upgrade
     - days_remaining
     - duration_days
     - end_date
@@ -574,6 +622,15 @@ definitions:
         type: string
     required:
     - full_name
+    type: object
+  api.upgradeSubscriptionRequest:
+    properties:
+      plan_id:
+        description: ID of the target subscription plan
+        example: 2
+        type: integer
+    required:
+    - plan_id
     type: object
   api.verifyAccessTokenRequest:
     properties:
@@ -2066,6 +2123,40 @@ definitions:
     - shop_name
     - updated_at
     type: object
+  db.SellerSubscription:
+    properties:
+      created_at:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      listings_used:
+        type: integer
+      open_auctions_used:
+        type: integer
+      plan_id:
+        type: integer
+      seller_id:
+        type: string
+      start_date:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - created_at
+    - end_date
+    - id
+    - is_active
+    - listings_used
+    - open_auctions_used
+    - plan_id
+    - seller_id
+    - start_date
+    - updated_at
+    type: object
   db.Sender:
     properties:
       avatar_url:
@@ -2149,6 +2240,19 @@ definitions:
     required:
     - note
     - offer
+    type: object
+  db.UpgradeSubscriptionTxResult:
+    properties:
+      new_subscription:
+        $ref: '#/definitions/db.SellerSubscription'
+      old_subscription:
+        $ref: '#/definitions/db.SellerSubscription'
+      payment_entry:
+        $ref: '#/definitions/db.WalletEntry'
+    required:
+    - new_subscription
+    - old_subscription
+    - payment_entry
     type: object
   db.User:
     properties:
@@ -2454,6 +2558,7 @@ definitions:
     - auction_compensation
     - auction_winner_payment
     - auction_seller_payment
+    - subscription_payment
     type: string
     x-enum-varnames:
     - WalletEntryTypeDeposit
@@ -2471,6 +2576,7 @@ definitions:
     - WalletEntryTypeAuctionCompensation
     - WalletEntryTypeAuctionWinnerPayment
     - WalletEntryTypeAuctionSellerPayment
+    - WalletEntryTypeSubscriptionPayment
   db.WalletReferenceType:
     enum:
     - order
@@ -2478,6 +2584,7 @@ definitions:
     - withdrawal_request
     - deposit_request
     - exchange
+    - subscription
     type: string
     x-enum-varnames:
     - WalletReferenceTypeOrder
@@ -2485,6 +2592,7 @@ definitions:
     - WalletReferenceTypeWithdrawalRequest
     - WalletReferenceTypeDepositRequest
     - WalletReferenceTypeExchange
+    - WalletReferenceTypeSubscription
   multipart.FileHeader:
     properties:
       filename:
@@ -3810,6 +3918,64 @@ paths:
       security:
       - accessToken: []
       summary: Cancel order by seller
+      tags:
+      - sellers
+  /sellers/{sellerID}/subscriptions/upgrade:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Upgrade seller's subscription to a higher tier plan with the following business rules:
+
+        **Business Rules:**
+        1. **Same Plan Rule**: Không thể nâng cấp lên chính gói đang sử dụng
+        2. **Free Plan Downgrade Rule**: Không thể hạ cấp từ bất kỳ gói trả phí nào về gói miễn phí
+        3. **Paid Plan Downgrade Rule**: Không thể hạ cấp từ gói trả phí cao hơn xuống gói trả phí thấp hơn (ví dụ: từ "GÓI KHÔNG GIỚI HẠN" xuống "GÓI NÂNG CẤP")
+        4. **Balance Rule**: Phải có đủ số dư trong ví để thanh toán **toàn bộ** giá gói đích (không tính phần hoàn lại từ gói cũ)
+
+        **Các trường hợp nâng cấp hợp lệ:**
+        - Từ "GÓI DÙNG THỬ" (miễn phí) lên "GÓI NÂNG CẤP" (359.000 VND) - **Thanh toán: 359.000 VND**
+        - Từ "GÓI DÙNG THỬ" (miễn phí) lên "GÓI KHÔNG GIỚI HẠN" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**
+        - Từ "GÓI NÂNG CẤP" (359.000 VND) lên "GÓI KHÔNG GIỚI HẠN" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**
+
+        **Chính sách thanh toán:**
+        - **Thanh toán toàn bộ**: Người dùng sẽ thanh toán 100% giá trị của gói đích, không có hoàn tiền từ gói cũ
+        - **Lý do**: Đảm bảo tính đơn giản trong hệ thống và người dùng được hưởng đầy đủ benefits mới ngay lập tức
+        - **Ví dụ**: Nâng cấp từ GÓI NÂNG CẤP (đã dùng 75% thời hạn) lên GÓI KHÔNG GIỚI HẠN vẫn phải trả đủ 1.049.000 VND
+
+        **Tác động khi nâng cấp thành công:**
+        - Gói đăng ký cũ sẽ bị vô hiệu hóa ngay lập tức (không hoàn tiền phần chưa sử dụng)
+        - Gói đăng ký mới được kích hoạt với hạn mức hoàn toàn mới (listings_used = 0, open_auctions_used = 0)
+        - Chu kỳ đăng ký mới bắt đầu từ thời điểm nâng cấp với đầy đủ thời hạn của gói mới
+        - Số tiền được trừ từ ví là 100% giá trị gói đích
+        - Gửi thông báo cho người bán về việc nâng cấp thành công
+
+        **Lưu ý quan trọng:**
+        - Không có chính sách hoàn tiền cho gói cũ chưa hết hạn
+        - Nên cân nhắc thời điểm nâng cấp để tối ưu chi phí
+        - Sau khi nâng cấp, tất cả các hạn mức sử dụng sẽ được reset về 0
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Upgrade subscription request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.upgradeSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Upgrade successfully
+          schema:
+            $ref: '#/definitions/db.UpgradeSubscriptionTxResult'
+      security:
+      - accessToken: []
+      summary: Upgrade subscription plan
       tags:
       - sellers
   /subscription-plans:

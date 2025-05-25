@@ -9,9 +9,31 @@ import (
 	"context"
 )
 
-const listSubscriptionPlans = `-- name: ListSubscriptionPlans :many
+const getSubscriptionPlanByID = `-- name: GetSubscriptionPlanByID :one
 SELECT id, name, duration_days, max_listings, max_open_auctions, is_unlimited, price, created_at
 FROM subscription_plans
+WHERE id = $1
+`
+
+func (q *Queries) GetSubscriptionPlanByID(ctx context.Context, id int64) (SubscriptionPlan, error) {
+	row := q.db.QueryRow(ctx, getSubscriptionPlanByID, id)
+	var i SubscriptionPlan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DurationDays,
+		&i.MaxListings,
+		&i.MaxOpenAuctions,
+		&i.IsUnlimited,
+		&i.Price,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listSubscriptionPlans = `-- name: ListSubscriptionPlans :many
+SELECT id, name, duration_days, max_listings, max_open_auctions, is_unlimited, price, created_at FROM subscription_plans
+ORDER BY price ASC
 `
 
 func (q *Queries) ListSubscriptionPlans(ctx context.Context) ([]SubscriptionPlan, error) {

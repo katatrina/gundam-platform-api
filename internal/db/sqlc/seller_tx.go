@@ -31,7 +31,7 @@ func (store *SQLStore) PublishGundamTx(ctx context.Context, arg PublishGundamTxP
 		}
 		
 		// Plus 1 to the seller's listings used
-		err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+		_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
 			ListingsUsed:   &arg.ListingsUsed,
 			SubscriptionID: arg.ActiveSubscriptionID,
 			SellerID:       arg.SellerID,
@@ -71,7 +71,7 @@ func (store *SQLStore) UnpublishGundamTx(ctx context.Context, arg UnpublishGunda
 		}
 		
 		// Minus 1 to the seller's listings used
-		err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+		_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
 			ListingsUsed:   util.Int64Pointer(subscription.ListingsUsed - 1),
 			SubscriptionID: subscription.ID,
 			SellerID:       arg.SellerID,
@@ -283,6 +283,90 @@ func (store *SQLStore) CancelOrderBySellerTx(ctx context.Context, arg CancelOrde
 				}
 			} else {
 				log.Warn().Msgf("Gundam ID not found in order item %d", item.ID)
+			}
+		}
+		
+		return nil
+	})
+	
+	return result, err
+}
+
+type UpgradeSubscriptionTxParams struct {
+	SellerID          string
+	OldSubscriptionID int64
+	NewPlanID         int64
+	NewPlanPrice      int64
+	NewPlanDuration   *int64 // duration in days
+}
+
+type UpgradeSubscriptionTxResult struct {
+	OldSubscription SellerSubscription `json:"old_subscription"`
+	NewSubscription SellerSubscription `json:"new_subscription"`
+	PaymentEntry    *WalletEntry       `json:"payment_entry"`
+}
+
+func (store *SQLStore) UpgradeSubscriptionTx(ctx context.Context, arg UpgradeSubscriptionTxParams) (UpgradeSubscriptionTxResult, error) {
+	var result UpgradeSubscriptionTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Deactivate old subscription
+		result.OldSubscription, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+			IsActive:       util.BoolPointer(false), // Deactivate old subscription
+			SubscriptionID: arg.OldSubscriptionID,
+			SellerID:       arg.SellerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to deactivate old subscription: %w", err)
+		}
+		
+		// 2. Calculate end date for new subscription
+		var endDate *time.Time
+		if arg.NewPlanDuration != nil {
+			ed := time.Now().AddDate(0, 0, int(*arg.NewPlanDuration))
+			endDate = &ed
+		}
+		
+		// 3. Create new subscription (reset counters to 0)
+		result.NewSubscription, err = qTx.CreateSellerSubscription(ctx, CreateSellerSubscriptionParams{
+			SellerID:         arg.SellerID,
+			PlanID:           arg.NewPlanID,
+			EndDate:          endDate,
+			ListingsUsed:     0, // Reset to 0
+			OpenAuctionsUsed: 0, // Reset to 0
+			IsActive:         true,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create new subscription: %w", err)
+		}
+		
+		// 4. Process payment (only if plan has cost)
+		if arg.NewPlanPrice > 0 {
+			// Create wallet entry
+			paymentEntry, err := qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+				WalletID:      arg.SellerID,
+				ReferenceID:   util.StringPointer(fmt.Sprintf("%d", result.NewSubscription.ID)),
+				ReferenceType: WalletReferenceTypeSubscription,
+				EntryType:     WalletEntryTypeSubscriptionPayment,
+				AffectedField: WalletAffectedFieldBalance,
+				Amount:        -arg.NewPlanPrice,
+				Status:        WalletEntryStatusCompleted,
+				CompletedAt:   util.TimePointer(time.Now()),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create payment entry: %w", err)
+			}
+			result.PaymentEntry = &paymentEntry
+			
+			// Update wallet balance
+			_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+				UserID: arg.SellerID,
+				Amount: -arg.NewPlanPrice,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update wallet balance: %w", err)
 			}
 		}
 		

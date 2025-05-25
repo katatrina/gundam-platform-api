@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -1051,6 +1052,173 @@ func (server *Server) getSellerAuctionDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (server *Server) upgradeSubscription(c *gin.Context) {
+type upgradeSubscriptionRequest struct {
+	PlanID int64 `json:"plan_id" binding:"required" example:"2"` // ID of the target subscription plan
+}
 
+//	@Summary		Upgrade subscription plan
+//	@Description	Upgrade seller's subscription to a higher tier plan with the following business rules:
+//	@Description
+//	@Description	**Business Rules:**
+//	@Description	1. **Same Plan Rule**: Không thể nâng cấp lên chính gói đang sử dụng
+//	@Description	2. **Free Plan Downgrade Rule**: Không thể hạ cấp từ bất kỳ gói trả phí nào về gói miễn phí
+//	@Description	3. **Paid Plan Downgrade Rule**: Không thể hạ cấp từ gói trả phí cao hơn xuống gói trả phí thấp hơn (ví dụ: từ "GÓI KHÔNG GIỚI HẠN" xuống "GÓI NÂNG CẤP")
+//	@Description	4. **Balance Rule**: Phải có đủ số dư trong ví để thanh toán **toàn bộ** giá gói đích (không tính phần hoàn lại từ gói cũ)
+//	@Description
+//	@Description	**Các trường hợp nâng cấp hợp lệ:**
+//	@Description	- Từ "GÓI DÙNG THỬ" (miễn phí) lên "GÓI NÂNG CẤP" (359.000 VND) - **Thanh toán: 359.000 VND**
+//	@Description	- Từ "GÓI DÙNG THỬ" (miễn phí) lên "GÓI KHÔNG GIỚI HẠN" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**
+//	@Description	- Từ "GÓI NÂNG CẤP" (359.000 VND) lên "GÓI KHÔNG GIỚI HẠN" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**
+//	@Description
+//	@Description	**Chính sách thanh toán:**
+//	@Description	- **Thanh toán toàn bộ**: Người dùng sẽ thanh toán 100% giá trị của gói đích, không có hoàn tiền từ gói cũ
+//	@Description	- **Lý do**: Đảm bảo tính đơn giản trong hệ thống và người dùng được hưởng đầy đủ benefits mới ngay lập tức
+//	@Description	- **Ví dụ**: Nâng cấp từ GÓI NÂNG CẤP (đã dùng 75% thời hạn) lên GÓI KHÔNG GIỚI HẠN vẫn phải trả đủ 1.049.000 VND
+//	@Description
+//	@Description	**Tác động khi nâng cấp thành công:**
+//	@Description	- Gói đăng ký cũ sẽ bị vô hiệu hóa ngay lập tức (không hoàn tiền phần chưa sử dụng)
+//	@Description	- Gói đăng ký mới được kích hoạt với hạn mức hoàn toàn mới (listings_used = 0, open_auctions_used = 0)
+//	@Description	- Chu kỳ đăng ký mới bắt đầu từ thời điểm nâng cấp với đầy đủ thời hạn của gói mới
+//	@Description	- Số tiền được trừ từ ví là 100% giá trị gói đích
+//	@Description	- Gửi thông báo cho người bán về việc nâng cấp thành công
+//	@Description
+//	@Description	**Lưu ý quan trọng:**
+//	@Description	- Không có chính sách hoàn tiền cho gói cũ chưa hết hạn
+//	@Description	- Nên cân nhắc thời điểm nâng cấp để tối ưu chi phí
+//	@Description	- Sau khi nâng cấp, tất cả các hạn mức sử dụng sẽ được reset về 0
+//	@Tags			sellers
+//	@Accept			json
+//	@Produce		json
+//	@Param			sellerID	path		string							true	"Seller ID"
+//	@Param			request		body		upgradeSubscriptionRequest		true	"Upgrade subscription request"
+//	@Success		200			{object}	db.UpgradeSubscriptionTxResult	"Upgrade successfully"
+//	@Security		accessToken
+//	@Router			/sellers/{sellerID}/subscriptions/upgrade [post]
+func (server *Server) upgradeSubscription(c *gin.Context) {
+	seller := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	var req upgradeSubscriptionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	// Get current subscription details
+	currentSubDetails, err := server.dbStore.GetCurrentActiveSubscriptionDetailsForSeller(c.Request.Context(), seller.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("no active subscription found")
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Get current plan details
+	currentPlan, err := server.dbStore.GetSubscriptionPlanByID(c.Request.Context(), currentSubDetails.PlanID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("current plan not found")
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Get target plan details
+	targetPlan, err := server.dbStore.GetSubscriptionPlanByID(c.Request.Context(), req.PlanID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("target plan ID %d not found", req.PlanID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Cannot upgrade to the same plan
+	if currentPlan.ID == targetPlan.ID {
+		err = fmt.Errorf("seller ID %s is already subscribed to plan %s", seller.ID, targetPlan.Name)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Cannot downgrade to free plan from any paid plan
+	if targetPlan.Price == 0 && currentPlan.Price > 0 {
+		err = fmt.Errorf("cannot downgrade to free plan from a paid plan, current plan: %s, target plan: %s", currentPlan.Name, targetPlan.Name)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Cannot downgrade from higher-tier to lower-tier paid plan
+	if currentPlan.Price > 0 && targetPlan.Price > 0 && targetPlan.Price < currentPlan.Price {
+		err = fmt.Errorf("cannot downgrade from plan %s to plan %s", currentPlan.Name, targetPlan.Name)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Validate wallet balance
+	if targetPlan.Price > 0 {
+		wallet, err := server.dbStore.GetWalletByUserID(c.Request.Context(), seller.ID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("wallet not found for user ID %s", seller.ID)
+				c.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if wallet.Balance < targetPlan.Price {
+			err = fmt.Errorf("insufficient wallet balance to upgrade to plan %s, required: %s, available: %s", targetPlan.Name, util.FormatMoney(targetPlan.Price), util.FormatMoney(wallet.Balance))
+			c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+			return
+		}
+	}
+	
+	// All business rules passed - Execute the upgrade transaction
+	
+	txParams := db.UpgradeSubscriptionTxParams{
+		SellerID:          seller.ID,
+		OldSubscriptionID: currentSubDetails.ID,
+		NewPlanID:         req.PlanID,
+		NewPlanPrice:      targetPlan.Price,
+		NewPlanDuration:   targetPlan.DurationDays,
+	}
+	
+	result, err := server.dbStore.UpgradeSubscriptionTx(c.Request.Context(), txParams)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Notify the seller about the successful upgrade asynchronously
+	go func() {
+		message := fmt.Sprintf("Bạn đã nâng cấp gói đăng ký từ %s lên %s thành công. Số tiền đã thanh toán: %s",
+			currentPlan.Name, targetPlan.Name, util.FormatVND(targetPlan.Price))
+		
+		err = server.taskDistributor.DistributeTaskSendNotification(
+			context.Background(),
+			&worker.PayloadSendNotification{
+				RecipientID: seller.ID,
+				Title:       "Nâng cấp gói đăng ký thành công",
+				Message:     message,
+				Type:        "subscription_upgrade",
+				ReferenceID: seller.ID,
+			},
+		)
+		if err != nil {
+			log.Error().Err(err).Str("seller_id", seller.ID).Msg("Failed to send upgrade notification")
+		}
+	}()
+	
+	c.JSON(http.StatusOK, result)
 }

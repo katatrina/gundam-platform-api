@@ -72,7 +72,8 @@ CREATE TYPE "wallet_entry_type" AS ENUM (
   'auction_deposit_refund',
   'auction_compensation',
   'auction_winner_payment',
-  'auction_seller_payment'
+  'auction_seller_payment',
+  'subscription_payment'
 );
 
 CREATE TYPE "wallet_reference_type" AS ENUM (
@@ -80,7 +81,8 @@ CREATE TYPE "wallet_reference_type" AS ENUM (
   'auction',
   'withdrawal_request',
   'deposit_request',
-  'exchange'
+  'exchange',
+  'subscription'
 );
 
 CREATE TYPE "wallet_entry_status" AS ENUM (

@@ -1174,6 +1174,7 @@ const (
 	WalletEntryTypeAuctionCompensation          WalletEntryType = "auction_compensation"
 	WalletEntryTypeAuctionWinnerPayment         WalletEntryType = "auction_winner_payment"
 	WalletEntryTypeAuctionSellerPayment         WalletEntryType = "auction_seller_payment"
+	WalletEntryTypeSubscriptionPayment          WalletEntryType = "subscription_payment"
 )
 
 func (e *WalletEntryType) Scan(src interface{}) error {
@@ -1227,7 +1228,8 @@ func (e WalletEntryType) Valid() bool {
 		WalletEntryTypeAuctionDepositRefund,
 		WalletEntryTypeAuctionCompensation,
 		WalletEntryTypeAuctionWinnerPayment,
-		WalletEntryTypeAuctionSellerPayment:
+		WalletEntryTypeAuctionSellerPayment,
+		WalletEntryTypeSubscriptionPayment:
 		return true
 	}
 	return false
@@ -1250,6 +1252,7 @@ func AllWalletEntryTypeValues() []WalletEntryType {
 		WalletEntryTypeAuctionCompensation,
 		WalletEntryTypeAuctionWinnerPayment,
 		WalletEntryTypeAuctionSellerPayment,
+		WalletEntryTypeSubscriptionPayment,
 	}
 }
 
@@ -1261,6 +1264,7 @@ const (
 	WalletReferenceTypeWithdrawalRequest WalletReferenceType = "withdrawal_request"
 	WalletReferenceTypeDepositRequest    WalletReferenceType = "deposit_request"
 	WalletReferenceTypeExchange          WalletReferenceType = "exchange"
+	WalletReferenceTypeSubscription      WalletReferenceType = "subscription"
 )
 
 func (e *WalletReferenceType) Scan(src interface{}) error {
@@ -1304,7 +1308,8 @@ func (e WalletReferenceType) Valid() bool {
 		WalletReferenceTypeAuction,
 		WalletReferenceTypeWithdrawalRequest,
 		WalletReferenceTypeDepositRequest,
-		WalletReferenceTypeExchange:
+		WalletReferenceTypeExchange,
+		WalletReferenceTypeSubscription:
 		return true
 	}
 	return false
@@ -1317,6 +1322,7 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 		WalletReferenceTypeWithdrawalRequest,
 		WalletReferenceTypeDepositRequest,
 		WalletReferenceTypeExchange,
+		WalletReferenceTypeSubscription,
 	}
 }
 

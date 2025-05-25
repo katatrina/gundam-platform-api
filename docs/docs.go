@@ -1962,6 +1962,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/{sellerID}/subscriptions/upgrade": {
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Upgrade seller's subscription to a higher tier plan with the following business rules:\n\n**Business Rules:**\n1. **Same Plan Rule**: Không thể nâng cấp lên chính gói đang sử dụng\n2. **Free Plan Downgrade Rule**: Không thể hạ cấp từ bất kỳ gói trả phí nào về gói miễn phí\n3. **Paid Plan Downgrade Rule**: Không thể hạ cấp từ gói trả phí cao hơn xuống gói trả phí thấp hơn (ví dụ: từ \"GÓI KHÔNG GIỚI HẠN\" xuống \"GÓI NÂNG CẤP\")\n4. **Balance Rule**: Phải có đủ số dư trong ví để thanh toán **toàn bộ** giá gói đích (không tính phần hoàn lại từ gói cũ)\n\n**Các trường hợp nâng cấp hợp lệ:**\n- Từ \"GÓI DÙNG THỬ\" (miễn phí) lên \"GÓI NÂNG CẤP\" (359.000 VND) - **Thanh toán: 359.000 VND**\n- Từ \"GÓI DÙNG THỬ\" (miễn phí) lên \"GÓI KHÔNG GIỚI HẠN\" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**\n- Từ \"GÓI NÂNG CẤP\" (359.000 VND) lên \"GÓI KHÔNG GIỚI HẠN\" (1.049.000 VND) - **Thanh toán: 1.049.000 VND**\n\n**Chính sách thanh toán:**\n- **Thanh toán toàn bộ**: Người dùng sẽ thanh toán 100% giá trị của gói đích, không có hoàn tiền từ gói cũ\n- **Lý do**: Đảm bảo tính đơn giản trong hệ thống và người dùng được hưởng đầy đủ benefits mới ngay lập tức\n- **Ví dụ**: Nâng cấp từ GÓI NÂNG CẤP (đã dùng 75% thời hạn) lên GÓI KHÔNG GIỚI HẠN vẫn phải trả đủ 1.049.000 VND\n\n**Tác động khi nâng cấp thành công:**\n- Gói đăng ký cũ sẽ bị vô hiệu hóa ngay lập tức (không hoàn tiền phần chưa sử dụng)\n- Gói đăng ký mới được kích hoạt với hạn mức hoàn toàn mới (listings_used = 0, open_auctions_used = 0)\n- Chu kỳ đăng ký mới bắt đầu từ thời điểm nâng cấp với đầy đủ thời hạn của gói mới\n- Số tiền được trừ từ ví là 100% giá trị gói đích\n- Gửi thông báo cho người bán về việc nâng cấp thành công\n\n**Lưu ý quan trọng:**\n- Không có chính sách hoàn tiền cho gói cũ chưa hết hạn\n- Nên cân nhắc thời điểm nâng cấp để tối ưu chi phí\n- Sau khi nâng cấp, tất cả các hạn mức sử dụng sẽ được reset về 0",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Upgrade subscription plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Upgrade subscription request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.upgradeSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Upgrade successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.UpgradeSubscriptionTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/subscription-plans": {
             "get": {
                 "description": "Get a list of all available subscription plans.",
@@ -3984,6 +4030,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "auctions_remaining",
+                "can_upgrade",
                 "days_remaining",
                 "duration_days",
                 "end_date",
@@ -4004,63 +4051,99 @@ const docTemplate = `{
             ],
             "properties": {
                 "auctions_remaining": {
-                    "type": "integer"
+                    "description": "AuctionsRemaining là số phiên đấu giá còn có thể mở (null nếu unlimited)",
+                    "type": "integer",
+                    "example": 25
+                },
+                "can_upgrade": {
+                    "description": "CanUpgrade cho biết có thể nâng cấp lên gói cao hơn không",
+                    "type": "boolean",
+                    "example": true
                 },
                 "days_remaining": {
-                    "type": "integer"
+                    "description": "DaysRemaining là số ngày còn lại của subscription (null nếu vĩnh viễn)",
+                    "type": "integer",
+                    "example": 45
                 },
                 "duration_days": {
-                    "type": "integer"
+                    "description": "DurationDays là thời hạn của gói (ngày), null nếu vĩnh viễn",
+                    "type": "integer",
+                    "example": 90
                 },
                 "end_date": {
-                    "type": "string"
+                    "description": "EndDate là thời gian kết thúc subscription (null nếu vĩnh viễn)",
+                    "type": "string",
+                    "example": "2024-03-01T10:00:00Z"
                 },
                 "id": {
-                    "type": "integer"
+                    "description": "ID là ID duy nhất của subscription",
+                    "type": "integer",
+                    "example": 1
                 },
                 "is_active": {
-                    "description": "Plan details",
-                    "type": "boolean"
+                    "description": "Plan details\nIsActive cho biết subscription có đang hoạt động không",
+                    "type": "boolean",
+                    "example": true
                 },
                 "is_expiring_soon": {
-                    "description": "Status indicators",
-                    "type": "boolean"
+                    "description": "Status indicators\nIsExpiringSoon cho biết subscription có sắp hết hạn không (\u003c 7 ngày)",
+                    "type": "boolean",
+                    "example": false
                 },
                 "is_unlimited": {
-                    "type": "boolean"
+                    "description": "IsUnlimited cho biết có phải gói không giới hạn không",
+                    "type": "boolean",
+                    "example": false
                 },
                 "listings_remaining": {
-                    "type": "integer"
+                    "description": "ListingsRemaining là số lượt đăng bán còn lại (null nếu unlimited)",
+                    "type": "integer",
+                    "example": 38
                 },
                 "listings_used": {
-                    "type": "integer"
+                    "description": "ListingsUsed là số lượt đăng bán đã sử dụng",
+                    "type": "integer",
+                    "example": 12
                 },
                 "max_listings": {
-                    "description": "Listing information",
-                    "type": "integer"
+                    "description": "Listing information\nMaxListings là số lượt đăng bán tối đa (null nếu unlimited)",
+                    "type": "integer",
+                    "example": 50
                 },
                 "max_open_auctions": {
-                    "description": "Auction information",
-                    "type": "integer"
+                    "description": "Auction information\nMaxOpenAuctions là số phiên đấu giá tối đa có thể mở cùng lúc (null nếu unlimited)",
+                    "type": "integer",
+                    "example": 30
                 },
                 "open_auctions_used": {
-                    "type": "integer"
+                    "description": "OpenAuctionsUsed là số phiên đấu giá đang mở",
+                    "type": "integer",
+                    "example": 5
                 },
                 "plan_id": {
-                    "type": "integer"
+                    "description": "PlanID là ID của gói đăng ký",
+                    "type": "integer",
+                    "example": 2
                 },
                 "seller_id": {
-                    "type": "string"
+                    "description": "SellerID là ID của người bán",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "start_date": {
-                    "description": "Time information",
-                    "type": "string"
+                    "description": "Time information\nStartDate là thời gian bắt đầu subscription",
+                    "type": "string",
+                    "example": "2023-12-01T10:00:00Z"
                 },
                 "subscription_name": {
-                    "type": "string"
+                    "description": "SubscriptionName là tên của gói đăng ký",
+                    "type": "string",
+                    "example": "GÓI NÂNG CẤP"
                 },
                 "subscription_price": {
-                    "type": "integer"
+                    "description": "SubscriptionPrice là giá của gói đăng ký (VND)",
+                    "type": "integer",
+                    "example": 359000
                 }
             }
         },
@@ -4674,6 +4757,19 @@ const docTemplate = `{
             "properties": {
                 "full_name": {
                     "type": "string"
+                }
+            }
+        },
+        "api.upgradeSubscriptionRequest": {
+            "type": "object",
+            "required": [
+                "plan_id"
+            ],
+            "properties": {
+                "plan_id": {
+                    "description": "ID of the target subscription plan",
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
@@ -6785,6 +6881,53 @@ const docTemplate = `{
                 }
             }
         },
+        "db.SellerSubscription": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "end_date",
+                "id",
+                "is_active",
+                "listings_used",
+                "open_auctions_used",
+                "plan_id",
+                "seller_id",
+                "start_date",
+                "updated_at"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "listings_used": {
+                    "type": "integer"
+                },
+                "open_auctions_used": {
+                    "type": "integer"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "db.Sender": {
             "type": "object",
             "required": [
@@ -6901,6 +7044,25 @@ const docTemplate = `{
                 },
                 "offer": {
                     "$ref": "#/definitions/db.ExchangeOffer"
+                }
+            }
+        },
+        "db.UpgradeSubscriptionTxResult": {
+            "type": "object",
+            "required": [
+                "new_subscription",
+                "old_subscription",
+                "payment_entry"
+            ],
+            "properties": {
+                "new_subscription": {
+                    "$ref": "#/definitions/db.SellerSubscription"
+                },
+                "old_subscription": {
+                    "$ref": "#/definitions/db.SellerSubscription"
+                },
+                "payment_entry": {
+                    "$ref": "#/definitions/db.WalletEntry"
                 }
             }
         },
@@ -7323,7 +7485,8 @@ const docTemplate = `{
                 "auction_deposit_refund",
                 "auction_compensation",
                 "auction_winner_payment",
-                "auction_seller_payment"
+                "auction_seller_payment",
+                "subscription_payment"
             ],
             "x-enum-varnames": [
                 "WalletEntryTypeDeposit",
@@ -7340,7 +7503,8 @@ const docTemplate = `{
                 "WalletEntryTypeAuctionDepositRefund",
                 "WalletEntryTypeAuctionCompensation",
                 "WalletEntryTypeAuctionWinnerPayment",
-                "WalletEntryTypeAuctionSellerPayment"
+                "WalletEntryTypeAuctionSellerPayment",
+                "WalletEntryTypeSubscriptionPayment"
             ]
         },
         "db.WalletReferenceType": {
@@ -7350,14 +7514,16 @@ const docTemplate = `{
                 "auction",
                 "withdrawal_request",
                 "deposit_request",
-                "exchange"
+                "exchange",
+                "subscription"
             ],
             "x-enum-varnames": [
                 "WalletReferenceTypeOrder",
                 "WalletReferenceTypeAuction",
                 "WalletReferenceTypeWithdrawalRequest",
                 "WalletReferenceTypeDepositRequest",
-                "WalletReferenceTypeExchange"
+                "WalletReferenceTypeExchange",
+                "WalletReferenceTypeSubscription"
             ]
         },
         "multipart.FileHeader": {

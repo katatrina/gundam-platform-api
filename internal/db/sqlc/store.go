@@ -31,6 +31,7 @@ type Store interface {
 	DeleteGundamSecondaryImageTx(ctx context.Context, arg DeleteGundamSecondaryImageTxParams) error
 	
 	BecomeSellerTx(ctx context.Context, userID string) (User, error)
+	UpgradeSubscriptionTx(ctx context.Context, arg UpgradeSubscriptionTxParams) (UpgradeSubscriptionTxResult, error)
 	HandleZalopayCallbackTx(ctx context.Context, arg HandleZalopayCallbackTxParams) error
 	
 	CreateOrderTx(ctx context.Context, arg CreateOrderTxParams) (CreateOrderTxResult, error)

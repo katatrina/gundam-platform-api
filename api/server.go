@@ -293,7 +293,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription) // ✅
 			
 			// Đăng ký/nâng cấp gói subscription
-			subscriptionGroup.POST("upgrade", server.upgradeSubscription)
+			subscriptionGroup.POST("upgrade", server.upgradeSubscription) // ✅
 		}
 		
 		// Nhóm các API cho yêu cầu đấu giá

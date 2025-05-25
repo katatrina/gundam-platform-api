@@ -69,7 +69,7 @@ func (store *SQLStore) CreateAuctionRequestTx(ctx context.Context, arg CreateAuc
 		}
 		
 		// 4. Cập nhật open_auctions_used của người bán
-		err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+		_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
 			SubscriptionID:   arg.Subscription.ID,
 			SellerID:         arg.Gundam.OwnerID,
 			OpenAuctionsUsed: util.Int64Pointer(arg.Subscription.OpenAuctionsUsed + 1),
@@ -123,7 +123,7 @@ func (store *SQLStore) DeleteAuctionRequestTx(ctx context.Context, request Aucti
 			}
 			
 			if subscription.OpenAuctionsUsed > 0 {
-				err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+				_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
 					SubscriptionID:   subscription.ID,
 					SellerID:         request.SellerID,
 					OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),
@@ -184,7 +184,7 @@ func (store *SQLStore) RejectAuctionRequestTx(ctx context.Context, arg RejectAuc
 		
 		// 4. Giảm open_auctions_used trong subscription
 		if subscription.OpenAuctionsUsed > 0 {
-			err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+			_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
 				SubscriptionID:   subscription.ID,
 				SellerID:         rejectedRequest.SellerID,
 				OpenAuctionsUsed: util.Int64Pointer(subscription.OpenAuctionsUsed - 1),

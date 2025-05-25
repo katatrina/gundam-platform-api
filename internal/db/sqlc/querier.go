@@ -45,6 +45,7 @@ type Querier interface {
 	CreateOrderTransaction(ctx context.Context, arg CreateOrderTransactionParams) (OrderTransaction, error)
 	CreatePaymentTransaction(ctx context.Context, arg CreatePaymentTransactionParams) (PaymentTransaction, error)
 	CreateSellerProfile(ctx context.Context, arg CreateSellerProfileParams) (SellerProfile, error)
+	CreateSellerSubscription(ctx context.Context, arg CreateSellerSubscriptionParams) (SellerSubscription, error)
 	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
@@ -92,6 +93,7 @@ type Querier interface {
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)
 	GetSellerProfileByID(ctx context.Context, sellerID string) (SellerProfile, error)
+	GetSubscriptionPlanByID(ctx context.Context, id int64) (SubscriptionPlan, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
@@ -127,6 +129,7 @@ type Querier interface {
 	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListSellerAuctionRequests(ctx context.Context, arg ListSellerAuctionRequestsParams) ([]AuctionRequest, error)
 	ListSellerAuctions(ctx context.Context, arg ListSellerAuctionsParams) ([]Auction, error)
+	ListSubscriptionHistory(ctx context.Context, sellerID string) ([]ListSubscriptionHistoryRow, error)
 	ListSubscriptionPlans(ctx context.Context) ([]SubscriptionPlan, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	ListUserAuctionBids(ctx context.Context, arg ListUserAuctionBidsParams) ([]AuctionBid, error)
@@ -142,7 +145,7 @@ type Querier interface {
 	UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error)
 	UpdateAuctionParticipant(ctx context.Context, arg UpdateAuctionParticipantParams) (AuctionParticipant, error)
 	UpdateAuctionRequest(ctx context.Context, arg UpdateAuctionRequestParams) (AuctionRequest, error)
-	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) error
+	UpdateCurrentActiveSubscriptionForSeller(ctx context.Context, arg UpdateCurrentActiveSubscriptionForSellerParams) (SellerSubscription, error)
 	UpdateExchange(ctx context.Context, arg UpdateExchangeParams) (Exchange, error)
 	UpdateExchangeOffer(ctx context.Context, arg UpdateExchangeOfferParams) (ExchangeOffer, error)
 	UpdateExchangePost(ctx context.Context, arg UpdateExchangePostParams) (ExchangePost, error)
