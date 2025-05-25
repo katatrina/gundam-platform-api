@@ -51,6 +51,69 @@ definitions:
     - otp_code
     - phone_number
     type: object
+  api.SubscriptionDetailsResponse:
+    properties:
+      auctions_remaining:
+        type: integer
+      days_remaining:
+        type: integer
+      duration_days:
+        type: integer
+      end_date:
+        type: string
+      id:
+        type: integer
+      is_active:
+        description: Plan details
+        type: boolean
+      is_expiring_soon:
+        description: Status indicators
+        type: boolean
+      is_unlimited:
+        type: boolean
+      listings_remaining:
+        type: integer
+      listings_used:
+        type: integer
+      max_listings:
+        description: Listing information
+        type: integer
+      max_open_auctions:
+        description: Auction information
+        type: integer
+      open_auctions_used:
+        type: integer
+      plan_id:
+        type: integer
+      seller_id:
+        type: string
+      start_date:
+        description: Time information
+        type: string
+      subscription_name:
+        type: string
+      subscription_price:
+        type: integer
+    required:
+    - auctions_remaining
+    - days_remaining
+    - duration_days
+    - end_date
+    - id
+    - is_active
+    - is_expiring_soon
+    - is_unlimited
+    - listings_remaining
+    - listings_used
+    - max_listings
+    - max_open_auctions
+    - open_auctions_used
+    - plan_id
+    - seller_id
+    - start_date
+    - subscription_name
+    - subscription_price
+    type: object
   api.VerifyEmailOTPRequest:
     properties:
       email:
@@ -1366,46 +1429,6 @@ definitions:
     - note
     - order
     - to_address
-    type: object
-  db.GetCurrentActiveSubscriptionDetailsForSellerRow:
-    properties:
-      end_date:
-        type: string
-      id:
-        type: integer
-      is_active:
-        type: boolean
-      is_unlimited:
-        type: boolean
-      listings_used:
-        type: integer
-      max_listings:
-        type: integer
-      max_open_auctions:
-        type: integer
-      open_auctions_used:
-        type: integer
-      plan_id:
-        type: integer
-      seller_id:
-        type: string
-      start_date:
-        type: string
-      subscription_name:
-        type: string
-    required:
-    - end_date
-    - id
-    - is_active
-    - is_unlimited
-    - listings_used
-    - max_listings
-    - max_open_auctions
-    - open_auctions_used
-    - plan_id
-    - seller_id
-    - start_date
-    - subscription_name
     type: object
   db.GetSellerDetailByIDRow:
     properties:
@@ -3594,7 +3617,7 @@ paths:
       - sellers
   /sellers/:sellerID/subscriptions/active:
     get:
-      description: Get the current active subscription for the specified seller
+      description: Get the current active subscription details for the specified seller
       parameters:
       - description: Seller ID
         in: path
@@ -3607,7 +3630,7 @@ paths:
         "200":
           description: Current active subscription details
           schema:
-            $ref: '#/definitions/db.GetCurrentActiveSubscriptionDetailsForSellerRow'
+            $ref: '#/definitions/api.SubscriptionDetailsResponse'
       security:
       - accessToken: []
       summary: Get current active subscription

@@ -100,12 +100,12 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 }
 
 //	@Summary		Get current active subscription
-//	@Description	Get the current active subscription for the specified seller
+//	@Description	Get the current active subscription details for the specified seller
 //	@Tags			sellers
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
-//	@Success		200 {object}	db.GetCurrentActiveSubscriptionDetailsForSellerRow	"Current active subscription details"
+//	@Success		200 {object}	SubscriptionDetailsResponse	"Current active subscription details"
 //	@Router			/sellers/:sellerID/subscriptions/active [get]
 func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 	seller := c.MustGet(sellerPayloadKey).(*db.User)
@@ -122,7 +122,10 @@ func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, subscription)
+	// ✨ Transform raw data to structured response
+	response := transformSubscriptionDetails(subscription)
+	
+	c.JSON(http.StatusOK, response)
 }
 
 //	@Summary		Publish a gundam for sale
@@ -1046,4 +1049,8 @@ func (server *Server) getSellerAuctionDetails(c *gin.Context) {
 	resp.AuctionBids = bids
 	
 	c.JSON(http.StatusOK, resp)
+}
+
+func (server *Server) upgradeSubscription(c *gin.Context) {
+
 }

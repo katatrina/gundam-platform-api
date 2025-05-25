@@ -16,16 +16,24 @@ VALUES (
 -- name: GetCurrentActiveSubscriptionDetailsForSeller :one
 SELECT ss.id,
        ss.plan_id,
-       p.name AS subscription_name,
+       p.name                                        AS subscription_name,
+       p.price                                       AS subscription_price, -- ✨ Thêm giá gói
        ss.seller_id,
        p.max_listings,
        ss.listings_used,
+       (p.max_listings - ss.listings_used)           AS listings_remaining, -- ✨ Số lượt còn lại
        p.max_open_auctions,
        ss.open_auctions_used,
+       (p.max_open_auctions - ss.open_auctions_used) AS auctions_remaining, -- ✨ Số lượt đấu giá còn lại
        ss.is_active,
        p.is_unlimited,
+       p.duration_days,                                                     -- ✨ Thời hạn gói
        ss.start_date,
-       ss.end_date
+       ss.end_date,
+       CASE
+           WHEN ss.end_date IS NULL THEN NULL
+           ELSE (ss.end_date - NOW())
+           END                                       AS days_remaining      -- ✨ Số ngày còn lại
 FROM seller_subscriptions ss
          JOIN subscription_plans p ON ss.plan_id = p.id
 WHERE ss.seller_id = $1
