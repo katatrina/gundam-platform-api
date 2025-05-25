@@ -1367,6 +1367,46 @@ definitions:
     - order
     - to_address
     type: object
+  db.GetCurrentActiveSubscriptionDetailsForSellerRow:
+    properties:
+      end_date:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_unlimited:
+        type: boolean
+      listings_used:
+        type: integer
+      max_listings:
+        type: integer
+      max_open_auctions:
+        type: integer
+      open_auctions_used:
+        type: integer
+      plan_id:
+        type: integer
+      seller_id:
+        type: string
+      start_date:
+        type: string
+      subscription_name:
+        type: string
+    required:
+    - end_date
+    - id
+    - is_active
+    - is_unlimited
+    - listings_used
+    - max_listings
+    - max_open_auctions
+    - open_auctions_used
+    - plan_id
+    - seller_id
+    - start_date
+    - subscription_name
+    type: object
   db.GetSellerDetailByIDRow:
     properties:
       seller_profile:
@@ -2046,6 +2086,34 @@ definitions:
     - role
     - shop_name
     - updated_at
+    type: object
+  db.SubscriptionPlan:
+    properties:
+      created_at:
+        type: string
+      duration_days:
+        type: integer
+      id:
+        type: integer
+      is_unlimited:
+        type: boolean
+      max_listings:
+        type: integer
+      max_open_auctions:
+        type: integer
+      name:
+        type: string
+      price:
+        type: integer
+    required:
+    - created_at
+    - duration_days
+    - id
+    - is_unlimited
+    - max_listings
+    - max_open_auctions
+    - name
+    - price
     type: object
   db.UpdateExchangeOfferTxResult:
     properties:
@@ -3537,11 +3605,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully retrieved current active subscription
-        "404":
-          description: Subscription not found
-        "500":
-          description: Internal server error
+          description: Current active subscription details
+          schema:
+            $ref: '#/definitions/db.GetCurrentActiveSubscriptionDetailsForSellerRow'
       security:
       - accessToken: []
       summary: Get current active subscription
@@ -3721,6 +3787,21 @@ paths:
       security:
       - accessToken: []
       summary: Cancel order by seller
+      tags:
+      - sellers
+  /subscription-plans:
+    get:
+      description: Get a list of all available subscription plans.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All available subscription plans
+          schema:
+            items:
+              $ref: '#/definitions/db.SubscriptionPlan'
+            type: array
+      summary: List all subscription plans
       tags:
       - sellers
   /tokens/verify:

@@ -292,7 +292,8 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Lấy thông tin gói đăng ký hiện tại của người bán
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription) // ✅
 			
-			// TODO: Tham gia gói đăng ký mới
+			// Đăng ký/nâng cấp gói subscription
+			// subscriptionGroup.POST("upgrade", server.upgradeSubscription)
 		}
 		
 		// Nhóm các API cho yêu cầu đấu giá
@@ -339,7 +340,8 @@ func (server *Server) setupRouter() *gin.Engine {
 		userWalletGroup.GET("/entries", server.listUserWalletEntries)
 	}
 	
-	v1.GET("/grades", server.listGundamGrades)
+	v1.GET("/grades", server.listGundamGrades)                  // Liệt kê tất cả các cấp độ Gundam
+	v1.GET("/subscription-plans", server.listSubscriptionPlans) // Liệt kê tất cả gói subscription
 	
 	sellerProfileGroup := v1.Group("/seller/profile")
 	{

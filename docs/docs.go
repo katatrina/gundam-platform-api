@@ -1686,13 +1686,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved current active subscription"
-                    },
-                    "404": {
-                        "description": "Subscription not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
+                        "description": "Current active subscription details",
+                        "schema": {
+                            "$ref": "#/definitions/db.GetCurrentActiveSubscriptionDetailsForSellerRow"
+                        }
                     }
                 }
             }
@@ -1960,6 +1957,29 @@ const docTemplate = `{
                         "description": "FailedOrder canceled successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderBySellerTxResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription-plans": {
+            "get": {
+                "description": "Get a list of all available subscription plans.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "List all subscription plans",
+                "responses": {
+                    "200": {
+                        "description": "All available subscription plans",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.SubscriptionPlan"
+                            }
                         }
                     }
                 }
@@ -5764,6 +5784,61 @@ const docTemplate = `{
                 }
             }
         },
+        "db.GetCurrentActiveSubscriptionDetailsForSellerRow": {
+            "type": "object",
+            "required": [
+                "end_date",
+                "id",
+                "is_active",
+                "is_unlimited",
+                "listings_used",
+                "max_listings",
+                "max_open_auctions",
+                "open_auctions_used",
+                "plan_id",
+                "seller_id",
+                "start_date",
+                "subscription_name"
+            ],
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_unlimited": {
+                    "type": "boolean"
+                },
+                "listings_used": {
+                    "type": "integer"
+                },
+                "max_listings": {
+                    "type": "integer"
+                },
+                "max_open_auctions": {
+                    "type": "integer"
+                },
+                "open_auctions_used": {
+                    "type": "integer"
+                },
+                "plan_id": {
+                    "type": "integer"
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "subscription_name": {
+                    "type": "string"
+                }
+            }
+        },
         "db.GetSellerDetailByIDRow": {
             "type": "object",
             "required": [
@@ -6738,6 +6813,45 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "db.SubscriptionPlan": {
+            "type": "object",
+            "required": [
+                "created_at",
+                "duration_days",
+                "id",
+                "is_unlimited",
+                "max_listings",
+                "max_open_auctions",
+                "name",
+                "price"
+            ],
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "duration_days": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_unlimited": {
+                    "type": "boolean"
+                },
+                "max_listings": {
+                    "type": "integer"
+                },
+                "max_open_auctions": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
                 }
             }
         },

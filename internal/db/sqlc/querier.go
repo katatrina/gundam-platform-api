@@ -127,6 +127,7 @@ type Querier interface {
 	ListSalesOrders(ctx context.Context, arg ListSalesOrdersParams) ([]Order, error)
 	ListSellerAuctionRequests(ctx context.Context, arg ListSellerAuctionRequestsParams) ([]AuctionRequest, error)
 	ListSellerAuctions(ctx context.Context, arg ListSellerAuctionsParams) ([]Auction, error)
+	ListSubscriptionPlans(ctx context.Context) ([]SubscriptionPlan, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	ListUserAuctionBids(ctx context.Context, arg ListUserAuctionBidsParams) ([]AuctionBid, error)
 	ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error)
