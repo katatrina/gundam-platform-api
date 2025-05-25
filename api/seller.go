@@ -105,9 +105,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
-//	@Success		200	"Successfully retrieved current active subscription"
-//	@Failure		404	"Subscription not found"
-//	@Failure		500	"Internal server error"
+//	@Success		200 {object}	db.GetCurrentActiveSubscriptionDetailsForSellerRow	"Current active subscription details"
 //	@Router			/sellers/:sellerID/subscriptions/active [get]
 func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 	seller := c.MustGet(sellerPayloadKey).(*db.User)

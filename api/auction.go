@@ -384,14 +384,6 @@ func (server *Server) payAuctionWinningBid(c *gin.Context) {
 		return
 	}
 	
-	// Parse expected delivery time
-	expectedDeliveryTime, err := time.Parse(time.RFC3339, req.ExpectedDeliveryTime.String())
-	if err != nil {
-		err = fmt.Errorf("invalid expected_delivery_time format: %w", err)
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	
 	// 4. Kiểm tra auction
 	auction, err := server.dbStore.GetAuctionByID(c.Request.Context(), auctionID)
 	if err != nil {
@@ -513,7 +505,7 @@ func (server *Server) payAuctionWinningBid(c *gin.Context) {
 		Participant:          participant,
 		ToAddress:            toAddress,
 		DeliveryFee:          req.DeliveryFee,
-		ExpectedDeliveryTime: expectedDeliveryTime,
+		ExpectedDeliveryTime: req.ExpectedDeliveryTime,
 		Note:                 req.Note,
 	})
 	if err != nil {

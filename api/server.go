@@ -289,7 +289,10 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Nhóm các API liên quan đến việc quản lý gói đăng ký của người bán
 		subscriptionGroup := sellerGroup.Group("subscriptions")
 		{
+			// Lấy thông tin gói đăng ký hiện tại của người bán
 			subscriptionGroup.GET("active", server.getCurrentActiveSubscription) // ✅
+			
+			// TODO: Tham gia gói đăng ký mới
 		}
 		
 		// Nhóm các API cho yêu cầu đấu giá
