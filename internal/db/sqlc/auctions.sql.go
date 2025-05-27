@@ -524,8 +524,10 @@ SET status                  = COALESCE($2, status),
     current_price           = COALESCE($3, current_price),
     winning_bid_id          = COALESCE($4, winning_bid_id),
     winner_payment_deadline = COALESCE($5, winner_payment_deadline),
-    actual_end_time         = COALESCE($6, actual_end_time),
-    order_id                = COALESCE($7, order_id),
+    start_time              = COALESCE($6, start_time),
+    end_time                = COALESCE($7, end_time),
+    actual_end_time         = COALESCE($8, actual_end_time),
+    order_id                = COALESCE($9, order_id),
     updated_at              = now()
 WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, total_participants, total_bids, winner_payment_deadline, order_id, canceled_by, canceled_reason, created_at, updated_at
 `
@@ -536,6 +538,8 @@ type UpdateAuctionParams struct {
 	CurrentPrice          *int64            `json:"current_price"`
 	WinningBidID          *uuid.UUID        `json:"winning_bid_id"`
 	WinnerPaymentDeadline *time.Time        `json:"winner_payment_deadline"`
+	StartTime             *time.Time        `json:"start_time"`
+	EndTime               *time.Time        `json:"end_time"`
 	ActualEndTime         *time.Time        `json:"actual_end_time"`
 	OrderID               *uuid.UUID        `json:"order_id"`
 }
@@ -547,6 +551,8 @@ func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (A
 		arg.CurrentPrice,
 		arg.WinningBidID,
 		arg.WinnerPaymentDeadline,
+		arg.StartTime,
+		arg.EndTime,
 		arg.ActualEndTime,
 		arg.OrderID,
 	)

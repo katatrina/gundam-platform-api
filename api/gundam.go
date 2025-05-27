@@ -431,8 +431,6 @@ func (server *Server) listGundamsByUser(ctx *gin.Context) {
 		return
 	}
 	
-	fmt.Println(len(gundams))
-	
 	resp := make([]db.GundamDetails, len(gundams))
 	
 	for i, gundam := range gundams {

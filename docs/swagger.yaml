@@ -545,6 +545,16 @@ definitions:
     required:
     - note
     type: object
+  api.updateAuctionDetailsByModeratorBody:
+    properties:
+      end_time:
+        type: string
+      start_time:
+        type: string
+    required:
+    - end_time
+    - start_time
+    type: object
   api.updateAvatarResponse:
     properties:
       avatar_url:
@@ -2229,6 +2239,13 @@ definitions:
     - name
     - price
     type: object
+  db.UpdateAuctionByModeratorTxResult:
+    properties:
+      updated_auction:
+        $ref: '#/definitions/db.Auction'
+    required:
+    - updated_auction
+    type: object
   db.UpdateExchangeOfferTxResult:
     properties:
       note:
@@ -3185,6 +3202,35 @@ paths:
       security:
       - accessToken: []
       summary: Reject an auction request by moderator
+      tags:
+      - moderator
+  /mod/auctions/{auctionID}:
+    patch:
+      consumes:
+      - application/json
+      description: Moderator can update auction start and end times.
+      parameters:
+      - description: Auction ID (UUID format)
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      - description: Updated auction details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.updateAuctionDetailsByModeratorBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated auction details
+          schema:
+            $ref: '#/definitions/db.UpdateAuctionByModeratorTxResult'
+      security:
+      - accessToken: []
+      summary: Update auction details by moderator
       tags:
       - moderator
   /orders:

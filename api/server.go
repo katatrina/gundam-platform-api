@@ -378,19 +378,22 @@ func (server *Server) setupRouter() *gin.Engine {
 	// API cho moderator
 	moderatorGroup := v1.Group("/mod", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
 	{
-		moderatorAuctionGroup := moderatorGroup.Group("auction-requests")
+		moderatorAuctionRequestGroup := moderatorGroup.Group("auction-requests")
 		{
 			// Xem tất cả yêu cầu đấu giá (pending, approved, rejected)
-			moderatorAuctionGroup.GET("", server.listAuctionRequestsForModerator) // ✅
-			
-			// Xem chi tiết yêu cầu đấu giá (tạm thời bỏ qua)
-			// moderatorAuctionGroup.GET(":requestID", server.getAuctionRequestDetails)
+			moderatorAuctionRequestGroup.GET("", server.listAuctionRequestsForModerator) // ✅
 			
 			// Phê duyệt yêu cầu đấu giá
-			moderatorAuctionGroup.PATCH(":requestID/approve", server.approveAuctionRequest) // ✅
+			moderatorAuctionRequestGroup.PATCH(":requestID/approve", server.approveAuctionRequest) // ✅
 			
 			// Từ chối yêu cầu đấu giá
-			moderatorAuctionGroup.PATCH(":requestID/reject", server.rejectAuctionRequest) // ✅
+			moderatorAuctionRequestGroup.PATCH(":requestID/reject", server.rejectAuctionRequest) // ✅
+		}
+		
+		moderatorAuctionGroup := moderatorGroup.Group("auctions")
+		{
+			// Chỉnh sửa thông tin của một phiên đấu giá
+			moderatorAuctionGroup.PATCH(":auctionID", server.updateAuctionDetailsByModerator)
 		}
 	}
 	

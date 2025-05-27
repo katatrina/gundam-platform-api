@@ -86,7 +86,7 @@ func ValidateAuctionTimesForApproval(startTime time.Time) error {
 	startTimeVN := startTime.In(vietnamLoc)
 	
 	if startTimeVN.Before(now) {
-		return fmt.Errorf("auction start_time is in the past, provided: %s, current time: %s",
+		return fmt.Errorf("auction start_time is in the past, provided: %s, now: %s",
 			startTimeVN.Format("15:04 02/01/2006"),
 			now.Format("15:04 02/01/2006"))
 	}

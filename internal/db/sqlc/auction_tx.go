@@ -657,3 +657,43 @@ func (store *SQLStore) PayAuctionWinningBidTx(ctx context.Context, arg PayAuctio
 	
 	return result, err
 }
+
+type UpdateAuctionByModeratorTxParams struct {
+	AuctionID uuid.UUID
+	StartTime *time.Time
+	EndTime   *time.Time
+}
+
+type UpdateAuctionByModeratorTxResult struct {
+	UpdatedAuction Auction `json:"updated_auction"`
+}
+
+func (store *SQLStore) UpdateAuctionByModeratorTx(ctx context.Context, arg UpdateAuctionByModeratorTxParams) (UpdateAuctionByModeratorTxResult, error) {
+	var result UpdateAuctionByModeratorTxResult
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		params := UpdateAuctionParams{
+			ID:        arg.AuctionID,
+			StartTime: arg.StartTime,
+			EndTime:   arg.EndTime,
+		}
+		
+		now := time.Now()
+		if arg.StartTime != nil && arg.StartTime.Before(now) {
+			params.Status = NullAuctionStatus{
+				AuctionStatus: AuctionStatusActive,
+				Valid:         true,
+			}
+		}
+		
+		updatedAuction, err := qTx.UpdateAuction(ctx, params)
+		if err != nil {
+			return fmt.Errorf("failed to update auction: %w", err)
+		}
+		result.UpdatedAuction = updatedAuction
+		
+		return nil
+	})
+	
+	return result, err
+}

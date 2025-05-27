@@ -849,6 +849,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/mod/auctions/{auctionID}": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Moderator can update auction start and end times.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "Update auction details by moderator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID (UUID format)",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated auction details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.updateAuctionDetailsByModeratorBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated auction details",
+                        "schema": {
+                            "$ref": "#/definitions/db.UpdateAuctionByModeratorTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/orders": {
             "get": {
                 "security": [
@@ -4649,6 +4695,21 @@ const docTemplate = `{
                 }
             }
         },
+        "api.updateAuctionDetailsByModeratorBody": {
+            "type": "object",
+            "required": [
+                "end_time",
+                "start_time"
+            ],
+            "properties": {
+                "end_time": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                }
+            }
+        },
         "api.updateAvatarResponse": {
             "type": "object",
             "required": [
@@ -7024,6 +7085,17 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "integer"
+                }
+            }
+        },
+        "db.UpdateAuctionByModeratorTxResult": {
+            "type": "object",
+            "required": [
+                "updated_auction"
+            ],
+            "properties": {
+                "updated_auction": {
+                    "$ref": "#/definitions/db.Auction"
                 }
             }
         },

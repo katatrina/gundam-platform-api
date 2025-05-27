@@ -281,3 +281,59 @@ func (server *Server) approveAuctionRequest(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, result)
 }
+
+type updateAuctionDetailsByModeratorBody struct {
+	StartTime *time.Time `json:"start_time"`
+	EndTime   *time.Time `json:"end_time"`
+}
+
+//	@Summary		Update auction details by moderator
+//	@Description	Moderator can update auction start and end times.
+//	@Tags			moderator
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			auctionID	path		string								true	"Auction ID (UUID format)"
+//	@Param			request		body		updateAuctionDetailsByModeratorBody	true	"Updated auction details"
+//	@Success		200			{object}	db.UpdateAuctionByModeratorTxResult	"Updated auction details"
+//	@Router			/mod/auctions/{auctionID} [patch]
+func (server *Server) updateAuctionDetailsByModerator(c *gin.Context) {
+	_ = c.MustGet(moderatorPayloadKey).(*db.User)
+	
+	var req updateAuctionDetailsByModeratorBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	auctionID, err := uuid.Parse(c.Param("auctionID"))
+	if err != nil {
+		err = fmt.Errorf("invalid auction ID format: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	_, err = server.dbStore.GetAuctionByID(c.Request.Context(), auctionID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction ID %s not found", auctionID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	result, err := server.dbStore.UpdateAuctionByModeratorTx(c.Request.Context(), db.UpdateAuctionByModeratorTxParams{
+		AuctionID: auctionID,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, result)
+}
