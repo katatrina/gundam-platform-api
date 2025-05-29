@@ -35,9 +35,9 @@ func NewOrderTracker(store db.Store, deliveryService delivery.IDeliveryProvider,
 
 // Start bắt đầu chạy cronjob theo dõi trạng thái đơn hàng.
 func (t *OrderTracker) Start() error {
-	// Tạo job kiểm tra trạng thái đơn hàng (mỗi 10 giây)
+	// Tạo job kiểm tra trạng thái đơn hàng (mỗi 5 giây)
 	_, err := t.scheduler.NewJob(
-		gocron.DurationJob(10*time.Second),
+		gocron.DurationJob(5*time.Second),
 		gocron.NewTask(
 			func() {
 				t.checkOrderStatus()

@@ -49,6 +49,7 @@ type Querier interface {
 	CreateTrialSubscriptionForSeller(ctx context.Context, sellerID string) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserAddress(ctx context.Context, arg CreateUserAddressParams) (UserAddress, error)
+	CreateUserBankAccount(ctx context.Context, arg CreateUserBankAccountParams) (UserBankAccount, error)
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
@@ -96,6 +97,7 @@ type Querier interface {
 	GetSubscriptionPlanByID(ctx context.Context, id int64) (SubscriptionPlan, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
+	GetUserBankAccountByID(ctx context.Context, arg GetUserBankAccountByIDParams) (UserBankAccount, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error)
@@ -133,6 +135,7 @@ type Querier interface {
 	ListSubscriptionPlans(ctx context.Context) ([]SubscriptionPlan, error)
 	ListUserAddresses(ctx context.Context, userID string) ([]UserAddress, error)
 	ListUserAuctionBids(ctx context.Context, arg ListUserAuctionBidsParams) ([]AuctionBid, error)
+	ListUserBankAccounts(ctx context.Context, userID string) ([]UserBankAccount, error)
 	ListUserExchangePosts(ctx context.Context, arg ListUserExchangePostsParams) ([]ExchangePost, error)
 	ListUserExchanges(ctx context.Context, arg ListUserExchangesParams) ([]Exchange, error)
 	ListUserParticipatedAuctions(ctx context.Context, userID string) ([]ListUserParticipatedAuctionsRow, error)

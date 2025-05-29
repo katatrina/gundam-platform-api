@@ -188,6 +188,25 @@ definitions:
     - phone_number
     - user_id
     type: object
+  api.addBankAccountRequest:
+    properties:
+      account_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+      bank_name:
+        type: string
+      bank_short_name:
+        type: string
+    required:
+    - account_name
+    - account_number
+    - bank_code
+    - bank_name
+    - bank_short_name
+    type: object
   api.addCartItemRequest:
     properties:
       gundam_id:
@@ -2356,6 +2375,37 @@ definitions:
     - updated_at
     - user_id
     - ward_name
+    type: object
+  db.UserBankAccount:
+    properties:
+      account_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+      bank_name:
+        type: string
+      bank_short_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - account_name
+    - account_number
+    - bank_code
+    - bank_name
+    - bank_short_name
+    - created_at
+    - id
+    - updated_at
+    - user_id
     type: object
   db.UserExchangeDetails:
     properties:
@@ -4976,6 +5026,46 @@ paths:
       summary: Pay for winning auction bid
       tags:
       - auctions
+  /users/me/bank-accounts:
+    get:
+      description: Get all bank accounts for the authenticated user (for withdrawals)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user bank accounts
+          schema:
+            items:
+              $ref: '#/definitions/db.UserBankAccount'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user bank accounts
+      tags:
+      - wallet
+    post:
+      consumes:
+      - application/json
+      description: Add a new bank account for the authenticated user (for withdrawals)
+      parameters:
+      - description: Bank account information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.addBankAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully added bank account
+          schema:
+            $ref: '#/definitions/db.UserBankAccount'
+      security:
+      - accessToken: []
+      summary: Add bank account
+      tags:
+      - wallet
   /users/me/exchange-offers:
     get:
       description: Get a list of all exchange offers created by the authenticated

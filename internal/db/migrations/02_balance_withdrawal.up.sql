@@ -10,14 +10,15 @@ CREATE TYPE "withdrawal_request_status" AS ENUM (
 -- 2. Create user_bank_accounts table
 CREATE TABLE "user_bank_accounts"
 (
-    "id"             uuid PRIMARY KEY,
-    "user_id"        text        NOT NULL,
-    "account_name"   text        NOT NULL,
-    "account_number" text        NOT NULL,
-    "bank_code"      text        NOT NULL,
-    "bank_name"      text        NOT NULL,
-    "created_at"     timestamptz NOT NULL DEFAULT (now()),
-    "updated_at"     timestamptz NOT NULL DEFAULT (now())
+    "id"              uuid PRIMARY KEY,
+    "user_id"         text        NOT NULL,
+    "account_name"    text        NOT NULL,
+    "account_number"  text        NOT NULL,
+    "bank_code"       text        NOT NULL,
+    "bank_name"       text        NOT NULL,
+    "bank_short_name" text        NOT NULL,
+    "created_at"      timestamptz NOT NULL DEFAULT (now()),
+    "updated_at"      timestamptz NOT NULL DEFAULT (now())
 );
 
 -- 3. Create withdrawal_requests table
@@ -37,11 +38,6 @@ CREATE TABLE "withdrawal_requests"
     "updated_at"            timestamptz               NOT NULL DEFAULT (now()),
     "completed_at"          timestamptz
 );
-
--- 4. Create indexes
-CREATE UNIQUE INDEX ON "user_bank_accounts" ("user_id", "account_number");
-CREATE INDEX ON "withdrawal_requests" ("user_id", "status");
-CREATE INDEX ON "withdrawal_requests" ("status", "created_at");
 
 -- 5. Add foreign key constraints
 ALTER TABLE "user_bank_accounts"

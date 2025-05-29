@@ -3180,6 +3180,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/bank-accounts": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get all bank accounts for the authenticated user (for withdrawals)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "List user bank accounts",
+                "responses": {
+                    "200": {
+                        "description": "List of user bank accounts",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.UserBankAccount"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Add a new bank account for the authenticated user (for withdrawals)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Add bank account",
+                "parameters": [
+                    {
+                        "description": "Bank account information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.addBankAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully added bank account",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserBankAccount"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/exchange-offers": {
             "get": {
                 "security": [
@@ -4226,6 +4291,33 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "description": "ID của user cần cập nhật số điện thoại",
+                    "type": "string"
+                }
+            }
+        },
+        "api.addBankAccountRequest": {
+            "type": "object",
+            "required": [
+                "account_name",
+                "account_number",
+                "bank_code",
+                "bank_name",
+                "bank_short_name"
+            ],
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "bank_short_name": {
                     "type": "string"
                 }
             }
@@ -7252,6 +7344,49 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ward_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.UserBankAccount": {
+            "type": "object",
+            "required": [
+                "account_name",
+                "account_number",
+                "bank_code",
+                "bank_name",
+                "bank_short_name",
+                "created_at",
+                "id",
+                "updated_at",
+                "user_id"
+            ],
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "bank_short_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

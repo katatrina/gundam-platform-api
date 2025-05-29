@@ -1326,6 +1326,73 @@ func AllWalletReferenceTypeValues() []WalletReferenceType {
 	}
 }
 
+type WithdrawalRequestStatus string
+
+const (
+	WithdrawalRequestStatusPending   WithdrawalRequestStatus = "pending"
+	WithdrawalRequestStatusApproved  WithdrawalRequestStatus = "approved"
+	WithdrawalRequestStatusCompleted WithdrawalRequestStatus = "completed"
+	WithdrawalRequestStatusRejected  WithdrawalRequestStatus = "rejected"
+	WithdrawalRequestStatusCanceled  WithdrawalRequestStatus = "canceled"
+)
+
+func (e *WithdrawalRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WithdrawalRequestStatus(s)
+	case string:
+		*e = WithdrawalRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WithdrawalRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullWithdrawalRequestStatus struct {
+	WithdrawalRequestStatus WithdrawalRequestStatus `json:"withdrawal_request_status"`
+	Valid                   bool                    `json:"valid"` // Valid is true if WithdrawalRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWithdrawalRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.WithdrawalRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WithdrawalRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWithdrawalRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WithdrawalRequestStatus), nil
+}
+
+func (e WithdrawalRequestStatus) Valid() bool {
+	switch e {
+	case WithdrawalRequestStatusPending,
+		WithdrawalRequestStatusApproved,
+		WithdrawalRequestStatusCompleted,
+		WithdrawalRequestStatusRejected,
+		WithdrawalRequestStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func AllWithdrawalRequestStatusValues() []WithdrawalRequestStatus {
+	return []WithdrawalRequestStatus{
+		WithdrawalRequestStatusPending,
+		WithdrawalRequestStatusApproved,
+		WithdrawalRequestStatusCompleted,
+		WithdrawalRequestStatusRejected,
+		WithdrawalRequestStatusCanceled,
+	}
+}
+
 type Auction struct {
 	ID                    uuid.UUID       `json:"id"`
 	RequestID             *uuid.UUID      `json:"request_id"`
@@ -1700,6 +1767,18 @@ type UserAddress struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+type UserBankAccount struct {
+	ID            uuid.UUID `json:"id"`
+	UserID        string    `json:"user_id"`
+	AccountName   string    `json:"account_name"`
+	AccountNumber string    `json:"account_number"`
+	BankCode      string    `json:"bank_code"`
+	BankName      string    `json:"bank_name"`
+	BankShortName string    `json:"bank_short_name"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
 type Wallet struct {
 	UserID                string    `json:"user_id"`
 	Balance               int64     `json:"balance"`
@@ -1721,4 +1800,20 @@ type WalletEntry struct {
 	CreatedAt     time.Time           `json:"created_at"`
 	UpdatedAt     time.Time           `json:"updated_at"`
 	CompletedAt   *time.Time          `json:"completed_at"`
+}
+
+type WithdrawalRequest struct {
+	ID                   uuid.UUID               `json:"id"`
+	UserID               string                  `json:"user_id"`
+	BankAccountID        uuid.UUID               `json:"bank_account_id"`
+	Amount               int64                   `json:"amount"`
+	Status               WithdrawalRequestStatus `json:"status"`
+	ProcessedBy          *string                 `json:"processed_by"`
+	ProcessedAt          *time.Time              `json:"processed_at"`
+	RejectedReason       *string                 `json:"rejected_reason"`
+	TransactionReference *string                 `json:"transaction_reference"`
+	WalletEntryID        *int64                  `json:"wallet_entry_id"`
+	CreatedAt            time.Time               `json:"created_at"`
+	UpdatedAt            time.Time               `json:"updated_at"`
+	CompletedAt          *time.Time              `json:"completed_at"`
 }

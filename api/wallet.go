@@ -81,3 +81,11 @@ func (server *Server) listUserWalletEntries(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, entries)
 }
+
+func (server *Server) createWithdrawalRequest(c *gin.Context) {
+
+}
+
+func (server *Server) listUserWithdrawalRequests(c *gin.Context) {
+
+}
