@@ -52,7 +52,7 @@ func (server *Server) getUserWallet(c *gin.Context) {
 //	@Security		accessToken
 //	@Param			status	query	string			false	"Filter by wallet entry status"
 //	@Success		200		{array}	db.WalletEntry	"List of wallet entries"
-//	@Router			/user/me/wallet/entries [get]
+//	@Router			/users/me/wallet/entries [get]
 func (server *Server) listUserWalletEntries(c *gin.Context) {
 	// Lấy thông tin người dùng từ token
 	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)

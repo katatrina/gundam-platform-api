@@ -2117,45 +2117,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/me/wallet/entries": {
-            "get": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "List user wallet entries",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wallet"
-                ],
-                "summary": "List user wallet entries",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by wallet entry status",
-                        "name": "status",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of wallet entries",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/db.WalletEntry"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/users": {
             "post": {
                 "description": "Create a new user with email and password",
@@ -3679,6 +3640,45 @@ const docTemplate = `{
                         "description": "Negotiation request response",
                         "schema": {
                             "$ref": "#/definitions/db.RequestNegotiationForOfferTxResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/wallet/entries": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List user wallet entries",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "List user wallet entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by wallet entry status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of wallet entries",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.WalletEntry"
+                            }
                         }
                     }
                 }

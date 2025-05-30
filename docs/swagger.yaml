@@ -4115,30 +4115,6 @@ paths:
       summary: Verify access token
       tags:
       - authentication
-  /user/me/wallet/entries:
-    get:
-      consumes:
-      - application/json
-      description: List user wallet entries
-      parameters:
-      - description: Filter by wallet entry status
-        in: query
-        name: status
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of wallet entries
-          schema:
-            items:
-              $ref: '#/definitions/db.WalletEntry'
-            type: array
-      security:
-      - accessToken: []
-      summary: List user wallet entries
-      tags:
-      - wallet
   /users:
     post:
       consumes:
@@ -5358,6 +5334,30 @@ paths:
       summary: Request negotiation for an exchange offer
       tags:
       - exchanges
+  /users/me/wallet/entries:
+    get:
+      consumes:
+      - application/json
+      description: List user wallet entries
+      parameters:
+      - description: Filter by wallet entry status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of wallet entries
+          schema:
+            items:
+              $ref: '#/definitions/db.WalletEntry'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user wallet entries
+      tags:
+      - wallet
   /wallet/zalopay/create:
     post:
       consumes:
