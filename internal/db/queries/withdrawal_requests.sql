@@ -14,3 +14,11 @@ FROM withdrawal_requests wr
 WHERE wr.user_id = sqlc.arg('user_id')
   AND wr.status = COALESCE(sqlc.narg('status'), wr.status)
 ORDER BY wr.created_at DESC;
+
+-- name: ListWithdrawalRequests :many
+SELECT sqlc.embed(wr),
+       sqlc.embed(uba)
+FROM withdrawal_requests wr
+         LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
+WHERE wr.status = COALESCE(sqlc.narg('status'), wr.status)
+ORDER BY wr.created_at DESC;

@@ -895,6 +895,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/mod/withdrawal-requests": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List all withdrawal requests for moderators",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "List withdrawal requests",
+                "parameters": [
+                    {
+                        "enum": [
+                            "pending",
+                            "approved",
+                            "rejected",
+                            "completed",
+                            "rejected",
+                            "canceled"
+                        ],
+                        "type": "string",
+                        "description": "Filter by withdrawal request status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of withdrawal requests",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.WithdrawalRequestDetails"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/orders": {
             "get": {
                 "security": [

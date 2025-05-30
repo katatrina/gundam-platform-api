@@ -339,14 +339,14 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Liệt kê tất cả các bút toán ví của người dùng
 		userWalletGroup.GET("/entries", server.listUserWalletEntries)
 		
-		userWalletGroup.POST("/withdrawal-requests", server.createWithdrawalRequest)
-		userWalletGroup.GET("/withdrawal-requests", server.listUserWithdrawalRequests)
+		userWalletGroup.POST("/withdrawal-requests", server.createWithdrawalRequest)   // ✅
+		userWalletGroup.GET("/withdrawal-requests", server.listUserWithdrawalRequests) // ✅
 	}
 	
 	userBankAccountGroup := v1.Group("/users/me/bank-accounts", authMiddleware(server.tokenMaker))
 	{
-		userBankAccountGroup.POST("", server.addBankAccount)
-		userBankAccountGroup.GET("", server.listUserBankAccounts)
+		userBankAccountGroup.POST("", server.addBankAccount)      // ✅
+		userBankAccountGroup.GET("", server.listUserBankAccounts) // ✅
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)                  // Liệt kê tất cả các cấp độ Gundam

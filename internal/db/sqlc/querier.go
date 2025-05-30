@@ -142,6 +142,7 @@ type Querier interface {
 	ListUserParticipatedAuctions(ctx context.Context, userID string) ([]ListUserParticipatedAuctionsRow, error)
 	ListUserWalletEntries(ctx context.Context, arg ListUserWalletEntriesParams) ([]WalletEntry, error)
 	ListUserWithdrawalRequests(ctx context.Context, arg ListUserWithdrawalRequestsParams) ([]ListUserWithdrawalRequestsRow, error)
+	ListWithdrawalRequests(ctx context.Context, status NullWithdrawalRequestStatus) ([]ListWithdrawalRequestsRow, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)

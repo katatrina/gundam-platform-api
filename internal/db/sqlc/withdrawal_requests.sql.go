@@ -117,3 +117,60 @@ func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, arg ListUserWi
 	}
 	return items, nil
 }
+
+const listWithdrawalRequests = `-- name: ListWithdrawalRequests :many
+SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
+FROM withdrawal_requests wr
+         LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
+WHERE wr.status = COALESCE($1, wr.status)
+ORDER BY wr.created_at DESC
+`
+
+type ListWithdrawalRequestsRow struct {
+	WithdrawalRequest WithdrawalRequest `json:"withdrawal_request"`
+	UserBankAccount   UserBankAccount   `json:"user_bank_account"`
+}
+
+func (q *Queries) ListWithdrawalRequests(ctx context.Context, status NullWithdrawalRequestStatus) ([]ListWithdrawalRequestsRow, error) {
+	rows, err := q.db.Query(ctx, listWithdrawalRequests, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWithdrawalRequestsRow{}
+	for rows.Next() {
+		var i ListWithdrawalRequestsRow
+		if err := rows.Scan(
+			&i.WithdrawalRequest.ID,
+			&i.WithdrawalRequest.UserID,
+			&i.WithdrawalRequest.BankAccountID,
+			&i.WithdrawalRequest.Amount,
+			&i.WithdrawalRequest.Status,
+			&i.WithdrawalRequest.ProcessedBy,
+			&i.WithdrawalRequest.ProcessedAt,
+			&i.WithdrawalRequest.RejectedReason,
+			&i.WithdrawalRequest.TransactionReference,
+			&i.WithdrawalRequest.WalletEntryID,
+			&i.WithdrawalRequest.CreatedAt,
+			&i.WithdrawalRequest.UpdatedAt,
+			&i.WithdrawalRequest.CompletedAt,
+			&i.UserBankAccount.ID,
+			&i.UserBankAccount.UserID,
+			&i.UserBankAccount.AccountName,
+			&i.UserBankAccount.AccountNumber,
+			&i.UserBankAccount.BankCode,
+			&i.UserBankAccount.BankName,
+			&i.UserBankAccount.BankShortName,
+			&i.UserBankAccount.CreatedAt,
+			&i.UserBankAccount.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

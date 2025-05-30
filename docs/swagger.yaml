@@ -3393,6 +3393,35 @@ paths:
       summary: Update auction details by moderator
       tags:
       - moderator
+  /mod/withdrawal-requests:
+    get:
+      description: List all withdrawal requests for moderators
+      parameters:
+      - description: Filter by withdrawal request status
+        enum:
+        - pending
+        - approved
+        - rejected
+        - completed
+        - rejected
+        - canceled
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of withdrawal requests
+          schema:
+            items:
+              $ref: '#/definitions/db.WithdrawalRequestDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List withdrawal requests
+      tags:
+      - moderator
   /orders:
     get:
       description: List all orders of a member with optional filtering by order status
