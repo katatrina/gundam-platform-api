@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -57,38 +56,27 @@ func (q *Queries) CreateWithdrawalRequest(ctx context.Context, arg CreateWithdra
 }
 
 const listUserWithdrawalRequests = `-- name: ListUserWithdrawalRequests :many
-SELECT
-    wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
-    uba.account_name,
-    uba.account_number,
-    uba.bank_short_name
+SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
 FROM withdrawal_requests wr
          LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
 WHERE wr.user_id = $1
+  AND wr.status = COALESCE($2, wr.status)
 ORDER BY wr.created_at DESC
 `
 
-type ListUserWithdrawalRequestsRow struct {
-	ID                   uuid.UUID               `json:"id"`
-	UserID               string                  `json:"user_id"`
-	BankAccountID        uuid.UUID               `json:"bank_account_id"`
-	Amount               int64                   `json:"amount"`
-	Status               WithdrawalRequestStatus `json:"status"`
-	ProcessedBy          *string                 `json:"processed_by"`
-	ProcessedAt          *time.Time              `json:"processed_at"`
-	RejectedReason       *string                 `json:"rejected_reason"`
-	TransactionReference *string                 `json:"transaction_reference"`
-	WalletEntryID        *int64                  `json:"wallet_entry_id"`
-	CreatedAt            time.Time               `json:"created_at"`
-	UpdatedAt            time.Time               `json:"updated_at"`
-	CompletedAt          *time.Time              `json:"completed_at"`
-	AccountName          *string                 `json:"account_name"`
-	AccountNumber        *string                 `json:"account_number"`
-	BankShortName        *string                 `json:"bank_short_name"`
+type ListUserWithdrawalRequestsParams struct {
+	UserID string                      `json:"user_id"`
+	Status NullWithdrawalRequestStatus `json:"status"`
 }
 
-func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, userID string) ([]ListUserWithdrawalRequestsRow, error) {
-	rows, err := q.db.Query(ctx, listUserWithdrawalRequests, userID)
+type ListUserWithdrawalRequestsRow struct {
+	WithdrawalRequest WithdrawalRequest `json:"withdrawal_request"`
+	UserBankAccount   UserBankAccount   `json:"user_bank_account"`
+}
+
+func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, arg ListUserWithdrawalRequestsParams) ([]ListUserWithdrawalRequestsRow, error) {
+	rows, err := q.db.Query(ctx, listUserWithdrawalRequests, arg.UserID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -97,22 +85,28 @@ func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, userID string)
 	for rows.Next() {
 		var i ListUserWithdrawalRequestsRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.BankAccountID,
-			&i.Amount,
-			&i.Status,
-			&i.ProcessedBy,
-			&i.ProcessedAt,
-			&i.RejectedReason,
-			&i.TransactionReference,
-			&i.WalletEntryID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.CompletedAt,
-			&i.AccountName,
-			&i.AccountNumber,
-			&i.BankShortName,
+			&i.WithdrawalRequest.ID,
+			&i.WithdrawalRequest.UserID,
+			&i.WithdrawalRequest.BankAccountID,
+			&i.WithdrawalRequest.Amount,
+			&i.WithdrawalRequest.Status,
+			&i.WithdrawalRequest.ProcessedBy,
+			&i.WithdrawalRequest.ProcessedAt,
+			&i.WithdrawalRequest.RejectedReason,
+			&i.WithdrawalRequest.TransactionReference,
+			&i.WithdrawalRequest.WalletEntryID,
+			&i.WithdrawalRequest.CreatedAt,
+			&i.WithdrawalRequest.UpdatedAt,
+			&i.WithdrawalRequest.CompletedAt,
+			&i.UserBankAccount.ID,
+			&i.UserBankAccount.UserID,
+			&i.UserBankAccount.AccountName,
+			&i.UserBankAccount.AccountNumber,
+			&i.UserBankAccount.BankCode,
+			&i.UserBankAccount.BankName,
+			&i.UserBankAccount.BankShortName,
+			&i.UserBankAccount.CreatedAt,
+			&i.UserBankAccount.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

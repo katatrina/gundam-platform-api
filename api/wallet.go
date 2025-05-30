@@ -198,6 +198,43 @@ func (server *Server) createWithdrawalRequest(c *gin.Context) {
 	c.JSON(http.StatusCreated, request)
 }
 
+//	@Summary		List user withdrawal requests
+//	@Description	Retrieve all withdrawal requests for the authenticated user
+//	@Tags			wallet
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			status	query	string						false	"Filter by status"	Enums(pending, approved, completed, rejected, canceled)
+//	@Success		200		{array}	db.WithdrawalRequestDetails	"List of withdrawal requests"
+//	@Router			/users/me/wallet/withdrawal-requests [get]
 func (server *Server) listUserWithdrawalRequests(c *gin.Context) {
-
+	authPayload := c.MustGet(authorizationPayloadKey).(*token.Payload)
+	userID := authPayload.Subject
+	
+	status := c.Query("status")
+	if status != "" {
+		if err := db.IsValidWithdrawalRequestStatus(status); err != nil {
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	requests, err := server.dbStore.ListUserWithdrawalRequests(c, db.ListUserWithdrawalRequestsParams{
+		UserID: userID,
+		Status: db.NullWithdrawalRequestStatus{
+			WithdrawalRequestStatus: db.WithdrawalRequestStatus(status),
+			Valid:                   status != "",
+		},
+	})
+	if err != nil {
+		err = fmt.Errorf("failed to list withdrawal requests for user ID %s: %w", userID, err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	resp := make([]db.WithdrawalRequestDetails, 0, len(requests))
+	for _, req := range requests {
+		resp = append(resp, db.NewWithdrawalRequestDetails(req.WithdrawalRequest, req.UserBankAccount))
+	}
+	
+	c.JSON(http.StatusOK, resp)
 }

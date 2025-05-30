@@ -2713,6 +2713,49 @@ definitions:
     - user_id
     - wallet_entry_id
     type: object
+  db.WithdrawalRequestDetails:
+    properties:
+      amount:
+        type: integer
+      bank_account:
+        $ref: '#/definitions/db.UserBankAccount'
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      processed_at:
+        type: string
+      processed_by:
+        type: string
+      rejected_reason:
+        type: string
+      status:
+        $ref: '#/definitions/db.WithdrawalRequestStatus'
+      transaction_reference:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      wallet_entry_id:
+        type: integer
+    required:
+    - amount
+    - bank_account
+    - completed_at
+    - created_at
+    - id
+    - processed_at
+    - processed_by
+    - rejected_reason
+    - status
+    - transaction_reference
+    - updated_at
+    - user_id
+    - wallet_entry_id
+    type: object
   db.WithdrawalRequestStatus:
     enum:
     - pending
@@ -5426,6 +5469,33 @@ paths:
       tags:
       - wallet
   /users/me/wallet/withdrawal-requests:
+    get:
+      description: Retrieve all withdrawal requests for the authenticated user
+      parameters:
+      - description: Filter by status
+        enum:
+        - pending
+        - approved
+        - completed
+        - rejected
+        - canceled
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of withdrawal requests
+          schema:
+            items:
+              $ref: '#/definitions/db.WithdrawalRequestDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List user withdrawal requests
+      tags:
+      - wallet
     post:
       consumes:
       - application/json
@@ -5437,7 +5507,6 @@ paths:
         - Tài khoản ngân hàng phải thuộc về người dùng đã xác thực
         - Số tiền rút phải trong khoảng từ 50,000 VNĐ đến 5,000,000 VNĐ mỗi lần
         - Yêu cầu rút tiền được xử lý thủ công bởi moderator trong vòng 24 giờ (ngày làm việc)
-        - Tiền sẽ được chuyển vào tài khoản ngân hàng trong vòng 1-3 ngày làm việc sau khi được duyệt
         - Sau khi tạo, yêu cầu rút tiền không thể hủy bởi người dùng
 
         **Quy trình xử lý:**

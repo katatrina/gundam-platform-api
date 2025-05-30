@@ -118,3 +118,12 @@ func IsValidWalletEntryStatus(status string) error {
 	
 	return nil
 }
+
+func IsValidWithdrawalRequestStatus(status string) error {
+	if !WithdrawalRequestStatus(status).Valid() {
+		err := fmt.Errorf("invalid status: %s, must be one of %v", status, AllWithdrawalRequestStatusValues())
+		return err
+	}
+	
+	return nil
+}

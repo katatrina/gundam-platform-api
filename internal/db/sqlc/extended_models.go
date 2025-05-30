@@ -189,3 +189,37 @@ type AuctionDetails struct {
 	AuctionParticipants []AuctionParticipant `json:"auction_participants"` // Danh sách người tham gia đấu giá
 	AuctionBids         []AuctionBid         `json:"auction_bids"`         // Danh sách giá đấu
 }
+
+func NewWithdrawalRequestDetails(request WithdrawalRequest, bankAccount UserBankAccount) WithdrawalRequestDetails {
+	return WithdrawalRequestDetails{
+		ID:                   request.ID,
+		UserID:               request.UserID,
+		BankAccount:          bankAccount,
+		Amount:               request.Amount,
+		Status:               request.Status,
+		ProcessedBy:          request.ProcessedBy,
+		ProcessedAt:          request.ProcessedAt,
+		RejectedReason:       request.RejectedReason,
+		TransactionReference: request.TransactionReference,
+		WalletEntryID:        request.WalletEntryID,
+		CreatedAt:            request.CreatedAt,
+		UpdatedAt:            request.UpdatedAt,
+		CompletedAt:          request.CompletedAt,
+	}
+}
+
+type WithdrawalRequestDetails struct {
+	ID                   uuid.UUID               `json:"id"`
+	UserID               string                  `json:"user_id"`
+	BankAccount          UserBankAccount         `json:"bank_account"`
+	Amount               int64                   `json:"amount"`
+	Status               WithdrawalRequestStatus `json:"status"`
+	ProcessedBy          *string                 `json:"processed_by"`
+	ProcessedAt          *time.Time              `json:"processed_at"`
+	RejectedReason       *string                 `json:"rejected_reason"`
+	TransactionReference *string                 `json:"transaction_reference"`
+	WalletEntryID        *int64                  `json:"wallet_entry_id"`
+	CreatedAt            time.Time               `json:"created_at"`
+	UpdatedAt            time.Time               `json:"updated_at"`
+	CompletedAt          *time.Time              `json:"completed_at"`
+}
