@@ -1420,7 +1420,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/:sellerID/auction-requests": {
+        "/sellers/{sellerID}/auction-requests": {
             "get": {
                 "security": [
                     {
@@ -1512,7 +1512,45 @@ const docTemplate = `{
                 }
             }
         },
-        "/sellers/:sellerID/auctions": {
+        "/sellers/{sellerID}/auction-requests/{requestID}": {
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Delete an auction request. Only requests with 'pending' or 'rejected' status can be deleted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Delete an auction request by seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auction Request ID (UUID format)",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted auction request"
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/auctions": {
             "get": {
                 "security": [
                     {
@@ -1559,221 +1597,6 @@ const docTemplate = `{
                                 "$ref": "#/definitions/db.AuctionDetails"
                             }
                         }
-                    }
-                }
-            }
-        },
-        "/sellers/:sellerID/orders": {
-            "get": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Get all sales orders that belong to the specified seller ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "List all sales orders (excluding exchange orders) for a specific seller",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "pending",
-                            "packaging",
-                            "delivering",
-                            "delivered",
-                            "completed",
-                            "canceled",
-                            "failed"
-                        ],
-                        "type": "string",
-                        "description": "Filter by order status",
-                        "name": "status",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of sales orders",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/db.SalesOrderInfo"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/sellers/:sellerID/orders/:orderID": {
-            "get": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Get details of a specific sales order for the seller",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Get sales order details (excluding exchange orders)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "FailedOrder ID",
-                        "name": "orderID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Sales order details",
-                        "schema": {
-                            "$ref": "#/definitions/db.SalesOrderDetails"
-                        }
-                    }
-                }
-            }
-        },
-        "/sellers/:sellerID/orders/:orderID/confirm": {
-            "patch": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Confirm an order for the specified seller. This endpoint checks the order's status before proceeding.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Confirm an order",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "FailedOrder ID",
-                        "name": "orderID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully confirmed order",
-                        "schema": {
-                            "$ref": "#/definitions/db.ConfirmOrderTxResult"
-                        }
-                    }
-                }
-            }
-        },
-        "/sellers/:sellerID/subscriptions/active": {
-            "get": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Get the current active subscription details for the specified seller",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "sellers"
-                ],
-                "summary": "Get current active subscription",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Current active subscription details",
-                        "schema": {
-                            "$ref": "#/definitions/api.SubscriptionDetailsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sellers/{sellerID}/auction-requests/{requestID}": {
-            "delete": {
-                "security": [
-                    {
-                        "accessToken": []
-                    }
-                ],
-                "description": "Delete an auction request. Only requests with 'pending' or 'rejected' status can be deleted.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auctions"
-                ],
-                "summary": "Delete an auction request by seller",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Seller ID",
-                        "name": "sellerID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Auction Request ID (UUID format)",
-                        "name": "requestID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully deleted auction request"
                     }
                 }
             }
@@ -1954,6 +1777,149 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/{sellerID}/orders": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get all sales orders that belong to the specified seller ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "List all sales orders (excluding exchange orders) for a specific seller",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "packaging",
+                            "delivering",
+                            "delivered",
+                            "completed",
+                            "canceled",
+                            "failed"
+                        ],
+                        "type": "string",
+                        "description": "Filter by order status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of sales orders",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.SalesOrderInfo"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/orders/:orderID": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get details of a specific sales order for the seller",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get sales order details (excluding exchange orders)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "FailedOrder ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sales order details",
+                        "schema": {
+                            "$ref": "#/definitions/db.SalesOrderDetails"
+                        }
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/orders/:orderID/confirm": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Confirm an order for the specified seller. This endpoint checks the order's status before proceeding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Confirm an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "FailedOrder ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully confirmed order",
+                        "schema": {
+                            "$ref": "#/definitions/db.ConfirmOrderTxResult"
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/{sellerID}/orders/{orderID}/cancel": {
             "patch": {
                 "security": [
@@ -2003,6 +1969,40 @@ const docTemplate = `{
                         "description": "FailedOrder canceled successfully",
                         "schema": {
                             "$ref": "#/definitions/db.CancelOrderBySellerTxResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/sellers/{sellerID}/subscriptions/active": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get the current active subscription details for the specified seller",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get current active subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Current active subscription details",
+                        "schema": {
+                            "$ref": "#/definitions/api.SubscriptionDetailsResponse"
                         }
                     }
                 }

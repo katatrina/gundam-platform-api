@@ -49,7 +49,7 @@ func (req *createAuctionRequestBody) validate() error {
 //	@Param			sellerID	path		string						true	"Seller ID"
 //	@Param			request		body		createAuctionRequestBody	true	"Auction request details"
 //	@Success		201			{object}	db.AuctionRequest			"Successfully created auction request"
-//	@Router			/sellers/:sellerID/auction-requests [post]
+//	@Router			/sellers/{sellerID}/auction-requests [post]
 func (server *Server) createAuctionRequest(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	

@@ -107,7 +107,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
 //	@Success		200 {object}	SubscriptionDetailsResponse	"Current active subscription details"
-//	@Router			/sellers/:sellerID/subscriptions/active [get]
+//	@Router			/sellers/{sellerID}/subscriptions/active [get]
 func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 	seller := c.MustGet(sellerPayloadKey).(*db.User)
 	
@@ -302,7 +302,7 @@ func (server *Server) unpublishGundam(c *gin.Context) {
 //	@Param			sellerID	path	string				true	"Seller ID"
 //	@Param			status		query	string				false	"Filter by order status"	Enums(pending, packaging, delivering, delivered, completed, canceled, failed)
 //	@Success		200			array	db.SalesOrderInfo	"List of sales orders"
-//	@Router			/sellers/:sellerID/orders [get]
+//	@Router			/sellers/{sellerID}/orders [get]
 func (server *Server) listSalesOrders(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	status := c.Query("status")
@@ -363,7 +363,7 @@ type confirmOrderRequestParams struct {
 //	@Param			orderID		path	string	true	"FailedOrder ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.ConfirmOrderTxResult	"Successfully confirmed order"
-//	@Router			/sellers/:sellerID/orders/:orderID/confirm [patch]
+//	@Router			/sellers/{sellerID}/orders/:orderID/confirm [patch]
 func (server *Server) confirmOrder(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
@@ -621,7 +621,7 @@ func (server *Server) updateSellerProfile(c *gin.Context) {
 //	@Param			orderID		path	string	true	"FailedOrder ID"
 //	@Security		accessToken
 //	@Success		200	{object}	db.SalesOrderDetails	"Sales order details"
-//	@Router			/sellers/:sellerID/orders/:orderID [get]
+//	@Router			/sellers/{sellerID}/orders/:orderID [get]
 func (server *Server) getSalesOrderDetails(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
@@ -843,7 +843,7 @@ func (server *Server) cancelOrderBySeller(c *gin.Context) {
 //	@Param			status		query	string				false	"Filter by status"	Enums(pending,approved,rejected)
 //	@Success		200			{array}	db.AuctionRequest	"List of auction requests"
 //	@Security		accessToken
-//	@Router			/sellers/:sellerID/auction-requests [get]
+//	@Router			/sellers/{sellerID}/auction-requests [get]
 func (server *Server) listSellerAuctionRequests(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	
@@ -936,7 +936,7 @@ func (server *Server) deleteAuctionRequest(c *gin.Context) {
 //	@Param			status		query	string				false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
 //	@Success		200			{array}	db.AuctionDetails	"List of auctions"
 //	@Security		accessToken
-//	@Router			/sellers/:sellerID/auctions [get]
+//	@Router			/sellers/{sellerID}/auctions [get]
 func (server *Server) listSellerAuctions(c *gin.Context) {
 	user := c.MustGet(sellerPayloadKey).(*db.User)
 	

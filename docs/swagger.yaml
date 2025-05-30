@@ -3630,7 +3630,7 @@ paths:
       summary: Create a seller profile
       tags:
       - seller profile
-  /sellers/:sellerID/auction-requests:
+  /sellers/{sellerID}/auction-requests:
     get:
       description: List all auction requests that belong to the specified seller,
         optionally filtered by status
@@ -3690,7 +3690,32 @@ paths:
       summary: Create a new auction request by seller
       tags:
       - auctions
-  /sellers/:sellerID/auctions:
+  /sellers/{sellerID}/auction-requests/{requestID}:
+    delete:
+      description: Delete an auction request. Only requests with 'pending' or 'rejected'
+        status can be deleted.
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Auction Request ID (UUID format)
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted auction request
+      security:
+      - accessToken: []
+      summary: Delete an auction request by seller
+      tags:
+      - auctions
+  /sellers/{sellerID}/auctions:
     get:
       description: List all auctions that belong to the specified seller, optionally
         filtered by status
@@ -3723,146 +3748,6 @@ paths:
       security:
       - accessToken: []
       summary: List all auctions of a seller
-      tags:
-      - auctions
-  /sellers/:sellerID/orders:
-    get:
-      consumes:
-      - application/json
-      description: Get all sales orders that belong to the specified seller ID
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: Filter by order status
-        enum:
-        - pending
-        - packaging
-        - delivering
-        - delivered
-        - completed
-        - canceled
-        - failed
-        in: query
-        name: status
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of sales orders
-          schema:
-            items:
-              $ref: '#/definitions/db.SalesOrderInfo'
-            type: array
-      security:
-      - accessToken: []
-      summary: List all sales orders (excluding exchange orders) for a specific seller
-      tags:
-      - sellers
-  /sellers/:sellerID/orders/:orderID:
-    get:
-      consumes:
-      - application/json
-      description: Get details of a specific sales order for the seller
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: FailedOrder ID
-        in: path
-        name: orderID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Sales order details
-          schema:
-            $ref: '#/definitions/db.SalesOrderDetails'
-      security:
-      - accessToken: []
-      summary: Get sales order details (excluding exchange orders)
-      tags:
-      - sellers
-  /sellers/:sellerID/orders/:orderID/confirm:
-    patch:
-      consumes:
-      - application/json
-      description: Confirm an order for the specified seller. This endpoint checks
-        the order's status before proceeding.
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: FailedOrder ID
-        in: path
-        name: orderID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully confirmed order
-          schema:
-            $ref: '#/definitions/db.ConfirmOrderTxResult'
-      security:
-      - accessToken: []
-      summary: Confirm an order
-      tags:
-      - sellers
-  /sellers/:sellerID/subscriptions/active:
-    get:
-      description: Get the current active subscription details for the specified seller
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Current active subscription details
-          schema:
-            $ref: '#/definitions/api.SubscriptionDetailsResponse'
-      security:
-      - accessToken: []
-      summary: Get current active subscription
-      tags:
-      - sellers
-  /sellers/{sellerID}/auction-requests/{requestID}:
-    delete:
-      description: Delete an auction request. Only requests with 'pending' or 'rejected'
-        status can be deleted.
-      parameters:
-      - description: Seller ID
-        in: path
-        name: sellerID
-        required: true
-        type: string
-      - description: Auction Request ID (UUID format)
-        in: path
-        name: requestID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Successfully deleted auction request
-      security:
-      - accessToken: []
-      summary: Delete an auction request by seller
       tags:
       - auctions
   /sellers/{sellerID}/auctions/{auctionID}:
@@ -3981,6 +3866,100 @@ paths:
       summary: Unpublish a gundam
       tags:
       - sellers
+  /sellers/{sellerID}/orders:
+    get:
+      consumes:
+      - application/json
+      description: Get all sales orders that belong to the specified seller ID
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Filter by order status
+        enum:
+        - pending
+        - packaging
+        - delivering
+        - delivered
+        - completed
+        - canceled
+        - failed
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of sales orders
+          schema:
+            items:
+              $ref: '#/definitions/db.SalesOrderInfo'
+            type: array
+      security:
+      - accessToken: []
+      summary: List all sales orders (excluding exchange orders) for a specific seller
+      tags:
+      - sellers
+  /sellers/{sellerID}/orders/:orderID:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific sales order for the seller
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: FailedOrder ID
+        in: path
+        name: orderID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sales order details
+          schema:
+            $ref: '#/definitions/db.SalesOrderDetails'
+      security:
+      - accessToken: []
+      summary: Get sales order details (excluding exchange orders)
+      tags:
+      - sellers
+  /sellers/{sellerID}/orders/:orderID/confirm:
+    patch:
+      consumes:
+      - application/json
+      description: Confirm an order for the specified seller. This endpoint checks
+        the order's status before proceeding.
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: FailedOrder ID
+        in: path
+        name: orderID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully confirmed order
+          schema:
+            $ref: '#/definitions/db.ConfirmOrderTxResult'
+      security:
+      - accessToken: []
+      summary: Confirm an order
+      tags:
+      - sellers
   /sellers/{sellerID}/orders/{orderID}/cancel:
     patch:
       consumes:
@@ -4014,6 +3993,27 @@ paths:
       security:
       - accessToken: []
       summary: Cancel order by seller
+      tags:
+      - sellers
+  /sellers/{sellerID}/subscriptions/active:
+    get:
+      description: Get the current active subscription details for the specified seller
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current active subscription details
+          schema:
+            $ref: '#/definitions/api.SubscriptionDetailsResponse'
+      security:
+      - accessToken: []
+      summary: Get current active subscription
       tags:
       - sellers
   /sellers/{sellerID}/subscriptions/upgrade:
