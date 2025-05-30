@@ -15,7 +15,7 @@ FROM user_bank_accounts
 WHERE user_id = $1
 ORDER BY created_at DESC;
 
--- name: GetUserBankAccountByID :one
+-- name: GetUserBankAccount :one
 SELECT *
 FROM user_bank_accounts
 WHERE id = $1

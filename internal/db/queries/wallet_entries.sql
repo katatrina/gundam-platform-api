@@ -16,7 +16,8 @@ WHERE id = $1;
 
 -- name: UpdateWalletEntryByID :one
 UPDATE wallet_entries
-SET status       = COALESCE(sqlc.narg('status'), status),
+SET reference_id = COALESCE(sqlc.narg('reference_id'), reference_id),
+    status       = COALESCE(sqlc.narg('status'), status),
     completed_at = COALESCE(sqlc.narg('completed_at'), completed_at),
     updated_at   = now()
 WHERE id = sqlc.arg('id') RETURNING *;

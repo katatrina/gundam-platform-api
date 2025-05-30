@@ -57,20 +57,20 @@ func (q *Queries) CreateUserBankAccount(ctx context.Context, arg CreateUserBankA
 	return i, err
 }
 
-const getUserBankAccountByID = `-- name: GetUserBankAccountByID :one
+const getUserBankAccount = `-- name: GetUserBankAccount :one
 SELECT id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at
 FROM user_bank_accounts
 WHERE id = $1
   AND user_id = $2
 `
 
-type GetUserBankAccountByIDParams struct {
+type GetUserBankAccountParams struct {
 	ID     uuid.UUID `json:"id"`
 	UserID string    `json:"user_id"`
 }
 
-func (q *Queries) GetUserBankAccountByID(ctx context.Context, arg GetUserBankAccountByIDParams) (UserBankAccount, error) {
-	row := q.db.QueryRow(ctx, getUserBankAccountByID, arg.ID, arg.UserID)
+func (q *Queries) GetUserBankAccount(ctx context.Context, arg GetUserBankAccountParams) (UserBankAccount, error) {
+	row := q.db.QueryRow(ctx, getUserBankAccount, arg.ID, arg.UserID)
 	var i UserBankAccount
 	err := row.Scan(
 		&i.ID,

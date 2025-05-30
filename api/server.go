@@ -339,7 +339,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Liệt kê tất cả các bút toán ví của người dùng
 		userWalletGroup.GET("/entries", server.listUserWalletEntries)
 		
-		userWalletGroup.POST("/withdrawal-request", server.createWithdrawalRequest)
+		userWalletGroup.POST("/withdrawal-requests", server.createWithdrawalRequest)
 		userWalletGroup.GET("/withdrawal-requests", server.listUserWithdrawalRequests)
 	}
 	

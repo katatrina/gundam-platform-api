@@ -66,6 +66,8 @@ type Store interface {
 	PayAuctionWinningBidTx(ctx context.Context, arg PayAuctionWinningBidTxParams) (PayAuctionWinningBidTxResult, error)
 	HandleAuctionNonPaymentTx(ctx context.Context, arg HandleAuctionNonPaymentTxParams) (HandleAuctionNonPaymentTxResult, error)
 	UpdateAuctionByModeratorTx(ctx context.Context, arg UpdateAuctionByModeratorTxParams) (UpdateAuctionByModeratorTxResult, error)
+	
+	CreateWithdrawalRequestTx(ctx context.Context, arg CreateWithdrawalRequestTxParams) (WithdrawalRequest, error)
 }
 
 type SQLStore struct {

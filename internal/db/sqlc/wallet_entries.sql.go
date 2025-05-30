@@ -167,20 +167,27 @@ func (q *Queries) ListUserWalletEntries(ctx context.Context, arg ListUserWalletE
 
 const updateWalletEntryByID = `-- name: UpdateWalletEntryByID :one
 UPDATE wallet_entries
-SET status       = COALESCE($1, status),
-    completed_at = COALESCE($2, completed_at),
+SET reference_id = COALESCE($1, reference_id),
+    status       = COALESCE($2, status),
+    completed_at = COALESCE($3, completed_at),
     updated_at   = now()
-WHERE id = $3 RETURNING id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
+WHERE id = $4 RETURNING id, wallet_id, reference_id, reference_type, entry_type, affected_field, amount, status, created_at, updated_at, completed_at
 `
 
 type UpdateWalletEntryByIDParams struct {
+	ReferenceID *string               `json:"reference_id"`
 	Status      NullWalletEntryStatus `json:"status"`
 	CompletedAt *time.Time            `json:"completed_at"`
 	ID          int64                 `json:"id"`
 }
 
 func (q *Queries) UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error) {
-	row := q.db.QueryRow(ctx, updateWalletEntryByID, arg.Status, arg.CompletedAt, arg.ID)
+	row := q.db.QueryRow(ctx, updateWalletEntryByID,
+		arg.ReferenceID,
+		arg.Status,
+		arg.CompletedAt,
+		arg.ID,
+	)
 	var i WalletEntry
 	err := row.Scan(
 		&i.ID,

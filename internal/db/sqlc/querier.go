@@ -53,6 +53,7 @@ type Querier interface {
 	CreateUserWithGoogleAccount(ctx context.Context, arg CreateUserWithGoogleAccountParams) (User, error)
 	CreateWallet(ctx context.Context, userID string) error
 	CreateWalletEntry(ctx context.Context, arg CreateWalletEntryParams) (WalletEntry, error)
+	CreateWithdrawalRequest(ctx context.Context, arg CreateWithdrawalRequestParams) (WithdrawalRequest, error)
 	DeleteAllGundamAccessories(ctx context.Context, gundamID int64) error
 	DeleteAuctionRequest(ctx context.Context, id uuid.UUID) error
 	DeleteExchangeOffer(ctx context.Context, id uuid.UUID) (ExchangeOffer, error)
@@ -97,7 +98,7 @@ type Querier interface {
 	GetSubscriptionPlanByID(ctx context.Context, id int64) (SubscriptionPlan, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)
-	GetUserBankAccountByID(ctx context.Context, arg GetUserBankAccountByIDParams) (UserBankAccount, error)
+	GetUserBankAccount(ctx context.Context, arg GetUserBankAccountParams) (UserBankAccount, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber *string) (User, error)
@@ -140,6 +141,7 @@ type Querier interface {
 	ListUserExchanges(ctx context.Context, arg ListUserExchangesParams) ([]Exchange, error)
 	ListUserParticipatedAuctions(ctx context.Context, userID string) ([]ListUserParticipatedAuctionsRow, error)
 	ListUserWalletEntries(ctx context.Context, arg ListUserWalletEntriesParams) ([]WalletEntry, error)
+	ListUserWithdrawalRequests(ctx context.Context, userID string) ([]ListUserWithdrawalRequestsRow, error)
 	RemoveCartItem(ctx context.Context, arg RemoveCartItemParams) error
 	StoreGundamImageURL(ctx context.Context, arg StoreGundamImageURLParams) error
 	TransferNonWithdrawableToBalance(ctx context.Context, arg TransferNonWithdrawableToBalanceParams) (Wallet, error)

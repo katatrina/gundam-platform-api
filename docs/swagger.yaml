@@ -455,6 +455,16 @@ definitions:
     - full_name
     - password
     type: object
+  api.createWithdrawalRequestBody:
+    properties:
+      amount:
+        type: integer
+      bank_account_id:
+        type: string
+    required:
+    - amount
+    - bank_account_id
+    type: object
   api.createZalopayOrderRequest:
     properties:
       amount:
@@ -2660,6 +2670,63 @@ definitions:
     - WalletReferenceTypeDepositRequest
     - WalletReferenceTypeExchange
     - WalletReferenceTypeSubscription
+  db.WithdrawalRequest:
+    properties:
+      amount:
+        type: integer
+      bank_account_id:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      processed_at:
+        type: string
+      processed_by:
+        type: string
+      rejected_reason:
+        type: string
+      status:
+        $ref: '#/definitions/db.WithdrawalRequestStatus'
+      transaction_reference:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      wallet_entry_id:
+        type: integer
+    required:
+    - amount
+    - bank_account_id
+    - completed_at
+    - created_at
+    - id
+    - processed_at
+    - processed_by
+    - rejected_reason
+    - status
+    - transaction_reference
+    - updated_at
+    - user_id
+    - wallet_entry_id
+    type: object
+  db.WithdrawalRequestStatus:
+    enum:
+    - pending
+    - approved
+    - completed
+    - rejected
+    - canceled
+    type: string
+    x-enum-varnames:
+    - WithdrawalRequestStatusPending
+    - WithdrawalRequestStatusApproved
+    - WithdrawalRequestStatusCompleted
+    - WithdrawalRequestStatusRejected
+    - WithdrawalRequestStatusCanceled
   multipart.FileHeader:
     properties:
       filename:
@@ -5356,6 +5423,51 @@ paths:
       security:
       - accessToken: []
       summary: List user wallet entries
+      tags:
+      - wallet
+  /users/me/wallet/withdrawal-requests:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a new withdrawal request to transfer money from user's wallet to their bank account
+
+        **Quy định nghiệp vụ:**
+        - Người dùng phải có đủ số dư trong ví (số tiền sẽ bị trừ ngay lập tức)
+        - Tài khoản ngân hàng phải thuộc về người dùng đã xác thực
+        - Số tiền rút phải trong khoảng từ 50,000 VNĐ đến 5,000,000 VNĐ mỗi lần
+        - Yêu cầu rút tiền được xử lý thủ công bởi moderator trong vòng 24 giờ (ngày làm việc)
+        - Tiền sẽ được chuyển vào tài khoản ngân hàng trong vòng 1-3 ngày làm việc sau khi được duyệt
+        - Sau khi tạo, yêu cầu rút tiền không thể hủy bởi người dùng
+
+        **Quy trình xử lý:**
+        1. Hệ thống kiểm tra yêu cầu và số dư ví
+        2. Tiền được trừ ngay lập tức khỏi ví người dùng
+        3. Yêu cầu rút tiền được tạo với trạng thái "đang xử lý"
+        4. Moderator xem xét và xử lý yêu cầu thủ công
+        5. Trạng thái cập nhật thành "hoàn thành" sau khi chuyển tiền
+
+        **Các trường hợp lỗi:**
+        - 400: Dữ liệu yêu cầu không hợp lệ hoặc không đủ số dư
+        - 404: Không tìm thấy tài khoản ngân hàng hoặc không thuộc về người dùng
+        - 422: Vi phạm quy tắc nghiệp vụ (giới hạn số tiền, v.v.)
+      parameters:
+      - description: Withdrawal request details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.createWithdrawalRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Withdrawal request created successfully
+          schema:
+            $ref: '#/definitions/db.WithdrawalRequest'
+      security:
+      - accessToken: []
+      summary: Create withdrawal request
       tags:
       - wallet
   /wallet/zalopay/create:
