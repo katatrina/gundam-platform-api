@@ -33,6 +33,93 @@ func (q *Queries) CreateSellerProfile(ctx context.Context, arg CreateSellerProfi
 	return i, err
 }
 
+const getActiveAuctionsCount = `-- name: GetActiveAuctionsCount :one
+SELECT COUNT(*) as count
+FROM auctions
+WHERE seller_id = $1 AND status = 'active'
+`
+
+// Bổ sung 2: Số phiên đấu giá đang diễn ra
+func (q *Queries) GetActiveAuctionsCount(ctx context.Context, sellerID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getActiveAuctionsCount, sellerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getCompletedOrdersCount = `-- name: GetCompletedOrdersCount :one
+SELECT COUNT(*) as count
+FROM orders
+WHERE seller_id = $1 AND status = 'completed'
+`
+
+// KPI 3: Số đơn hàng đã hoàn thành
+func (q *Queries) GetCompletedOrdersCount(ctx context.Context, sellerID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getCompletedOrdersCount, sellerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getIncomeThisMonth = `-- name: GetIncomeThisMonth :one
+SELECT COALESCE(SUM(amount), 0)::bigint as income_this_month
+FROM wallet_entries
+WHERE wallet_id = $1
+  AND entry_type IN ('payment_received', 'auction_seller_payment')
+  AND status = 'completed'
+  AND created_at >= date_trunc('month', CURRENT_DATE)
+`
+
+// Bổ sung 1: Thu nhập tháng này
+func (q *Queries) GetIncomeThisMonth(ctx context.Context, walletID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getIncomeThisMonth, walletID)
+	var income_this_month int64
+	err := row.Scan(&income_this_month)
+	return income_this_month, err
+}
+
+const getPendingAuctionRequestsCount = `-- name: GetPendingAuctionRequestsCount :one
+SELECT COUNT(*) as count
+FROM auction_requests
+WHERE seller_id = $1 AND status = 'pending'
+`
+
+// Bổ sung 3: Số yêu cầu đấu giá chờ duyệt
+func (q *Queries) GetPendingAuctionRequestsCount(ctx context.Context, sellerID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getPendingAuctionRequestsCount, sellerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getProcessingOrdersCount = `-- name: GetProcessingOrdersCount :one
+SELECT COUNT(*) as count
+FROM orders
+WHERE seller_id = $1 AND status IN ('pending', 'packaging', 'delivering')
+`
+
+// KPI 4: Số đơn hàng đang xử lý
+func (q *Queries) GetProcessingOrdersCount(ctx context.Context, sellerID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getProcessingOrdersCount, sellerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getPublishedGundamsCount = `-- name: GetPublishedGundamsCount :one
+SELECT COUNT(*) as count
+FROM gundams
+WHERE owner_id = $1 AND status = 'published'
+`
+
+// KPI 1: Số Gundam đang đăng bán
+func (q *Queries) GetPublishedGundamsCount(ctx context.Context, ownerID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getPublishedGundamsCount, ownerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getSalesOrder = `-- name: GetSalesOrder :one
 SELECT id, code, buyer_id, seller_id, items_subtotal, delivery_fee, total_amount, status, payment_method, type, note, is_packaged, packaging_image_urls, canceled_by, canceled_reason, created_at, updated_at, completed_at
 FROM orders
@@ -154,6 +241,22 @@ func (q *Queries) GetSellerProfileByID(ctx context.Context, sellerID string) (Se
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getSellerTotalIncome = `-- name: GetSellerTotalIncome :one
+SELECT COALESCE(SUM(amount), 0) ::bigint as total_income
+FROM wallet_entries
+WHERE wallet_id = $1
+  AND entry_type IN ('payment_received', 'auction_seller_payment')
+  AND status = 'completed'
+`
+
+// KPI 2: Tổng thu nhập từ bán hàng và đấu giá
+func (q *Queries) GetSellerTotalIncome(ctx context.Context, walletID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getSellerTotalIncome, walletID)
+	var total_income int64
+	err := row.Scan(&total_income)
+	return total_income, err
 }
 
 const listSalesOrders = `-- name: ListSalesOrders :many

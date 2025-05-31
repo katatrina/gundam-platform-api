@@ -270,6 +270,9 @@ func (server *Server) setupRouter() *gin.Engine {
 	// Nhóm các API chỉ dành cho seller
 	sellerGroup := v1.Group("/sellers/:sellerID", authMiddleware(server.tokenMaker), requiredSellerRole(server.dbStore))
 	{
+		// API thống kê cho dashboard của người bán
+		sellerGroup.GET("/dashboard", server.getSellerDashboard)
+		
 		// Nhóm các API chỉ liên quan đến đơn bán (không bao gồm đơn hàng trao đổi)
 		sellerOrderGroup := sellerGroup.Group("orders")
 		{

@@ -28,6 +28,7 @@ require (
 	github.com/zpmep/hmacutil v0.0.0-20190619043418-253bc927934c
 	golang.ngrok.com/ngrok v1.13.0
 	golang.org/x/crypto v0.36.0
+	golang.org/x/sync v0.12.0
 	google.golang.org/api v0.227.0
 	resty.dev/v3 v3.0.0-beta.2
 )
@@ -125,7 +126,6 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect

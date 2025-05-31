@@ -1778,6 +1778,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/sellers/{sellerID}/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get comprehensive dashboard statistics for a seller including gundam counts, income, orders, and auction data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sellers"
+                ],
+                "summary": "Get seller dashboard statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Seller ID",
+                        "name": "sellerID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dashboard statistics",
+                        "schema": {
+                            "$ref": "#/definitions/db.SellerDashboard"
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/{sellerID}/gundams/{gundamID}/publish": {
             "patch": {
                 "security": [
@@ -7297,6 +7331,48 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
+                }
+            }
+        },
+        "db.SellerDashboard": {
+            "type": "object",
+            "required": [
+                "active_auctions_count",
+                "completed_orders_count",
+                "income_this_month",
+                "pending_auction_requests_count",
+                "processing_orders_count",
+                "published_gundams_count",
+                "total_income"
+            ],
+            "properties": {
+                "active_auctions_count": {
+                    "description": "Số lượng phiên đấu giá đang diễn ra",
+                    "type": "integer"
+                },
+                "completed_orders_count": {
+                    "description": "Số lượng đơn hàng đã hoàn thành",
+                    "type": "integer"
+                },
+                "income_this_month": {
+                    "description": "Thu nhập trong tháng hiện tại",
+                    "type": "integer"
+                },
+                "pending_auction_requests_count": {
+                    "description": "Số lượng yêu cầu đấu giá đang chờ xử lý",
+                    "type": "integer"
+                },
+                "processing_orders_count": {
+                    "description": "Số lượng đơn hàng đang xử lý",
+                    "type": "integer"
+                },
+                "published_gundams_count": {
+                    "description": "Số lượng gundam đã đăng bán",
+                    "type": "integer"
+                },
+                "total_income": {
+                    "description": "Tổng thu nhập từ việc bán + đấu giá gundam",
+                    "type": "integer"
                 }
             }
         },

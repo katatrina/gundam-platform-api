@@ -2162,6 +2162,38 @@ definitions:
     - order
     - order_items
     type: object
+  db.SellerDashboard:
+    properties:
+      active_auctions_count:
+        description: Số lượng phiên đấu giá đang diễn ra
+        type: integer
+      completed_orders_count:
+        description: Số lượng đơn hàng đã hoàn thành
+        type: integer
+      income_this_month:
+        description: Thu nhập trong tháng hiện tại
+        type: integer
+      pending_auction_requests_count:
+        description: Số lượng yêu cầu đấu giá đang chờ xử lý
+        type: integer
+      processing_orders_count:
+        description: Số lượng đơn hàng đang xử lý
+        type: integer
+      published_gundams_count:
+        description: Số lượng gundam đã đăng bán
+        type: integer
+      total_income:
+        description: Tổng thu nhập từ việc bán + đấu giá gundam
+        type: integer
+    required:
+    - active_auctions_count
+    - completed_orders_count
+    - income_this_month
+    - pending_auction_requests_count
+    - processing_orders_count
+    - published_gundams_count
+    - total_income
+    type: object
   db.SellerProfile:
     properties:
       created_at:
@@ -3992,6 +4024,28 @@ paths:
       summary: Get auction details by seller
       tags:
       - auctions
+  /sellers/{sellerID}/dashboard:
+    get:
+      description: Get comprehensive dashboard statistics for a seller including gundam
+        counts, income, orders, and auction data
+      parameters:
+      - description: Seller ID
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dashboard statistics
+          schema:
+            $ref: '#/definitions/db.SellerDashboard'
+      security:
+      - accessToken: []
+      summary: Get seller dashboard statistics
+      tags:
+      - sellers
   /sellers/{sellerID}/gundams/{gundamID}/publish:
     patch:
       consumes:

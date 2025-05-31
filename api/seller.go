@@ -18,6 +18,7 @@ import (
 	"github.com/katatrina/gundam-BE/internal/util"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 )
 
 //	@Summary		Become a seller
@@ -106,7 +107,7 @@ func (server *Server) getSellerProfile(c *gin.Context) {
 //	@Produce		json
 //	@Param			sellerID	path	string	true	"Seller ID"
 //	@Security		accessToken
-//	@Success		200 {object}	SubscriptionDetailsResponse	"Current active subscription details"
+//	@Success		200	{object}	SubscriptionDetailsResponse	"Current active subscription details"
 //	@Router			/sellers/{sellerID}/subscriptions/active [get]
 func (server *Server) getCurrentActiveSubscription(c *gin.Context) {
 	seller := c.MustGet(sellerPayloadKey).(*db.User)
@@ -1221,4 +1222,98 @@ func (server *Server) upgradeSubscription(c *gin.Context) {
 	}()
 	
 	c.JSON(http.StatusOK, result)
+}
+
+//	@Summary		Get seller dashboard statistics
+//	@Description	Get comprehensive dashboard statistics for a seller including gundam counts, income, orders, and auction data
+//	@Tags			sellers
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			sellerID	path		string				true	"Seller ID"
+//	@Success		200			{object}	db.SellerDashboard	"Dashboard statistics"
+//	@Router			/sellers/{sellerID}/dashboard [get]
+func (server *Server) getSellerDashboard(c *gin.Context) {
+	seller := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	var resp db.SellerDashboard
+	
+	g, ctx := errgroup.WithContext(c.Request.Context())
+	
+	// Goroutine 1: Get published gundams count
+	g.Go(func() error {
+		publishedCount, err := server.dbStore.GetPublishedGundamsCount(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get published gundams count: %w", err)
+		}
+		resp.PublishedGundamsCount = publishedCount
+		return nil
+	})
+	
+	// Goroutine 2: Get total income
+	g.Go(func() error {
+		totalIncome, err := server.dbStore.GetSellerTotalIncome(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get total income: %w", err)
+		}
+		resp.TotalIncome = totalIncome
+		return nil
+	})
+	
+	// Goroutine 3: Get completed orders count
+	g.Go(func() error {
+		completedOrders, err := server.dbStore.GetCompletedOrdersCount(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get completed orders count: %w", err)
+		}
+		resp.CompletedOrdersCount = completedOrders
+		return nil
+	})
+	
+	// Goroutine 4: Get processing orders count
+	g.Go(func() error {
+		processingOrders, err := server.dbStore.GetProcessingOrdersCount(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get processing orders count: %w", err)
+		}
+		resp.ProcessingOrdersCount = processingOrders
+		return nil
+	})
+	
+	// Goroutine 5: Get income this month
+	g.Go(func() error {
+		incomeThisMonth, err := server.dbStore.GetIncomeThisMonth(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get income this month: %w", err)
+		}
+		resp.IncomeThisMonth = incomeThisMonth
+		return nil
+	})
+	
+	// Goroutine 6: Get active auctions count
+	g.Go(func() error {
+		activeAuctions, err := server.dbStore.GetActiveAuctionsCount(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get active auctions count: %w", err)
+		}
+		resp.ActiveAuctionsCount = activeAuctions
+		return nil
+	})
+	
+	// Goroutine 7: Get pending auction requests count
+	g.Go(func() error {
+		pendingAuctionRequests, err := server.dbStore.GetPendingAuctionRequestsCount(ctx, seller.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get pending auction requests count: %w", err)
+		}
+		resp.PendingAuctionRequestsCount = pendingAuctionRequests
+		return nil
+	})
+	
+	// Wait for all goroutines to complete
+	if err := g.Wait(); err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, resp)
 }

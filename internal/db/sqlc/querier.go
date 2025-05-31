@@ -61,6 +61,8 @@ type Querier interface {
 	DeleteGundam(ctx context.Context, arg DeleteGundamParams) error
 	DeleteGundamImage(ctx context.Context, arg DeleteGundamImageParams) error
 	DeleteUserAddress(ctx context.Context, arg DeleteUserAddressParams) error
+	// Bổ sung 2: Số phiên đấu giá đang diễn ra
+	GetActiveAuctionsCount(ctx context.Context, sellerID string) (int64, error)
 	GetActiveOrderDeliveries(ctx context.Context) ([]GetActiveOrderDeliveriesRow, error)
 	GetAuctionBidByID(ctx context.Context, id uuid.UUID) (AuctionBid, error)
 	GetAuctionByID(ctx context.Context, id uuid.UUID) (Auction, error)
@@ -69,6 +71,8 @@ type Querier interface {
 	GetAuctionParticipantByUserID(ctx context.Context, arg GetAuctionParticipantByUserIDParams) (AuctionParticipant, error)
 	GetAuctionRequestByID(ctx context.Context, id uuid.UUID) (AuctionRequest, error)
 	GetCartByUserID(ctx context.Context, userID string) (int64, error)
+	// KPI 3: Số đơn hàng đã hoàn thành
+	GetCompletedOrdersCount(ctx context.Context, sellerID string) (int64, error)
 	GetCurrentActiveSubscriptionDetailsForSeller(ctx context.Context, sellerID string) (GetCurrentActiveSubscriptionDetailsForSellerRow, error)
 	GetDeliveredOrdersToAutoComplete(ctx context.Context, updatedAt time.Time) ([]Order, error)
 	GetDeliveryInformation(ctx context.Context, id int64) (DeliveryInformation, error)
@@ -84,17 +88,27 @@ type Querier interface {
 	GetGundamPrimaryImageURL(ctx context.Context, gundamID int64) (string, error)
 	GetGundamSecondaryImageURLs(ctx context.Context, gundamID int64) ([]string, error)
 	GetImageByURL(ctx context.Context, arg GetImageByURLParams) (GundamImage, error)
+	// Bổ sung 1: Thu nhập tháng này
+	GetIncomeThisMonth(ctx context.Context, walletID string) (int64, error)
 	GetOrCreateCartIfNotExists(ctx context.Context, userID string) (int64, error)
 	GetOrderByID(ctx context.Context, id uuid.UUID) (Order, error)
 	GetOrderDelivery(ctx context.Context, orderID uuid.UUID) (OrderDelivery, error)
 	GetOrderDetails(ctx context.Context, id uuid.UUID) (GetOrderDetailsRow, error)
 	GetOrderTransactionByOrderID(ctx context.Context, orderID uuid.UUID) (OrderTransaction, error)
 	GetPaymentTransactionByProviderID(ctx context.Context, arg GetPaymentTransactionByProviderIDParams) (PaymentTransaction, error)
+	// Bổ sung 3: Số yêu cầu đấu giá chờ duyệt
+	GetPendingAuctionRequestsCount(ctx context.Context, sellerID string) (int64, error)
 	GetPendingExchangeCompensationEntry(ctx context.Context, arg GetPendingExchangeCompensationEntryParams) (WalletEntry, error)
+	// KPI 4: Số đơn hàng đang xử lý
+	GetProcessingOrdersCount(ctx context.Context, sellerID string) (int64, error)
+	// KPI 1: Số Gundam đang đăng bán
+	GetPublishedGundamsCount(ctx context.Context, ownerID string) (int64, error)
 	GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (Order, error)
 	GetSellerByID(ctx context.Context, id string) (User, error)
 	GetSellerDetailByID(ctx context.Context, id string) (GetSellerDetailByIDRow, error)
 	GetSellerProfileByID(ctx context.Context, sellerID string) (SellerProfile, error)
+	// KPI 2: Tổng thu nhập từ bán hàng và đấu giá
+	GetSellerTotalIncome(ctx context.Context, walletID string) (int64, error)
 	GetSubscriptionPlanByID(ctx context.Context, id int64) (SubscriptionPlan, error)
 	GetUserAddressByID(ctx context.Context, arg GetUserAddressByIDParams) (UserAddress, error)
 	GetUserAddressForUpdate(ctx context.Context, arg GetUserAddressForUpdateParams) (UserAddress, error)

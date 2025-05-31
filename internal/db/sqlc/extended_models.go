@@ -223,3 +223,13 @@ type WithdrawalRequestDetails struct {
 	UpdatedAt            time.Time               `json:"updated_at"`
 	CompletedAt          *time.Time              `json:"completed_at"`
 }
+
+type SellerDashboard struct {
+	PublishedGundamsCount       int64 `json:"published_gundams_count"`        // Số lượng gundam đã đăng bán
+	TotalIncome                 int64 `json:"total_income"`                   // Tổng thu nhập từ việc bán + đấu giá gundam
+	CompletedOrdersCount        int64 `json:"completed_orders_count"`         // Số lượng đơn hàng đã hoàn thành
+	ProcessingOrdersCount       int64 `json:"processing_orders_count"`        // Số lượng đơn hàng đang xử lý
+	IncomeThisMonth             int64 `json:"income_this_month"`              // Thu nhập trong tháng hiện tại
+	ActiveAuctionsCount         int64 `json:"active_auctions_count"`          // Số lượng phiên đấu giá đang diễn ra
+	PendingAuctionRequestsCount int64 `json:"pending_auction_requests_count"` // Số lượng yêu cầu đấu giá đang chờ xử lý
+}
