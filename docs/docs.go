@@ -939,6 +939,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/mod/withdrawal-requests/{requestID}/complete": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Complete a withdrawal request with transaction reference from bank.\nThe request must be in pending or approved status.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "Complete withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal Request ID",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.completeWithdrawalRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated withdrawal request details",
+                        "schema": {
+                            "$ref": "#/definitions/db.WithdrawalRequestDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/orders": {
             "get": {
                 "security": [
@@ -3808,6 +3854,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/wallet/withdrawal-requests/{requestID}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Cancel a pending withdrawal request and refund the amount back to user's wallet\n\n**Quy định nghiệp vụ:**\n- Chỉ có thể hủy những yêu cầu rút tiền đang ở trạng thái chờ xử lý\n- Chỉ người tạo yêu cầu mới có thể hủy yêu cầu của mình\n- Số tiền sẽ được hoàn trả ngay lập tức vào ví của người dùng\n\n**Các trường hợp lỗi:**\n- 400: ID yêu cầu không đúng định dạng\n- 403: Yêu cầu không thuộc về người dùng\n- 404: Không tìm thấy yêu cầu\n- 422: Không thể hủy yêu cầu (không ở trạng thái chờ xử lý)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Cancel withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal request ID",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/db.WithdrawalRequestDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}": {
             "get": {
                 "description": "Get detailed information about a specific user",
@@ -4486,6 +4566,18 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.completeWithdrawalRequestRequest": {
+            "type": "object",
+            "required": [
+                "transaction_reference"
+            ],
+            "properties": {
+                "transaction_reference": {
+                    "description": "Mã giao dịch từ ngân hàng để hoàn tất yêu cầu rút tiền",
                     "type": "string"
                 }
             }

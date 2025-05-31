@@ -235,6 +235,14 @@ definitions:
     required:
     - email
     type: object
+  api.completeWithdrawalRequestRequest:
+    properties:
+      transaction_reference:
+        description: Mã giao dịch từ ngân hàng để hoàn tất yêu cầu rút tiền
+        type: string
+    required:
+    - transaction_reference
+    type: object
   api.createAuctionRequestBody:
     properties:
       bid_increment:
@@ -3316,7 +3324,7 @@ paths:
       - moderator
   /mod/auction-requests/{requestID}/approve:
     patch:
-      description: Moderator approves an auction request and schedules the auction.
+      description: ModeratorID approves an auction request and schedules the auction.
       parameters:
       - description: Auction Request ID (UUID format)
         in: path
@@ -3339,7 +3347,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Moderator rejects an auction request with a reason.
+      description: ModeratorID rejects an auction request with a reason.
       parameters:
       - description: Auction Request ID (UUID format)
         in: path
@@ -3368,7 +3376,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Moderator can update auction start and end times.
+      description: ModeratorID can update auction start and end times.
       parameters:
       - description: Auction ID (UUID format)
         in: path
@@ -3420,6 +3428,37 @@ paths:
       security:
       - accessToken: []
       summary: List withdrawal requests
+      tags:
+      - moderator
+  /mod/withdrawal-requests/{requestID}/complete:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Complete a withdrawal request with transaction reference from bank.
+        The request must be in pending or approved status.
+      parameters:
+      - description: Withdrawal Request ID
+        in: path
+        name: requestID
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.completeWithdrawalRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated withdrawal request details
+          schema:
+            $ref: '#/definitions/db.WithdrawalRequestDetails'
+      security:
+      - accessToken: []
+      summary: Complete withdrawal request
       tags:
       - moderator
   /orders:
@@ -5542,7 +5581,7 @@ paths:
         1. Hệ thống kiểm tra yêu cầu và số dư ví
         2. Tiền được trừ ngay lập tức khỏi ví người dùng
         3. Yêu cầu rút tiền được tạo với trạng thái "đang xử lý"
-        4. Moderator xem xét và xử lý yêu cầu thủ công
+        4. ModeratorID xem xét và xử lý yêu cầu thủ công
         5. Trạng thái cập nhật thành "hoàn thành" sau khi chuyển tiền
 
         **Các trường hợp lỗi:**
@@ -5566,6 +5605,39 @@ paths:
       security:
       - accessToken: []
       summary: Create withdrawal request
+      tags:
+      - wallet
+  /users/me/wallet/withdrawal-requests/{requestID}/cancel:
+    patch:
+      description: |-
+        Cancel a pending withdrawal request and refund the amount back to user's wallet
+
+        **Quy định nghiệp vụ:**
+        - Chỉ có thể hủy những yêu cầu rút tiền đang ở trạng thái chờ xử lý
+        - Chỉ người tạo yêu cầu mới có thể hủy yêu cầu của mình
+        - Số tiền sẽ được hoàn trả ngay lập tức vào ví của người dùng
+
+        **Các trường hợp lỗi:**
+        - 400: ID yêu cầu không đúng định dạng
+        - 403: Yêu cầu không thuộc về người dùng
+        - 404: Không tìm thấy yêu cầu
+        - 422: Không thể hủy yêu cầu (không ở trạng thái chờ xử lý)
+      parameters:
+      - description: Withdrawal request ID
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/db.WithdrawalRequestDetails'
+      security:
+      - accessToken: []
+      summary: Cancel withdrawal request
       tags:
       - wallet
   /wallet/zalopay/create:

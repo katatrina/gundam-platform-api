@@ -339,8 +339,9 @@ func (server *Server) setupRouter() *gin.Engine {
 		// Liệt kê tất cả các bút toán ví của người dùng
 		userWalletGroup.GET("/entries", server.listUserWalletEntries)
 		
-		userWalletGroup.POST("/withdrawal-requests", server.createWithdrawalRequest)   // ✅
-		userWalletGroup.GET("/withdrawal-requests", server.listUserWithdrawalRequests) // ✅
+		userWalletGroup.POST("/withdrawal-requests", server.createWithdrawalRequest)             // ✅
+		userWalletGroup.GET("/withdrawal-requests", server.listUserWithdrawalRequests)           // ✅
+		userWalletGroup.PATCH("/withdrawal-requests/:requestID", server.cancelWithdrawalRequest) // ✅
 	}
 	
 	userBankAccountGroup := v1.Group("/users/me/bank-accounts", authMiddleware(server.tokenMaker))
@@ -407,9 +408,9 @@ func (server *Server) setupRouter() *gin.Engine {
 		
 		moderatorWithdrawalRequestGroup := moderatorGroup.Group("withdrawal-requests")
 		{
-			moderatorWithdrawalRequestGroup.GET("", server.listWithdrawalRequests)
-			moderatorWithdrawalRequestGroup.PATCH(":requestID/complete", server.completeWithdrawalRequest)
-			// moderatorWithdrawalRequestGroup.PATCH(":id/reject", server.rejectWithdrawal)
+			moderatorWithdrawalRequestGroup.GET("", server.listWithdrawalRequests)                         // ✅
+			moderatorWithdrawalRequestGroup.PATCH(":requestID/complete", server.completeWithdrawalRequest) // ✅
+			// moderatorWithdrawalRequestGroup.PATCH(":requestID/reject", server.rejectWithdrawalRequest)
 		}
 	}
 	

@@ -71,6 +71,73 @@ func (store *SQLStore) CreateWithdrawalRequestTx(ctx context.Context, arg Create
 	return request, err
 }
 
+type CancelWithdrawalRequestTxParams struct {
+	WithdrawalRequest WithdrawalRequest // Yêu cầu rút tiền cần hủy
+}
+
+func (store *SQLStore) CancelWithdrawalRequestTx(ctx context.Context, arg CancelWithdrawalRequestTxParams) (WithdrawalRequest, error) {
+	var updatedRequest WithdrawalRequest
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		// 1. Update the withdrawal request
+		updatedRequest, err = qTx.UpdateWithdrawalRequest(ctx, UpdateWithdrawalRequestParams{
+			ID: arg.WithdrawalRequest.ID,
+			Status: NullWithdrawalRequestStatus{
+				WithdrawalRequestStatus: WithdrawalRequestStatusCanceled,
+				Valid:                   true,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update withdrawal request: %w", err)
+		}
+		
+		// 2. Update the wallet entry
+		if updatedRequest.WalletEntryID != nil {
+			_, err = qTx.UpdateWalletEntryByID(ctx, UpdateWalletEntryByIDParams{
+				Status: NullWalletEntryStatus{
+					WalletEntryStatus: WalletEntryStatusCanceled,
+					Valid:             true,
+				},
+				ID: *updatedRequest.WalletEntryID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update wallet entry: %w", err)
+			}
+		} else {
+			return fmt.Errorf("withdrawal request %s does not have a wallet entry", arg.WithdrawalRequest.ID)
+		}
+		
+		// 3. Refund the amount back to the user's wallet
+		_, err = qTx.AddWalletBalance(ctx, AddWalletBalanceParams{
+			Amount: arg.WithdrawalRequest.Amount,
+			UserID: arg.WithdrawalRequest.UserID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to refund amount to wallet: %w", err)
+		}
+		
+		// 4. Create a new wallet entry for the refund
+		_, err = qTx.CreateWalletEntry(ctx, CreateWalletEntryParams{
+			WalletID:      arg.WithdrawalRequest.UserID,
+			ReferenceID:   util.StringPointer(arg.WithdrawalRequest.ID.String()),
+			ReferenceType: WalletReferenceTypeWithdrawalRequest,
+			EntryType:     WalletEntryTypeRefund,
+			AffectedField: WalletAffectedFieldBalance,
+			Amount:        arg.WithdrawalRequest.Amount, // Positive = refund
+			Status:        WalletEntryStatusCompleted,
+			CompletedAt:   util.TimePointer(time.Now()),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create wallet entry for refund: %w", err)
+		}
+		
+		return nil
+	})
+	
+	return updatedRequest, err
+}
+
 type CompleteWithdrawalRequestTxParams struct {
 	WithdrawalRequest    WithdrawalRequest // Yêu cầu rút tiền cần hoàn thành
 	ModeratorID          string            // ID của moderator xử lý yêu cầu
