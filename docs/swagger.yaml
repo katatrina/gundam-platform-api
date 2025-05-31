@@ -574,6 +574,14 @@ definitions:
     required:
     - reason
     type: object
+  api.rejectWithdrawalRequestRequest:
+    properties:
+      reason:
+        description: Lý do từ chối yêu cầu rút tiền của moderator
+        type: string
+    required:
+    - reason
+    type: object
   api.requestNegotiationForOfferRequest:
     properties:
       note:
@@ -3459,6 +3467,36 @@ paths:
       security:
       - accessToken: []
       summary: Complete withdrawal request
+      tags:
+      - moderator
+  /mod/withdrawal-requests/{requestID}/reject:
+    patch:
+      consumes:
+      - application/json
+      description: Reject a withdrawal request with reason from moderator. The request
+        must be in pending status.
+      parameters:
+      - description: Withdrawal Request ID
+        in: path
+        name: requestID
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.rejectWithdrawalRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated withdrawal request details
+          schema:
+            $ref: '#/definitions/db.WithdrawalRequestDetails'
+      security:
+      - accessToken: []
+      summary: Reject withdrawal request
       tags:
       - moderator
   /orders:

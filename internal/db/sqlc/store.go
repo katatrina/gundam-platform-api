@@ -70,6 +70,7 @@ type Store interface {
 	CreateWithdrawalRequestTx(ctx context.Context, arg CreateWithdrawalRequestTxParams) (WithdrawalRequest, error)
 	CancelWithdrawalRequestTx(ctx context.Context, arg CancelWithdrawalRequestTxParams) (WithdrawalRequest, error)
 	CompleteWithdrawalRequestTx(ctx context.Context, arg CompleteWithdrawalRequestTxParams) (WithdrawalRequest, error)
+	RejectWithdrawalRequestTx(ctx context.Context, arg RejectWithdrawalRequestTxParams) (WithdrawalRequest, error)
 }
 
 type SQLStore struct {

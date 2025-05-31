@@ -410,7 +410,7 @@ func (server *Server) setupRouter() *gin.Engine {
 		{
 			moderatorWithdrawalRequestGroup.GET("", server.listWithdrawalRequests)                         // ✅
 			moderatorWithdrawalRequestGroup.PATCH(":requestID/complete", server.completeWithdrawalRequest) // ✅
-			// moderatorWithdrawalRequestGroup.PATCH(":requestID/reject", server.rejectWithdrawalRequest)
+			moderatorWithdrawalRequestGroup.PATCH(":requestID/reject", server.rejectWithdrawalRequest)     // ✅
 		}
 	}
 	

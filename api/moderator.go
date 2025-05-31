@@ -461,3 +461,89 @@ func (server *Server) listWithdrawalRequests(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, resp)
 }
+
+type rejectWithdrawalRequestRequest struct {
+	// Lý do từ chối yêu cầu rút tiền của moderator
+	Reason string `json:"reason" binding:"required"`
+}
+
+//	@Summary		Reject withdrawal request
+//	@Description	Reject a withdrawal request with reason from moderator. The request must be in pending status.
+//	@Tags			moderator 
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			requestID	path		string							true	"Withdrawal Request ID"
+//	@Param			body		body		rejectWithdrawalRequestRequest	true	"Request body"
+//	@Success		200			{object}	db.WithdrawalRequestDetails		"Updated withdrawal request details"
+//	@Router			/mod/withdrawal-requests/{requestID}/reject [patch]
+func (server *Server) rejectWithdrawalRequest(c *gin.Context) {
+	user := c.MustGet(moderatorPayloadKey).(*db.User)
+	
+	var req rejectWithdrawalRequestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	requestID, err := uuid.Parse(c.Param("requestID"))
+	if err != nil {
+		err = fmt.Errorf("invalid request ID: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	request, err := server.dbStore.GetWithdrawalRequest(c.Request.Context(), requestID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("withdrawal request ID %s not found: %w", requestID, err)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		err = fmt.Errorf("failed to get withdrawal request ID %s: %w", requestID, err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Validate business logic
+	if request.WithdrawalRequest.Status != db.WithdrawalRequestStatusPending {
+		err = fmt.Errorf("can only reject request with status pending, current request status is %s", request.WithdrawalRequest.Status)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Execute transaction to reject withdrawal request
+	arg := db.RejectWithdrawalRequestTxParams{
+		WithdrawalRequest: request.WithdrawalRequest,
+		ModeratorID:       user.ID,
+		Reason:            req.Reason,
+	}
+	updatedRequest, err := server.dbStore.RejectWithdrawalRequestTx(c, arg)
+	if err != nil {
+		err = fmt.Errorf("failed to reject withdrawal request ID %s: %w", requestID, err)
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Thông báo đến người dùng về việc yêu cầu rút tiền đã bị từ chối
+	go func() {
+		// Gửi thông báo trên nền tảng
+		err = server.taskDistributor.DistributeTaskSendNotification(c.Request.Context(), &worker.PayloadSendNotification{
+			RecipientID: updatedRequest.UserID,
+			Title:       "Yêu cầu rút tiền bị từ chối",
+			Message:     fmt.Sprintf("Yêu cầu rút tiền của bạn đã bị từ chối. Lý do: %s", req.Reason),
+			Type:        "withdrawal_request",
+			ReferenceID: updatedRequest.ID.String(),
+		})
+		if err != nil {
+			log.Err(err).Msgf("failed to distribute task notification for reject request ID %s", request.WithdrawalRequest.ID.String())
+		}
+		
+		// TODO: Gửi qua email
+	}()
+	
+	resp := db.NewWithdrawalRequestDetails(updatedRequest, request.UserBankAccount)
+	
+	c.JSON(http.StatusOK, resp)
+}

@@ -985,6 +985,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/mod/withdrawal-requests/{requestID}/reject": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Reject a withdrawal request with reason from moderator. The request must be in pending status.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "Reject withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal Request ID",
+                        "name": "requestID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.rejectWithdrawalRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated withdrawal request details",
+                        "schema": {
+                            "$ref": "#/definitions/db.WithdrawalRequestDetails"
+                        }
+                    }
+                }
+            }
+        },
         "/orders": {
             "get": {
                 "security": [
@@ -5002,6 +5048,18 @@ const docTemplate = `{
             ],
             "properties": {
                 "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.rejectWithdrawalRequestRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "description": "Lý do từ chối yêu cầu rút tiền của moderator",
                     "type": "string"
                 }
             }
