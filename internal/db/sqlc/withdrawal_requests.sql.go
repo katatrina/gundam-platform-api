@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -51,6 +52,49 @@ func (q *Queries) CreateWithdrawalRequest(ctx context.Context, arg CreateWithdra
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const getWithdrawalRequest = `-- name: GetWithdrawalRequest :one
+SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
+FROM withdrawal_requests wr
+         LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
+WHERE wr.id = $1
+`
+
+type GetWithdrawalRequestRow struct {
+	WithdrawalRequest WithdrawalRequest `json:"withdrawal_request"`
+	UserBankAccount   UserBankAccount   `json:"user_bank_account"`
+}
+
+func (q *Queries) GetWithdrawalRequest(ctx context.Context, id uuid.UUID) (GetWithdrawalRequestRow, error) {
+	row := q.db.QueryRow(ctx, getWithdrawalRequest, id)
+	var i GetWithdrawalRequestRow
+	err := row.Scan(
+		&i.WithdrawalRequest.ID,
+		&i.WithdrawalRequest.UserID,
+		&i.WithdrawalRequest.BankAccountID,
+		&i.WithdrawalRequest.Amount,
+		&i.WithdrawalRequest.Status,
+		&i.WithdrawalRequest.ProcessedBy,
+		&i.WithdrawalRequest.ProcessedAt,
+		&i.WithdrawalRequest.RejectedReason,
+		&i.WithdrawalRequest.TransactionReference,
+		&i.WithdrawalRequest.WalletEntryID,
+		&i.WithdrawalRequest.CreatedAt,
+		&i.WithdrawalRequest.UpdatedAt,
+		&i.WithdrawalRequest.CompletedAt,
+		&i.UserBankAccount.ID,
+		&i.UserBankAccount.UserID,
+		&i.UserBankAccount.AccountName,
+		&i.UserBankAccount.AccountNumber,
+		&i.UserBankAccount.BankCode,
+		&i.UserBankAccount.BankName,
+		&i.UserBankAccount.BankShortName,
+		&i.UserBankAccount.CreatedAt,
+		&i.UserBankAccount.UpdatedAt,
 	)
 	return i, err
 }
@@ -173,4 +217,55 @@ func (q *Queries) ListWithdrawalRequests(ctx context.Context, status NullWithdra
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateWithdrawalRequest = `-- name: UpdateWithdrawalRequest :one
+UPDATE withdrawal_requests
+SET status                = COALESCE($1, status),
+    processed_by          = COALESCE($2, processed_by),
+    processed_at          = COALESCE($3, processed_at),
+    rejected_reason       = COALESCE($4, rejected_reason),
+    transaction_reference = COALESCE($5, transaction_reference),
+    completed_at          = COALESCE($6, completed_at),
+    updated_at            = NOW()
+WHERE id = $7 RETURNING id, user_id, bank_account_id, amount, status, processed_by, processed_at, rejected_reason, transaction_reference, wallet_entry_id, created_at, updated_at, completed_at
+`
+
+type UpdateWithdrawalRequestParams struct {
+	Status               NullWithdrawalRequestStatus `json:"status"`
+	ProcessedBy          *string                     `json:"processed_by"`
+	ProcessedAt          *time.Time                  `json:"processed_at"`
+	RejectedReason       *string                     `json:"rejected_reason"`
+	TransactionReference *string                     `json:"transaction_reference"`
+	CompletedAt          *time.Time                  `json:"completed_at"`
+	ID                   uuid.UUID                   `json:"id"`
+}
+
+func (q *Queries) UpdateWithdrawalRequest(ctx context.Context, arg UpdateWithdrawalRequestParams) (WithdrawalRequest, error) {
+	row := q.db.QueryRow(ctx, updateWithdrawalRequest,
+		arg.Status,
+		arg.ProcessedBy,
+		arg.ProcessedAt,
+		arg.RejectedReason,
+		arg.TransactionReference,
+		arg.CompletedAt,
+		arg.ID,
+	)
+	var i WithdrawalRequest
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.BankAccountID,
+		&i.Amount,
+		&i.Status,
+		&i.ProcessedBy,
+		&i.ProcessedAt,
+		&i.RejectedReason,
+		&i.TransactionReference,
+		&i.WalletEntryID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
 }

@@ -776,7 +776,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Moderator approves an auction request and schedules the auction.",
+                "description": "ModeratorID approves an auction request and schedules the auction.",
                 "produces": [
                     "application/json"
                 ],
@@ -810,7 +810,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Moderator rejects an auction request with a reason.",
+                "description": "ModeratorID rejects an auction request with a reason.",
                 "consumes": [
                     "application/json"
                 ],
@@ -856,7 +856,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Moderator can update auction start and end times.",
+                "description": "ModeratorID can update auction start and end times.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3776,7 +3776,7 @@ const docTemplate = `{
                         "accessToken": []
                     }
                 ],
-                "description": "Create a new withdrawal request to transfer money from user's wallet to their bank account\n\n**Quy định nghiệp vụ:**\n- Người dùng phải có đủ số dư trong ví (số tiền sẽ bị trừ ngay lập tức)\n- Tài khoản ngân hàng phải thuộc về người dùng đã xác thực\n- Số tiền rút phải trong khoảng từ 50,000 VNĐ đến 5,000,000 VNĐ mỗi lần\n- Yêu cầu rút tiền được xử lý thủ công bởi moderator trong vòng 24 giờ (ngày làm việc)\n- Sau khi tạo, yêu cầu rút tiền không thể hủy bởi người dùng\n\n**Quy trình xử lý:**\n1. Hệ thống kiểm tra yêu cầu và số dư ví\n2. Tiền được trừ ngay lập tức khỏi ví người dùng\n3. Yêu cầu rút tiền được tạo với trạng thái \"đang xử lý\"\n4. Moderator xem xét và xử lý yêu cầu thủ công\n5. Trạng thái cập nhật thành \"hoàn thành\" sau khi chuyển tiền\n\n**Các trường hợp lỗi:**\n- 400: Dữ liệu yêu cầu không hợp lệ hoặc không đủ số dư\n- 404: Không tìm thấy tài khoản ngân hàng hoặc không thuộc về người dùng\n- 422: Vi phạm quy tắc nghiệp vụ (giới hạn số tiền, v.v.)",
+                "description": "Create a new withdrawal request to transfer money from user's wallet to their bank account\n\n**Quy định nghiệp vụ:**\n- Người dùng phải có đủ số dư trong ví (số tiền sẽ bị trừ ngay lập tức)\n- Tài khoản ngân hàng phải thuộc về người dùng đã xác thực\n- Số tiền rút phải trong khoảng từ 50,000 VNĐ đến 5,000,000 VNĐ mỗi lần\n- Yêu cầu rút tiền được xử lý thủ công bởi moderator trong vòng 24 giờ (ngày làm việc)\n- Sau khi tạo, yêu cầu rút tiền không thể hủy bởi người dùng\n\n**Quy trình xử lý:**\n1. Hệ thống kiểm tra yêu cầu và số dư ví\n2. Tiền được trừ ngay lập tức khỏi ví người dùng\n3. Yêu cầu rút tiền được tạo với trạng thái \"đang xử lý\"\n4. ModeratorID xem xét và xử lý yêu cầu thủ công\n5. Trạng thái cập nhật thành \"hoàn thành\" sau khi chuyển tiền\n\n**Các trường hợp lỗi:**\n- 400: Dữ liệu yêu cầu không hợp lệ hoặc không đủ số dư\n- 404: Không tìm thấy tài khoản ngân hàng hoặc không thuộc về người dùng\n- 422: Vi phạm quy tắc nghiệp vụ (giới hạn số tiền, v.v.)",
                 "consumes": [
                     "application/json"
                 ],

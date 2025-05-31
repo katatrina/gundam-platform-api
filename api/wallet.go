@@ -119,7 +119,7 @@ func (req *createWithdrawalRequestBody) validate() error {
 //	@Description	1. Hệ thống kiểm tra yêu cầu và số dư ví
 //	@Description	2. Tiền được trừ ngay lập tức khỏi ví người dùng
 //	@Description	3. Yêu cầu rút tiền được tạo với trạng thái "đang xử lý"
-//	@Description	4. Moderator xem xét và xử lý yêu cầu thủ công
+//	@Description	4. ModeratorID xem xét và xử lý yêu cầu thủ công
 //	@Description	5. Trạng thái cập nhật thành "hoàn thành" sau khi chuyển tiền
 //	@Description
 //	@Description	**Các trường hợp lỗi:**

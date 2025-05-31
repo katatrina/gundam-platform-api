@@ -108,6 +108,7 @@ type Querier interface {
 	GetWalletByUserID(ctx context.Context, userID string) (Wallet, error)
 	GetWalletEntryByID(ctx context.Context, id int64) (WalletEntry, error)
 	GetWalletForUpdate(ctx context.Context, userID string) (Wallet, error)
+	GetWithdrawalRequest(ctx context.Context, id uuid.UUID) (GetWithdrawalRequestRow, error)
 	IncrementAuctionParticipants(ctx context.Context, id uuid.UUID) (Auction, error)
 	IncrementAuctionTotalBids(ctx context.Context, id uuid.UUID) (Auction, error)
 	ListAuctionBids(ctx context.Context, auctionID *uuid.UUID) ([]AuctionBid, error)
@@ -165,6 +166,7 @@ type Querier interface {
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
 	UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error)
+	UpdateWithdrawalRequest(ctx context.Context, arg UpdateWithdrawalRequestParams) (WithdrawalRequest, error)
 }
 
 var _ Querier = (*Queries)(nil)

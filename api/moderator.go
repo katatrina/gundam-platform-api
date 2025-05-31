@@ -50,7 +50,7 @@ type rejectAuctionRequestBody struct {
 }
 
 //	@Summary		Reject an auction request by moderator
-//	@Description	Moderator rejects an auction request with a reason.
+//	@Description	ModeratorID rejects an auction request with a reason.
 //	@Tags			moderator
 //	@Accept			json
 //	@Produce		json
@@ -128,7 +128,7 @@ func (server *Server) rejectAuctionRequest(c *gin.Context) {
 }
 
 //	@Summary		Approve an auction request by moderator
-//	@Description	Moderator approves an auction request and schedules the auction.
+//	@Description	ModeratorID approves an auction request and schedules the auction.
 //	@Tags			moderator
 //	@Produce		json
 //	@Security		accessToken
@@ -288,7 +288,7 @@ type updateAuctionDetailsByModeratorBody struct {
 }
 
 //	@Summary		Update auction details by moderator
-//	@Description	Moderator can update auction start and end times.
+//	@Description	ModeratorID can update auction start and end times.
 //	@Tags			moderator
 //	@Accept			json
 //	@Produce		json
