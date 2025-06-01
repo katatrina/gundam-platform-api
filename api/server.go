@@ -324,8 +324,8 @@ func (server *Server) setupRouter() *gin.Engine {
 			// Xem chi tiết phiên đấu giá của mình
 			sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails) // ✅
 			
-			// Hủy phiên đấu giá (tạm thời không cho hủy)
-			// sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuction)
+			// Hủy phiên đấu giá (sắp diễn ra)
+			sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuctionBySeller)
 		}
 	}
 	

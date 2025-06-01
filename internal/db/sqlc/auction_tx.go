@@ -697,3 +697,65 @@ func (store *SQLStore) UpdateAuctionByModeratorTx(ctx context.Context, arg Updat
 	
 	return result, err
 }
+
+type CancelAuctionTxParams struct {
+	Auction    Auction // Phiên đấu giá cần hủy
+	CanceledBy string  // ID của người hủy (có thể là người bán hoặc admin)
+	Reason     *string // Lý do hủy (nếu có)
+}
+
+func (store *SQLStore) CancelAuctionTx(ctx context.Context, arg CancelAuctionTxParams) (Auction, error) {
+	var updatedAuction Auction
+	
+	err := store.ExecTx(ctx, func(qTx *Queries) error {
+		var err error
+		
+		// 1. Cập nhật phiên đấu giá
+		updatedAuction, err = qTx.UpdateAuction(ctx, UpdateAuctionParams{
+			ID: arg.Auction.ID,
+			Status: NullAuctionStatus{
+				AuctionStatus: AuctionStatusCanceled,
+				Valid:         true,
+			},
+			CanceledBy:     util.StringPointer(arg.CanceledBy),
+			CanceledReason: arg.Reason,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update auction status: %w", err)
+		}
+		
+		// 2. Chuyển gundam về trạng thái "in store"
+		if arg.Auction.GundamID != nil {
+			err = qTx.UpdateGundam(ctx, UpdateGundamParams{
+				ID: *arg.Auction.GundamID,
+				Status: NullGundamStatus{
+					GundamStatus: GundamStatusInstore,
+					Valid:        true,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to update gundam status: %w", err)
+			}
+		}
+		
+		// 3. Lấy gói đăng ký hiện tại của người bán
+		sellerSubscription, err := qTx.GetCurrentActiveSubscriptionDetailsForSeller(ctx, arg.Auction.SellerID)
+		if err != nil {
+			return fmt.Errorf("failed to get seller's active subscription: %w", err)
+		}
+		
+		// 3. Hoàn trả lượt đăng đấu giá trong subscription
+		_, err = qTx.UpdateCurrentActiveSubscriptionForSeller(ctx, UpdateCurrentActiveSubscriptionForSellerParams{
+			OpenAuctionsUsed: util.Int64Pointer(sellerSubscription.OpenAuctionsUsed - 1),
+			SubscriptionID:   sellerSubscription.ID,
+			SellerID:         arg.Auction.SellerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update seller's subscription: %w", err)
+		}
+		
+		return nil
+	})
+	
+	return updatedAuction, err
+}

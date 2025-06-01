@@ -1554,6 +1554,52 @@
                 }
             }
         },
+        "/sellers/me/auctions/{auctionID}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Cancel an auction that is in 'scheduled' status (has not started yet). This endpoint allows sellers to cancel their own auctions before they begin.\n\n**Quy tắc nghiệp vụ:**\n- Chỉ chủ sở hữu phiên đấu giá (người bán) mới có thể hủy\n- Chỉ có thể hủy phiên đấu giá có trạng thái 'scheduled' (chưa bắt đầu)\n- Không thể hủy phiên đấu giá đang 'active', 'ended', 'completed', hoặc 'failed'\n- Lý do hủy là tùy chọn (không bắt buộc)\n\n**Kết quả sau khi hủy:**\n1. Trạng thái đấu giá chuyển từ 'scheduled' sang 'canceled'\n2. Trạng thái Gundam chuyển từ 'auctioning' về 'in store' (có thể đăng bán lại)\n3. Hoàn trả 1 lượt đăng đấu giá trong gói đăng ký của người bán\n4. Người bán có thể tạo yêu cầu đấu giá mới (nếu còn quota)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "Cancel a scheduled auction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auction ID (UUID format)",
+                        "name": "auctionID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cancellation request with optional reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.cancelAuctionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully cancelled auction with updated details",
+                        "schema": {
+                            "$ref": "#/definitions/db.Auction"
+                        }
+                    }
+                }
+            }
+        },
         "/sellers/{sellerID}/auction-requests": {
             "get": {
                 "security": [
@@ -4612,6 +4658,18 @@
             "properties": {
                 "gundam_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.cancelAuctionRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "description": "Lý do hủy đấu giá, có thể để trống",
+                    "type": "string"
                 }
             }
         },

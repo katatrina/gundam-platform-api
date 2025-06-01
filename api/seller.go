@@ -1053,6 +1053,92 @@ func (server *Server) getSellerAuctionDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type cancelAuctionRequest struct {
+	Reason *string `json:"reason"` // Lý do hủy đấu giá, có thể để trống
+}
+
+//	@Summary		Cancel a scheduled auction
+//	@Description	Cancel an auction that is in 'scheduled' status (has not started yet). This endpoint allows sellers to cancel their own auctions before they begin.
+//	@Description
+//	@Description	**Quy tắc nghiệp vụ:**
+//	@Description	- Chỉ chủ sở hữu phiên đấu giá (người bán) mới có thể hủy
+//	@Description	- Chỉ có thể hủy phiên đấu giá có trạng thái 'scheduled' (chưa bắt đầu)
+//	@Description	- Không thể hủy phiên đấu giá đang 'active', 'ended', 'completed', hoặc 'failed'
+//	@Description	- Lý do hủy là tùy chọn (không bắt buộc)
+//	@Description
+//	@Description	**Kết quả sau khi hủy:**
+//	@Description	1. Trạng thái đấu giá chuyển từ 'scheduled' sang 'canceled'
+//	@Description	2. Trạng thái Gundam chuyển từ 'auctioning' về 'in store' (có thể đăng bán lại)
+//	@Description	3. Hoàn trả 1 lượt đăng đấu giá trong gói đăng ký của người bán
+//	@Description	4. Người bán có thể tạo yêu cầu đấu giá mới (nếu còn quota)
+//	@Tags			auctions
+//	@Accept			json
+//	@Produce		json
+//	@Security		accessToken
+//	@Param			auctionID	path		string					true	"Auction ID (UUID format)"
+//	@Param			request		body		cancelAuctionRequest	true	"Cancellation request with optional reason"
+//	@Success		200			{object}	db.Auction				"Successfully cancelled auction with updated details"
+//	@Router			/sellers/me/auctions/{auctionID}/cancel [patch]
+func (server *Server) cancelAuctionBySeller(c *gin.Context) {
+	seller := c.MustGet(sellerPayloadKey).(*db.User)
+	
+	var req cancelAuctionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	auctionID, err := uuid.Parse(c.Param("auctionID"))
+	if err != nil {
+		err = fmt.Errorf("failed to parse auction ID: %w", err)
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	auction, err := server.dbStore.GetAuctionByID(c.Request.Context(), auctionID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			err = fmt.Errorf("auction ID %s not found", auctionID)
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		
+		log.Error().Err(err).Msg("failed to get auction")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	// Kiểm tra quyền sở hữu đấu giá
+	if auction.SellerID != seller.ID {
+		err = fmt.Errorf("auction ID %s does not belong to seller ID %s", auction.ID, seller.ID)
+		c.JSON(http.StatusForbidden, errorResponse(err))
+		return
+	}
+	
+	// Chỉ cho phép hủy nếu đấu giá đang trong trạng thái 'scheduled' hoặc 'active'
+	if auction.Status != db.AuctionStatusScheduled {
+		err = fmt.Errorf("only 'scheduled' auctions can be canceled, current: %s", auction.Status)
+		c.JSON(http.StatusUnprocessableEntity, errorResponse(err))
+		return
+	}
+	
+	// Thực hiện hủy đấu giá trong transaction
+	arg := db.CancelAuctionTxParams{
+		Auction:    auction,
+		CanceledBy: seller.ID,
+		Reason:     req.Reason,
+	}
+	
+	canceledAuction, err := server.dbStore.CancelAuctionTx(c.Request.Context(), arg)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to cancel auction")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, canceledAuction)
+}
+
 type upgradeSubscriptionRequest struct {
 	PlanID int64 `json:"plan_id" binding:"required" example:"2"` // ID of the target subscription plan
 }

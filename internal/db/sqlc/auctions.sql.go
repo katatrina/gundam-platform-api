@@ -528,6 +528,8 @@ SET status                  = COALESCE($2, status),
     end_time                = COALESCE($7, end_time),
     actual_end_time         = COALESCE($8, actual_end_time),
     order_id                = COALESCE($9, order_id),
+    canceled_by             = COALESCE($10, canceled_by),
+    canceled_reason         = COALESCE($11, canceled_reason),
     updated_at              = now()
 WHERE id = $1 RETURNING id, request_id, gundam_id, seller_id, gundam_snapshot, starting_price, bid_increment, winning_bid_id, buy_now_price, start_time, end_time, actual_end_time, status, current_price, deposit_rate, deposit_amount, total_participants, total_bids, winner_payment_deadline, order_id, canceled_by, canceled_reason, created_at, updated_at
 `
@@ -542,6 +544,8 @@ type UpdateAuctionParams struct {
 	EndTime               *time.Time        `json:"end_time"`
 	ActualEndTime         *time.Time        `json:"actual_end_time"`
 	OrderID               *uuid.UUID        `json:"order_id"`
+	CanceledBy            *string           `json:"canceled_by"`
+	CanceledReason        *string           `json:"canceled_reason"`
 }
 
 func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (Auction, error) {
@@ -555,6 +559,8 @@ func (q *Queries) UpdateAuction(ctx context.Context, arg UpdateAuctionParams) (A
 		arg.EndTime,
 		arg.ActualEndTime,
 		arg.OrderID,
+		arg.CanceledBy,
+		arg.CanceledReason,
 	)
 	var i Auction
 	err := row.Scan(

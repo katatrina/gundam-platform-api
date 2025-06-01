@@ -30,6 +30,8 @@ SET status                  = COALESCE(sqlc.narg('status'), status),
     end_time                = COALESCE(sqlc.narg('end_time'), end_time),
     actual_end_time         = COALESCE(sqlc.narg('actual_end_time'), actual_end_time),
     order_id                = COALESCE(sqlc.narg('order_id'), order_id),
+    canceled_by             = COALESCE(sqlc.narg('canceled_by'), canceled_by),
+    canceled_reason         = COALESCE(sqlc.narg('canceled_reason'), canceled_reason),
     updated_at              = now()
 WHERE id = $1 RETURNING *;
 
