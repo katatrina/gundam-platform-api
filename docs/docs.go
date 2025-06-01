@@ -895,6 +895,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/mod/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get dashboard statistics for moderator including pending tasks and platform activity volume",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moderator"
+                ],
+                "summary": "Get moderator dashboard statistics",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard statistics",
+                        "schema": {
+                            "$ref": "#/definitions/db.ModeratorDashboard"
+                        }
+                    }
+                }
+            }
+        },
         "/mod/withdrawal-requests": {
             "get": {
                 "security": [
@@ -6851,6 +6876,33 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/db.OrderItem"
                     }
+                }
+            }
+        },
+        "db.ModeratorDashboard": {
+            "type": "object",
+            "required": [
+                "pending_auction_requests_count",
+                "pending_withdrawal_requests_count",
+                "total_exchanges_this_week",
+                "total_orders_this_week"
+            ],
+            "properties": {
+                "pending_auction_requests_count": {
+                    "description": "Số lượng yêu cầu đấu giá đang chờ xử lý",
+                    "type": "integer"
+                },
+                "pending_withdrawal_requests_count": {
+                    "description": "Số lượng yêu cầu rút tiền đang chờ xử lý",
+                    "type": "integer"
+                },
+                "total_exchanges_this_week": {
+                    "description": "Tổng số cuộc trao đổi trong tuần nàyl",
+                    "type": "integer"
+                },
+                "total_orders_this_week": {
+                    "description": "Tổng số đơn hàng trong tuần này",
+                    "type": "integer"
                 }
             }
         },

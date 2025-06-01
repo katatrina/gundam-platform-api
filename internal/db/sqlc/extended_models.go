@@ -234,4 +234,9 @@ type SellerDashboard struct {
 	PendingAuctionRequestsCount int64 `json:"pending_auction_requests_count"` // Số lượng yêu cầu đấu giá đang chờ xử lý
 }
 
-type ModeratorDashboard struct{}
+type ModeratorDashboard struct {
+	PendingAuctionRequestsCount    int64 `json:"pending_auction_requests_count"`    // Số lượng yêu cầu đấu giá đang chờ xử lý
+	PendingWithdrawalRequestsCount int64 `json:"pending_withdrawal_requests_count"` // Số lượng yêu cầu rút tiền đang chờ xử lý
+	TotalExchangesThisWeek         int64 `json:"total_exchanges_this_week"`         // Tổng số cuộc trao đổi trong tuần nàyl
+	TotalOrdersThisWeek            int64 `json:"total_orders_this_week"`            // Tổng số đơn hàng trong tuần này
+}

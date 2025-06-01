@@ -22,3 +22,45 @@ func (q *Queries) GetModPendingAuctionRequestsCount(ctx context.Context) (int64,
 	err := row.Scan(&count)
 	return count, err
 }
+
+const getModPendingWithdrawalRequestsCount = `-- name: GetModPendingWithdrawalRequestsCount :one
+SELECT COUNT(*) as count
+FROM withdrawal_requests
+WHERE status = 'pending'
+`
+
+// Metric 2: Yêu cầu rút tiền chờ moderator xử lý (bảng withdrawal_requests)
+func (q *Queries) GetModPendingWithdrawalRequestsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getModPendingWithdrawalRequestsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getModTotalExchangesThisWeek = `-- name: GetModTotalExchangesThisWeek :one
+SELECT COUNT(*) as count
+FROM exchanges
+WHERE created_at >= date_trunc('week', CURRENT_DATE)
+`
+
+// Metric 3: Tất cả trao đổi được tạo tuần này - VOLUME INDICATOR (bảng exchanges)
+func (q *Queries) GetModTotalExchangesThisWeek(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getModTotalExchangesThisWeek)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getModTotalOrdersThisWeek = `-- name: GetModTotalOrdersThisWeek :one
+SELECT COUNT(*) as count
+FROM orders
+WHERE created_at >= date_trunc('week', CURRENT_DATE)
+`
+
+// Metric 4: Tất cả đơn hàng được tạo tuần này - VOLUME INDICATOR (bảng orders)
+func (q *Queries) GetModTotalOrdersThisWeek(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getModTotalOrdersThisWeek)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}

@@ -13,6 +13,7 @@ import (
 	"github.com/katatrina/gundam-BE/internal/validator"
 	"github.com/katatrina/gundam-BE/internal/worker"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 )
 
 //	@Summary		List all auction requests for moderator
@@ -548,8 +549,65 @@ func (server *Server) rejectWithdrawalRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+//	@Summary		Get moderator dashboard statistics
+//	@Description	Get dashboard statistics for moderator including pending tasks and platform activity volume
+//	@Tags			moderator
+//	@Produce		json
+//	@Security		accessToken
+//	@Success		200	{object}	db.ModeratorDashboard	"Dashboard statistics"
+//	@Router			/mod/dashboard [get]
 func (server *Server) getModeratorDashboard(c *gin.Context) {
-	mod := c.MustGet(moderatorPayloadKey).(*db.User)
+	_ = c.MustGet(moderatorPayloadKey).(*db.User)
 	
 	var resp db.ModeratorDashboard
+	
+	g, ctx := errgroup.WithContext(c.Request.Context())
+	
+	// Goroutine 1: Get pending auction requests count
+	g.Go(func() error {
+		pendingAuctionRequests, err := server.dbStore.GetModPendingAuctionRequestsCount(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get pending auction requests count: %w", err)
+		}
+		resp.PendingAuctionRequestsCount = pendingAuctionRequests
+		return nil
+	})
+	
+	// Goroutine 2: Get pending withdrawal requests count
+	g.Go(func() error {
+		pendingWithdrawalRequests, err := server.dbStore.GetModPendingWithdrawalRequestsCount(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get pending withdrawal requests count: %w", err)
+		}
+		resp.PendingWithdrawalRequestsCount = pendingWithdrawalRequests
+		return nil
+	})
+	
+	// Goroutine 3: Get total exchanges this week
+	g.Go(func() error {
+		totalExchangesThisWeek, err := server.dbStore.GetModTotalExchangesThisWeek(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get total exchanges this week: %w", err)
+		}
+		resp.TotalExchangesThisWeek = totalExchangesThisWeek
+		return nil
+	})
+	
+	// Goroutine 4: Get total orders this week
+	g.Go(func() error {
+		totalOrdersThisWeek, err := server.dbStore.GetModTotalOrdersThisWeek(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get total orders this week: %w", err)
+		}
+		resp.TotalOrdersThisWeek = totalOrdersThisWeek
+		return nil
+	})
+	
+	// Wait for all goroutines to complete
+	if err := g.Wait(); err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	c.JSON(http.StatusOK, resp)
 }
