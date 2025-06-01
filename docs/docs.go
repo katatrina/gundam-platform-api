@@ -15,6 +15,31 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Get comprehensive dashboard statistics for admin including business metrics with order type breakdowns",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get admin dashboard statistics",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard statistics with order type details",
+                        "schema": {
+                            "$ref": "#/definitions/db.AdminDashboard"
+                        }
+                    }
+                }
+            }
+        },
         "/auctions": {
             "get": {
                 "description": "Retrieves upcoming and ongoing auctions from the platform.",
@@ -5393,6 +5418,63 @@ const docTemplate = `{
                 }
             }
         },
+        "db.AdminDashboard": {
+            "type": "object",
+            "required": [
+                "completed_auctions_this_week",
+                "completed_exchanges_this_month",
+                "new_users_this_week",
+                "total_auction_orders_this_month",
+                "total_business_users",
+                "total_exchange_orders_this_month",
+                "total_published_gundams",
+                "total_regular_orders_this_month",
+                "total_revenue_this_month",
+                "total_wallet_volume_this_week"
+            ],
+            "properties": {
+                "completed_auctions_this_week": {
+                    "description": "Tổng số phiên đấu giá đã hoàn thành trong tuần này",
+                    "type": "integer"
+                },
+                "completed_exchanges_this_month": {
+                    "description": "Tổng số cuộc trao đổi đã hoàn thành trong tháng này",
+                    "type": "integer"
+                },
+                "new_users_this_week": {
+                    "description": "Số lượng người dùng mới trong tuần này",
+                    "type": "integer"
+                },
+                "total_auction_orders_this_month": {
+                    "description": "Tổng số đơn hàng đấu giá trong tháng này",
+                    "type": "integer"
+                },
+                "total_business_users": {
+                    "description": "Tổng số người dùng hoạt động trên nền tảng (chỉ tính role member và seller)",
+                    "type": "integer"
+                },
+                "total_exchange_orders_this_month": {
+                    "description": "Tổng số đơn hàng trao đổi trong tháng này",
+                    "type": "integer"
+                },
+                "total_published_gundams": {
+                    "description": "Tổng số gundam đã được đăng bán",
+                    "type": "integer"
+                },
+                "total_regular_orders_this_month": {
+                    "description": "Tổng số đơn hàng thường trong tháng này",
+                    "type": "integer"
+                },
+                "total_revenue_this_month": {
+                    "description": "Tổng doanh thu trong tháng này",
+                    "type": "integer"
+                },
+                "total_wallet_volume_this_week": {
+                    "description": "Tổng khối lượng giao dịch ví trong tuần này",
+                    "type": "integer"
+                }
+            }
+        },
         "db.ApproveAuctionRequestTxResult": {
             "type": "object",
             "required": [
@@ -6897,7 +6979,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "total_exchanges_this_week": {
-                    "description": "Tổng số cuộc trao đổi trong tuần nàyl",
+                    "description": "Tổng số cuộc trao đổi trong tuần này",
                     "type": "integer"
                 },
                 "total_orders_this_week": {

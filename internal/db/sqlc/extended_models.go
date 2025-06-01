@@ -237,6 +237,19 @@ type SellerDashboard struct {
 type ModeratorDashboard struct {
 	PendingAuctionRequestsCount    int64 `json:"pending_auction_requests_count"`    // Số lượng yêu cầu đấu giá đang chờ xử lý
 	PendingWithdrawalRequestsCount int64 `json:"pending_withdrawal_requests_count"` // Số lượng yêu cầu rút tiền đang chờ xử lý
-	TotalExchangesThisWeek         int64 `json:"total_exchanges_this_week"`         // Tổng số cuộc trao đổi trong tuần nàyl
+	TotalExchangesThisWeek         int64 `json:"total_exchanges_this_week"`         // Tổng số cuộc trao đổi trong tuần này
 	TotalOrdersThisWeek            int64 `json:"total_orders_this_week"`            // Tổng số đơn hàng trong tuần này
+}
+
+type AdminDashboard struct {
+	TotalBusinessUsers           int64 `json:"total_business_users"`             // Tổng số người dùng hoạt động trên nền tảng (chỉ tính role member và seller)
+	TotalRegularOrdersThisMonth  int64 `json:"total_regular_orders_this_month"`  // Tổng số đơn hàng thường trong tháng này
+	TotalExchangeOrdersThisMonth int64 `json:"total_exchange_orders_this_month"` // Tổng số đơn hàng trao đổi trong tháng này
+	TotalAuctionOrdersThisMonth  int64 `json:"total_auction_orders_this_month"`  // Tổng số đơn hàng đấu giá trong tháng này
+	TotalRevenueThisMonth        int64 `json:"total_revenue_this_month"`         // Tổng doanh thu trong tháng này
+	CompletedExchangesThisMonth  int64 `json:"completed_exchanges_this_month"`   // Tổng số cuộc trao đổi đã hoàn thành trong tháng này
+	CompletedAuctionsThisWeek    int64 `json:"completed_auctions_this_week"`     // Tổng số phiên đấu giá đã hoàn thành trong tuần này
+	TotalWalletVolumeThisWeek    int64 `json:"total_wallet_volume_this_week"`    // Tổng khối lượng giao dịch ví trong tuần này
+	TotalPublishedGundams        int64 `json:"total_published_gundams"`          // Tổng số gundam đã được đăng bán
+	NewUsersThisWeek             int64 `json:"new_users_this_week"`              // Số lượng người dùng mới trong tuần này
 }

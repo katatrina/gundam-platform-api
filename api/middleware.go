@@ -15,8 +15,10 @@ const (
 	authorizationHeaderKey  = "Authorization"
 	authorizationTypeBearer = "Bearer"
 	authorizationPayloadKey = "authPayload"
-	sellerPayloadKey        = "sellerPayload"
-	moderatorPayloadKey     = "moderatorPayload"
+	
+	sellerPayloadKey    = "sellerPayload"
+	moderatorPayloadKey = "moderatorPayload"
+	adminPayloadKey     = "adminPayload"
 )
 
 // authMiddleware authenticates the user.
@@ -155,6 +157,34 @@ func requiredModeratorRole(dbStore db.Store) gin.HandlerFunc {
 		}
 		
 		ctx.Set(moderatorPayloadKey, &user)
+		ctx.Next()
+	}
+}
+
+func requiredAdminRole(dbStore db.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		authenticatedUserID := authPayload.Subject
+		
+		user, err := dbStore.GetUserByID(ctx, authenticatedUserID)
+		if err != nil {
+			if errors.Is(err, db.ErrRecordNotFound) {
+				err = fmt.Errorf("user ID %s not found", authenticatedUserID)
+				ctx.AbortWithStatusJSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+			
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		
+		if user.Role != db.UserRoleAdmin {
+			err = fmt.Errorf("user ID %s is not an admin", authenticatedUserID)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
+		
+		ctx.Set(adminPayloadKey, &user)
 		ctx.Next()
 	}
 }

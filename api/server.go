@@ -419,6 +419,11 @@ func (server *Server) setupRouter() *gin.Engine {
 		}
 	}
 	
+	adminGroup := v1.Group("/admin", authMiddleware(server.tokenMaker), requiredAdminRole(server.dbStore))
+	{
+		adminGroup.GET("/dashboard", server.getAdminDashboard) // ✅
+	}
+	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
 	server.router = router
