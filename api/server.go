@@ -325,7 +325,7 @@ func (server *Server) setupRouter() *gin.Engine {
 			sellerAuctionGroup.GET(":auctionID", server.getSellerAuctionDetails) // ✅
 			
 			// Hủy phiên đấu giá (sắp diễn ra)
-			sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuctionBySeller)
+			sellerAuctionGroup.PATCH(":auctionID/cancel", server.cancelAuctionBySeller) // ✅
 		}
 	}
 	
@@ -391,6 +391,8 @@ func (server *Server) setupRouter() *gin.Engine {
 	// API cho moderator
 	moderatorGroup := v1.Group("/mod", authMiddleware(server.tokenMaker), requiredModeratorRole(server.dbStore))
 	{
+		moderatorGroup.GET("/dashboard", server.getModeratorDashboard) // ✅
+		
 		moderatorAuctionRequestGroup := moderatorGroup.Group("auction-requests")
 		{
 			// Xem tất cả yêu cầu đấu giá (pending, approved, rejected)

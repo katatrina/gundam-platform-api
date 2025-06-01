@@ -233,3 +233,5 @@ type SellerDashboard struct {
 	ActiveAuctionsCount         int64 `json:"active_auctions_count"`          // Số lượng phiên đấu giá đang diễn ra
 	PendingAuctionRequestsCount int64 `json:"pending_auction_requests_count"` // Số lượng yêu cầu đấu giá đang chờ xử lý
 }
+
+type ModeratorDashboard struct{}

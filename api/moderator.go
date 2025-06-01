@@ -547,3 +547,9 @@ func (server *Server) rejectWithdrawalRequest(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, resp)
 }
+
+func (server *Server) getModeratorDashboard(c *gin.Context) {
+	mod := c.MustGet(moderatorPayloadKey).(*db.User)
+	
+	var resp db.ModeratorDashboard
+}

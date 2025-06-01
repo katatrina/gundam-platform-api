@@ -1327,7 +1327,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 1: Get published gundams count
 	g.Go(func() error {
-		publishedCount, err := server.dbStore.GetPublishedGundamsCount(ctx, seller.ID)
+		publishedCount, err := server.dbStore.GetSellerPublishedGundamsCount(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get published gundams count: %w", err)
 		}
@@ -1347,7 +1347,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 3: Get completed orders count
 	g.Go(func() error {
-		completedOrders, err := server.dbStore.GetCompletedOrdersCount(ctx, seller.ID)
+		completedOrders, err := server.dbStore.GetSellerCompletedOrdersCount(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get completed orders count: %w", err)
 		}
@@ -1357,7 +1357,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 4: Get processing orders count
 	g.Go(func() error {
-		processingOrders, err := server.dbStore.GetProcessingOrdersCount(ctx, seller.ID)
+		processingOrders, err := server.dbStore.GetSellerProcessingOrdersCount(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get processing orders count: %w", err)
 		}
@@ -1367,7 +1367,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 5: Get income this month
 	g.Go(func() error {
-		incomeThisMonth, err := server.dbStore.GetIncomeThisMonth(ctx, seller.ID)
+		incomeThisMonth, err := server.dbStore.GetSellerIncomeThisMonth(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get income this month: %w", err)
 		}
@@ -1377,7 +1377,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 6: Get active auctions count
 	g.Go(func() error {
-		activeAuctions, err := server.dbStore.GetActiveAuctionsCount(ctx, seller.ID)
+		activeAuctions, err := server.dbStore.GetSellerActiveAuctionsCount(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get active auctions count: %w", err)
 		}
@@ -1387,7 +1387,7 @@ func (server *Server) getSellerDashboard(c *gin.Context) {
 	
 	// Goroutine 7: Get pending auction requests count
 	g.Go(func() error {
-		pendingAuctionRequests, err := server.dbStore.GetPendingAuctionRequestsCount(ctx, seller.ID)
+		pendingAuctionRequests, err := server.dbStore.GetSellerPendingAuctionRequestsCount(ctx, seller.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get pending auction requests count: %w", err)
 		}

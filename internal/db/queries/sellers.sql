@@ -41,50 +41,49 @@ WHERE seller_id = $1;
 INSERT INTO seller_profiles (seller_id, shop_name)
 VALUES ($1, $2) RETURNING *;
 
--- name: GetPublishedGundamsCount :one
--- KPI 1: Số Gundam đang đăng bán
+-- name: GetSellerPublishedGundamsCount :one
+-- Metric 1: Gundam đang bán của seller này (bảng gundams)
 SELECT COUNT(*) as count
 FROM gundams
 WHERE owner_id = $1 AND status = 'published';
 
-
 -- name: GetSellerTotalIncome :one
--- KPI 2: Tổng thu nhập từ bán hàng và đấu giá
+-- Metric 2: Tổng thu nhập của seller (bảng wallet_entries)
 SELECT COALESCE(SUM(amount), 0) ::bigint as total_income
 FROM wallet_entries
 WHERE wallet_id = $1
   AND entry_type IN ('payment_received', 'auction_seller_payment')
   AND status = 'completed';
 
--- name: GetCompletedOrdersCount :one
--- KPI 3: Số đơn hàng đã hoàn thành
+-- name: GetSellerCompletedOrdersCount :one
+-- Metric 3: Đơn hàng hoàn thành của seller (bảng orders)
 SELECT COUNT(*) as count
 FROM orders
 WHERE seller_id = $1 AND status = 'completed';
 
--- name: GetProcessingOrdersCount :one
--- KPI 4: Số đơn hàng đang xử lý
+-- name: GetSellerProcessingOrdersCount :one
+-- Metric 4: Đơn hàng đang xử lý của seller (bảng orders)
 SELECT COUNT(*) as count
 FROM orders
 WHERE seller_id = $1 AND status IN ('pending', 'packaging', 'delivering');
 
--- name: GetIncomeThisMonth :one
--- Bổ sung 1: Thu nhập tháng này
-SELECT COALESCE(SUM(amount), 0)::bigint as income_this_month
+-- name: GetSellerIncomeThisMonth :one
+-- Metric 5: Thu nhập tháng này của seller (bảng wallet_entries)
+SELECT COALESCE(SUM(amount), 0) ::bigint as income_this_month
 FROM wallet_entries
 WHERE wallet_id = $1
   AND entry_type IN ('payment_received', 'auction_seller_payment')
   AND status = 'completed'
   AND created_at >= date_trunc('month', CURRENT_DATE);
 
--- name: GetActiveAuctionsCount :one
--- Bổ sung 2: Số phiên đấu giá đang diễn ra
+-- name: GetSellerActiveAuctionsCount :one
+-- Metric 6: Đấu giá đang hoạt động của seller (bảng auctions)
 SELECT COUNT(*) as count
 FROM auctions
 WHERE seller_id = $1 AND status = 'active';
 
--- name: GetPendingAuctionRequestsCount :one
--- Bổ sung 3: Số yêu cầu đấu giá chờ duyệt
+-- name: GetSellerPendingAuctionRequestsCount :one
+-- Metric 7: Yêu cầu đấu giá chờ duyệt của seller (bảng auction_requests)
 SELECT COUNT(*) as count
 FROM auction_requests
 WHERE seller_id = $1 AND status = 'pending';
