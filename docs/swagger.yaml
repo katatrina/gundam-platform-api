@@ -3529,7 +3529,7 @@ paths:
       - accessToken: []
       summary: List auctions for moderator
       tags:
-      - auctions
+      - moderator
   /mod/auctions/{auctionID}:
     patch:
       consumes:

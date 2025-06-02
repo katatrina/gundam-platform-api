@@ -614,7 +614,7 @@ func (server *Server) getModeratorDashboard(c *gin.Context) {
 
 //	@Summary		List auctions for moderator
 //	@Description	List all auctions with optional status filter.
-//	@Tags			auctions
+//	@Tags			moderator
 //	@Produce		json
 //	@Param			status	query	string				false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
 //	@Success		200		{array}	db.AuctionDetails	"List of auctions"

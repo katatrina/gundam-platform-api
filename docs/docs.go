@@ -886,7 +886,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auctions"
+                    "moderator"
                 ],
                 "summary": "List auctions for moderator",
                 "parameters": [
