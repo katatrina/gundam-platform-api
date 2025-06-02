@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 	
@@ -21,23 +20,23 @@ const (
 // The values are read by viper from a config file or environment variables.
 type Config struct {
 	AllowedOrigins      []string      `mapstructure:"ALLOWED_ORIGINS"`
-	DatabaseURL         string        `mapstructure:"DATABASE_URL" validate:"required"`
+	DatabaseURL         string        `mapstructure:"DATABASE_URL"`
 	HTTPServerAddress   string        `mapstructure:"HTTP_SERVER_ADDRESS"`
-	TokenSecretKey      string        `mapstructure:"TOKEN_SECRET_KEY" validate:"required"`
+	TokenSecretKey      string        `mapstructure:"TOKEN_SECRET_KEY"`
 	AccessTokenDuration time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
-	GoogleClientID      string        `mapstructure:"GOOGLE_CLIENT_ID" validate:"required"`
-	CloudinaryURL       string        `mapstructure:"CLOUDINARY_URL" validate:"required"`
-	RedisServerAddress  string        `mapstructure:"REDIS_SERVER_ADDRESS" validate:"required"`
-	RedisServerPassword string        `mapstructure:"REDIS_SERVER_PASSWORD" validate:"required"`
-	DiscordBotToken     string        `mapstructure:"DISCORD_BOT_TOKEN" validate:"required"`
-	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID" validate:"required"`
-	GmailSMTPUsername   string        `mapstructure:"GMAIL_SMTP_USERNAME" validate:"required"`
-	GmailSMTPPassword   string        `mapstructure:"GMAIL_SMTP_PASSWORD" validate:"required"`
+	GoogleClientID      string        `mapstructure:"GOOGLE_CLIENT_ID"`
+	CloudinaryURL       string        `mapstructure:"CLOUDINARY_URL"`
+	RedisServerAddress  string        `mapstructure:"REDIS_SERVER_ADDRESS"`
+	RedisServerPassword string        `mapstructure:"REDIS_SERVER_PASSWORD"`
+	DiscordBotToken     string        `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscordChannelID    string        `mapstructure:"DISCORD_CHANNEL_ID"`
+	GmailSMTPUsername   string        `mapstructure:"GMAIL_SMTP_USERNAME"`
+	GmailSMTPPassword   string        `mapstructure:"GMAIL_SMTP_PASSWORD"`
 	ZalopayCallbackURL  string        `mapstructure:"ZALOPAY_CALLBACK_URL"`
 	Environment         string        `mapstructure:"ENVIRONMENT"`
-	NgrokAuthToken      string        `mapstructure:"NGROK_AUTH_TOKEN" validate:"required"`
-	GHNShopID           string        `mapstructure:"GHN_SHOP_ID" validate:"required"`
-	GHNToken            string        `mapstructure:"GHN_TOKEN" validate:"required"`
+	NgrokAuthToken      string        `mapstructure:"NGROK_AUTH_TOKEN"`
+	GHNShopID           string        `mapstructure:"GHN_SHOP_ID"`
+	GHNToken            string        `mapstructure:"GHN_TOKEN"`
 }
 
 // LoadConfig reads configuration from file (dev) or environment variables (prod)
@@ -81,8 +80,37 @@ func LoadConfig(path string) (config Config, err error) {
 		
 		viper.SetDefault("ENVIRONMENT", environment)
 		
-		// Only use environment variables
+		// Configure viper for environment variables
 		viper.AutomaticEnv()
+		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+		
+		// Bind all environment variables
+		envVars := []string{
+			"DATABASE_URL",
+			"TOKEN_SECRET_KEY",
+			"GOOGLE_CLIENT_ID",
+			"CLOUDINARY_URL",
+			"REDIS_SERVER_ADDRESS",
+			"REDIS_SERVER_PASSWORD",
+			"DISCORD_BOT_TOKEN",
+			"DISCORD_CHANNEL_ID",
+			"GMAIL_SMTP_USERNAME",
+			"GMAIL_SMTP_PASSWORD",
+			"NGROK_AUTH_TOKEN",
+			"GHN_SHOP_ID",
+			"GHN_TOKEN",
+			"ALLOWED_ORIGINS",
+			"HTTP_SERVER_ADDRESS",
+			"ACCESS_TOKEN_DURATION",
+			"ZALOPAY_CALLBACK_URL",
+		}
+		
+		for _, env := range envVars {
+			err = viper.BindEnv(env)
+			if err != nil {
+				return config, fmt.Errorf("failed to bind environment variable %s: %w", env, err)
+			}
+		}
 	}
 	
 	// Unmarshal config into struct
@@ -133,32 +161,46 @@ func postProcessConfig(config Config) Config {
 	return config
 }
 
-// validateConfig validates the configuration using struct tags
+// validateConfig validates the configuration
 func validateConfig(config Config) error {
-	v := reflect.ValueOf(config)
-	t := reflect.TypeOf(config)
-	
-	var missingFields []string
-	
-	for i := 0; i < v.NumField(); i++ {
-		field := t.Field(i)
-		value := v.Field(i)
-		
-		// Check if field has "required" tag
-		if validateTag := field.Tag.Get("validate"); validateTag == "required" {
-			// Check if the field is empty
-			if value.Kind() == reflect.String && value.String() == "" {
-				fieldName := field.Tag.Get("mapstructure")
-				if fieldName == "" {
-					fieldName = field.Name
-				}
-				missingFields = append(missingFields, fieldName)
-			}
-		}
+	if config.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
 	}
-	
-	if len(missingFields) > 0 {
-		return fmt.Errorf("required fields are missing: %v", missingFields)
+	if config.TokenSecretKey == "" {
+		return fmt.Errorf("TOKEN_SECRET_KEY is required")
+	}
+	if config.GoogleClientID == "" {
+		return fmt.Errorf("GOOGLE_CLIENT_ID is required")
+	}
+	if config.CloudinaryURL == "" {
+		return fmt.Errorf("CLOUDINARY_URL is required")
+	}
+	if config.RedisServerAddress == "" {
+		return fmt.Errorf("REDIS_SERVER_ADDRESS is required")
+	}
+	if config.RedisServerPassword == "" {
+		return fmt.Errorf("REDIS_SERVER_PASSWORD is required")
+	}
+	if config.DiscordBotToken == "" {
+		return fmt.Errorf("DISCORD_BOT_TOKEN is required")
+	}
+	if config.DiscordChannelID == "" {
+		return fmt.Errorf("DISCORD_CHANNEL_ID is required")
+	}
+	if config.GmailSMTPUsername == "" {
+		return fmt.Errorf("GMAIL_SMTP_USERNAME is required")
+	}
+	if config.GmailSMTPPassword == "" {
+		return fmt.Errorf("GMAIL_SMTP_PASSWORD is required")
+	}
+	if config.NgrokAuthToken == "" {
+		return fmt.Errorf("NGROK_AUTH_TOKEN is required")
+	}
+	if config.GHNShopID == "" {
+		return fmt.Errorf("GHN_SHOP_ID is required")
+	}
+	if config.GHNToken == "" {
+		return fmt.Errorf("GHN_TOKEN is required")
 	}
 	
 	if config.Environment != EnvironmentDevelopment && config.Environment != EnvironmentProduction {

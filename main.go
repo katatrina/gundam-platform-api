@@ -60,8 +60,22 @@ func main() {
 	}
 	log.Info().Msg("firebase client app initialized ✅")
 	
-	// Create connection pool
-	connPool, err := pgxpool.New(context.Background(), appConfig.DatabaseURL)
+	// Create connection pool với optimized settings
+	config, err := pgxpool.ParseConfig(appConfig.DatabaseURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse database config string 😣")
+	}
+	
+	// Optimize connection pool for production
+	if appConfig.Environment == util.EnvironmentProduction {
+		config.MaxConns = 10               // Limit concurrent connections
+		config.MinConns = 2                // Keep warm connections
+		config.MaxConnLifetime = time.Hour // Rotate connections
+		config.MaxConnIdleTime = time.Minute * 30
+		config.HealthCheckPeriod = time.Minute
+	}
+	
+	connPool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to validate db connection string 😣")
 	}
@@ -157,10 +171,7 @@ func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
 	
-	// Only setup ngrok in development and when token is available
-	if appConfig.Environment == util.EnvironmentDevelopment && appConfig.NgrokAuthToken != "" {
-		go setupNgrokTunnel(appConfig, server)
-	}
+	go setupNgrokTunnel(appConfig, server)
 	
 	// Chạy server chính
 	log.Info().Msg("Starting main server")

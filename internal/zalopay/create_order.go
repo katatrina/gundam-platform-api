@@ -64,7 +64,6 @@ func (z *ZalopayService) CreateOrder(appUser string, amount int64, items []map[s
 	params.Add("mac", hmacutil.HexStringEncode(hmacutil.SHA256, z.key1, data))
 	
 	params.Add("callback_url", z.config.ZalopayCallbackURL)
-	fmt.Println("callback_url", z.config.ZalopayCallbackURL)
 	
 	// Gọi API ZaloPay
 	// Content-Type: application/x-www-form-urlencoded
