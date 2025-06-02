@@ -611,3 +611,62 @@ func (server *Server) getModeratorDashboard(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, resp)
 }
+
+//	@Summary		List auctions for moderator
+//	@Description	List all auctions with optional status filter.
+//	@Tags			auctions
+//	@Produce		json
+//	@Param			status	query	string				false	"Filter by status"	Enums(scheduled, active, ended, completed, failed, canceled)
+//	@Success		200		{array}	db.AuctionDetails	"List of auctions"
+//	@Security		accessToken
+//	@Router			/mod/auctions [get]
+func (server *Server) listAuctionsForModerator(c *gin.Context) {
+	_ = c.MustGet(sellerPayloadKey).(*db.User)
+	
+	status := c.Query("status")
+	if status != "" {
+		if err := db.IsValidAuctionStatus(status); err != nil {
+			c.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	}
+	
+	auctions, err := server.dbStore.ListAuctions(c.Request.Context(), db.NullAuctionStatus{
+		AuctionStatus: db.AuctionStatus(status),
+		Valid:         status != "",
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list auctions")
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	
+	var resp []db.AuctionDetails
+	
+	for _, auction := range auctions {
+		var auctionDetails db.AuctionDetails
+		auctionDetails.Auction = auction
+		
+		// Lấy danh sách người tham gia đấu giá
+		participants, err := server.dbStore.ListAuctionParticipants(c.Request.Context(), auction.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get auction participants")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		auctionDetails.AuctionParticipants = participants
+		
+		// Lấy danh sách giá đấu
+		bids, err := server.dbStore.ListAuctionBids(c.Request.Context(), &auction.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get auction bids")
+			c.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		auctionDetails.AuctionBids = bids
+		
+		resp = append(resp, auctionDetails)
+	}
+	
+	c.JSON(http.StatusOK, resp)
+}

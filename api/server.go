@@ -407,8 +407,11 @@ func (server *Server) setupRouter() *gin.Engine {
 		
 		moderatorAuctionGroup := moderatorGroup.Group("auctions")
 		{
+			// Liệt kê tất cả các phiên đấu giá cho moderator
+			moderatorAuctionGroup.GET("", server.listAuctionsForModerator) // ✅
+			
 			// Chỉnh sửa thông tin của một phiên đấu giá
-			moderatorAuctionGroup.PATCH(":auctionID", server.updateAuctionDetailsByModerator)
+			moderatorAuctionGroup.PATCH(":auctionID", server.updateAuctionDetailsByModerator) // ✅
 		}
 		
 		moderatorWithdrawalRequestGroup := moderatorGroup.Group("withdrawal-requests")

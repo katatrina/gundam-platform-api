@@ -872,6 +872,50 @@
                 }
             }
         },
+        "/mod/auctions": {
+            "get": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "List all auctions with optional status filter.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auctions"
+                ],
+                "summary": "List auctions for moderator",
+                "parameters": [
+                    {
+                        "enum": [
+                            "scheduled",
+                            "active",
+                            "ended",
+                            "completed",
+                            "failed",
+                            "canceled"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of auctions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.AuctionDetails"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/mod/auctions/{auctionID}": {
             "patch": {
                 "security": [

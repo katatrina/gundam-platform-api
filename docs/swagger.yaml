@@ -3501,6 +3501,35 @@ paths:
       summary: Reject an auction request by moderator
       tags:
       - moderator
+  /mod/auctions:
+    get:
+      description: List all auctions with optional status filter.
+      parameters:
+      - description: Filter by status
+        enum:
+        - scheduled
+        - active
+        - ended
+        - completed
+        - failed
+        - canceled
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of auctions
+          schema:
+            items:
+              $ref: '#/definitions/db.AuctionDetails'
+            type: array
+      security:
+      - accessToken: []
+      summary: List auctions for moderator
+      tags:
+      - auctions
   /mod/auctions/{auctionID}:
     patch:
       consumes:
