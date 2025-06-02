@@ -1076,9 +1076,10 @@ type cancelAuctionRequest struct {
 //	@Produce		json
 //	@Security		accessToken
 //	@Param			auctionID	path		string					true	"Auction ID (UUID format)"
+//	@Param			sellerID	path		string					true	"Seller ID"	example(s123e456-e789-45d0-9876-54321abcdef)
 //	@Param			request		body		cancelAuctionRequest	true	"Cancellation request with optional reason"
 //	@Success		200			{object}	db.Auction				"Successfully cancelled auction with updated details"
-//	@Router			/sellers/me/auctions/{auctionID}/cancel [patch]
+//	@Router			/sellers/{sellerID}/auctions/{auctionID}/cancel [patch]
 func (server *Server) cancelAuctionBySeller(c *gin.Context) {
 	seller := c.MustGet(sellerPayloadKey).(*db.User)
 	

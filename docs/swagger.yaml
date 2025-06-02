@@ -4158,6 +4158,54 @@ paths:
       summary: Get auction details by seller
       tags:
       - auctions
+  /sellers/{sellerID}/auctions/{auctionID}/cancel:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Cancel an auction that is in 'scheduled' status (has not started yet). This endpoint allows sellers to cancel their own auctions before they begin.
+
+        **Quy tắc nghiệp vụ:**
+        - Chỉ chủ sở hữu phiên đấu giá (người bán) mới có thể hủy
+        - Chỉ có thể hủy phiên đấu giá có trạng thái 'scheduled' (chưa bắt đầu)
+        - Không thể hủy phiên đấu giá đang 'active', 'ended', 'completed', hoặc 'failed'
+        - Lý do hủy là tùy chọn (không bắt buộc)
+
+        **Kết quả sau khi hủy:**
+        1. Trạng thái đấu giá chuyển từ 'scheduled' sang 'canceled'
+        2. Trạng thái Gundam chuyển từ 'auctioning' về 'in store' (có thể đăng bán lại)
+        3. Hoàn trả 1 lượt đăng đấu giá trong gói đăng ký của người bán
+        4. Người bán có thể tạo yêu cầu đấu giá mới (nếu còn quota)
+      parameters:
+      - description: Auction ID (UUID format)
+        in: path
+        name: auctionID
+        required: true
+        type: string
+      - description: Seller ID
+        example: s123e456-e789-45d0-9876-54321abcdef
+        in: path
+        name: sellerID
+        required: true
+        type: string
+      - description: Cancellation request with optional reason
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.cancelAuctionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully cancelled auction with updated details
+          schema:
+            $ref: '#/definitions/db.Auction'
+      security:
+      - accessToken: []
+      summary: Cancel a scheduled auction
+      tags:
+      - auctions
   /sellers/{sellerID}/dashboard:
     get:
       description: Get comprehensive dashboard statistics for a seller including gundam
@@ -4478,48 +4526,6 @@ paths:
       summary: Upgrade subscription plan
       tags:
       - sellers
-  /sellers/me/auctions/{auctionID}/cancel:
-    patch:
-      consumes:
-      - application/json
-      description: |-
-        Cancel an auction that is in 'scheduled' status (has not started yet). This endpoint allows sellers to cancel their own auctions before they begin.
-
-        **Quy tắc nghiệp vụ:**
-        - Chỉ chủ sở hữu phiên đấu giá (người bán) mới có thể hủy
-        - Chỉ có thể hủy phiên đấu giá có trạng thái 'scheduled' (chưa bắt đầu)
-        - Không thể hủy phiên đấu giá đang 'active', 'ended', 'completed', hoặc 'failed'
-        - Lý do hủy là tùy chọn (không bắt buộc)
-
-        **Kết quả sau khi hủy:**
-        1. Trạng thái đấu giá chuyển từ 'scheduled' sang 'canceled'
-        2. Trạng thái Gundam chuyển từ 'auctioning' về 'in store' (có thể đăng bán lại)
-        3. Hoàn trả 1 lượt đăng đấu giá trong gói đăng ký của người bán
-        4. Người bán có thể tạo yêu cầu đấu giá mới (nếu còn quota)
-      parameters:
-      - description: Auction ID (UUID format)
-        in: path
-        name: auctionID
-        required: true
-        type: string
-      - description: Cancellation request with optional reason
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/api.cancelAuctionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully cancelled auction with updated details
-          schema:
-            $ref: '#/definitions/db.Auction'
-      security:
-      - accessToken: []
-      summary: Cancel a scheduled auction
-      tags:
-      - auctions
   /subscription-plans:
     get:
       description: Get a list of all available subscription plans.
