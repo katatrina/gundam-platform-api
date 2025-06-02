@@ -2,28 +2,34 @@
 FROM golang:1.24.0-alpine3.21 AS builder
 WORKDIR /app
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
+# Install ca-certificates for SSL
+RUN apk add --no-cache ca-certificates git
+
+# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-RUN apk add curl
-RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
-
+# Copy source code
 COPY . .
-RUN go build -v -o main main.go
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
 # Run stage
 FROM alpine:3.21
 WORKDIR /app
-COPY --from=builder app/main .
-COPY --from=builder app/migrate .
-RUN apk add --no-cache tzdata dos2unix
-COPY app.env .
-COPY internal/db/migrations ./migrations/
-COPY start.sh .
-RUN dos2unix start.sh
-RUN chmod +x start.sh
 
+# Install ca-certificates for SSL calls
+RUN apk --no-cache add ca-certificates tzdata
+
+# Copy binary from builder
+COPY --from=builder /app/main .
+
+# Copy service account file
+COPY service-account-file.json .
+
+# Expose port
 EXPOSE 8080
-CMD ["/app/main"]
-ENTRYPOINT ["/app/start.sh"]
+
+# Run the application
+CMD ["./main"]

@@ -1,5 +1,21 @@
 .idea/
+
+# Environment files
 app.env
-*.log
-data.sql
+.env
+*.env
+
+# Service account
 service-account-file.json
+
+# Fly.io
+fly.toml
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out

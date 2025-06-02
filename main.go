@@ -43,21 +43,22 @@ import (
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	
+	// Determine config path based on environment
+	configPath := getConfigPath()
+	
 	// Load configurations
-	appConfig, err := util.LoadConfig("./app.env")
+	appConfig, err := util.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load application config file 😣")
 	}
 	
-	// Load Google service account file and initialize Firebase app
+	// Load Google service account credentials
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("./service-account-file.json")
-	firebaseApp, err := firebase.NewApp(ctx, nil, opt)
+	firebaseApp, err := initializeFirebase(ctx, appConfig.Environment)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create firebase app 😣")
 	}
-	
-	log.Info().Msg("configurations loaded successfully ✅")
+	log.Info().Msg("firebase client app initialized ✅")
 	
 	// Create connection pool
 	connPool, err := pgxpool.New(context.Background(), appConfig.DatabaseURL)
@@ -75,11 +76,19 @@ func main() {
 	store := db.NewStore(connPool)
 	
 	redisDb := redis.NewClient(&redis.Options{
-		Addr:     appConfig.RedisServerAddress,
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:      appConfig.RedisServerAddress,
+		Password:  appConfig.RedisServerPassword,
+		DB:        0,
+		TLSConfig: getTLSConfig(appConfig.Environment),
 	})
 	defer redisDb.Close()
+	
+	// Test Redis connection
+	_, err = redisDb.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to Redis 😣")
+	}
+	log.Info().Msg("connected to Redis ✅")
 	
 	mailService, err := mailer.NewGmailSender(appConfig.GmailSMTPUsername, appConfig.GmailSMTPPassword, appConfig, redisDb)
 	if err != nil {
@@ -87,13 +96,9 @@ func main() {
 	}
 	
 	redisOpt := asynq.RedisClientOpt{
-		Addr: appConfig.RedisServerAddress,
-	}
-	if appConfig.Environment == "production" {
-		redisOpt.Password = appConfig.RedisServerPassword
-		redisOpt.TLSConfig = &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		}
+		Addr:      appConfig.RedisServerAddress,
+		Password:  appConfig.RedisServerPassword,
+		TLSConfig: getTLSConfig(appConfig.Environment),
 	}
 	
 	taskDistributor := worker.NewTaskDistributor(redisOpt)
@@ -122,28 +127,50 @@ func main() {
 	runHTTPServer(&appConfig, store, redisDb, taskDistributor, taskInspector, mailService, ghnService, sseServer)
 }
 
+// getConfigPath determines the config file path based on environment
+func getConfigPath() string {
+	if os.Getenv("ENVIRONMENT") == "production" {
+		return "" // No config file in production
+	}
+	return "./app.env" // Development: use app.env file
+}
+
+// getTLSConfig returns TLS config for Redis based on environment
+func getTLSConfig(environment string) *tls.Config {
+	if environment == util.EnvironmentProduction {
+		return &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+	return nil
+}
+
+// initializeFirebase initializes Firebase app by loading credentials from file
+func initializeFirebase(ctx context.Context, environment string) (*firebase.App, error) {
+	opt := option.WithCredentialsFile("./service-account-file.json")
+	return firebase.NewApp(ctx, nil, opt)
+}
+
 func runHTTPServer(appConfig *util.Config, store db.Store, redisDb *redis.Client, taskDistributor worker.TaskDistributor, taskInspector worker.TaskInspector, mailer *mailer.GmailSender, deliveryService delivery.IDeliveryProvider, eventSender event.EventSender) {
 	server, err := api.NewServer(store, redisDb, taskDistributor, taskInspector, appConfig, mailer, deliveryService, eventSender)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create HTTP server 😣")
 	}
 	
-	// Chạy ngrok tunnel trong một goroutine riêng
-	go setupNgrokTunnel(appConfig, server)
+	// Only setup ngrok in development and when token is available
+	if appConfig.Environment == util.EnvironmentDevelopment && appConfig.NgrokAuthToken != "" {
+		go setupNgrokTunnel(appConfig, server)
+	}
 	
-	// Chạy server chính trên localhost
-	log.Info().Msg("Starting main server on localhost")
-	if err := server.Start(appConfig.HTTPServerAddress); err != nil {
+	// Chạy server chính
+	log.Info().Msg("Starting main server")
+	if err = server.Start(appConfig.HTTPServerAddress); err != nil {
 		log.Fatal().Err(err).Msg("failed to start main HTTP server 😣")
 	}
 }
 
+// Always run ngrok tunnel setup in a separate goroutine in any environment
 func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
-	if appConfig.Environment != util.EnvironmentDevelopment || appConfig.NgrokAuthToken == "" {
-		log.Warn().Msg("Skipping ngrok tunnel setup")
-		return
-	}
-	
 	maxRetries := 3
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		ctx := context.Background()
@@ -167,7 +194,7 @@ func setupNgrokTunnel(appConfig *util.Config, server *api.Server) {
 		log.Info().Str("zalopay_callback_url", appConfig.ZalopayCallbackURL).Msg("Zalopay callback URL")
 		
 		zalopayRouter := server.SetupZalopayRouter()
-		if err := zalopayRouter.RunListener(tunnel); err != nil {
+		if err = zalopayRouter.RunListener(tunnel); err != nil {
 			log.Error().Err(err).Msg("Zalopay callback server stopped")
 			return
 		}

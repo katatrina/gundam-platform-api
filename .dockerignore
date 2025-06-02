@@ -1,0 +1,24 @@
+# flyctl launch added from .gitignore
+**\.idea
+
+# Environment files
+**\app.env
+**\.env
+**\*.env
+
+# Fly.io
+**\fly.toml
+
+# Go
+**\*.exe
+**\*.exe~
+**\*.dll
+**\*.so
+**\*.dylib
+**\*.test
+**\*.out
+
+# flyctl launch added from .idea\.gitignore
+# Default ignored files
+.idea\shelf
+.idea\workspace.xml
