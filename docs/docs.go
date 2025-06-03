@@ -3524,6 +3524,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/bank-accounts/{accountID}": {
+            "delete": {
+                "security": [
+                    {
+                        "accessToken": []
+                    }
+                ],
+                "description": "Delete a bank account for the authenticated user (for withdrawals)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Delete user bank account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bank account ID",
+                        "name": "accountID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully deleted bank account",
+                        "schema": {
+                            "$ref": "#/definitions/db.UserBankAccount"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me/exchange-offers": {
             "get": {
                 "security": [
@@ -7966,6 +8000,7 @@ const docTemplate = `{
                 "bank_name",
                 "bank_short_name",
                 "created_at",
+                "deleted_at",
                 "id",
                 "updated_at",
                 "user_id"
@@ -7987,6 +8022,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "id": {

@@ -58,7 +58,7 @@ func (q *Queries) CreateWithdrawalRequest(ctx context.Context, arg CreateWithdra
 
 const getWithdrawalRequest = `-- name: GetWithdrawalRequest :one
 SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
-       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at, uba.deleted_at
 FROM withdrawal_requests wr
          LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
 WHERE wr.id = $1
@@ -95,13 +95,14 @@ func (q *Queries) GetWithdrawalRequest(ctx context.Context, id uuid.UUID) (GetWi
 		&i.UserBankAccount.BankShortName,
 		&i.UserBankAccount.CreatedAt,
 		&i.UserBankAccount.UpdatedAt,
+		&i.UserBankAccount.DeletedAt,
 	)
 	return i, err
 }
 
 const listUserWithdrawalRequests = `-- name: ListUserWithdrawalRequests :many
 SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
-       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at, uba.deleted_at
 FROM withdrawal_requests wr
          LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
 WHERE wr.user_id = $1
@@ -151,6 +152,7 @@ func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, arg ListUserWi
 			&i.UserBankAccount.BankShortName,
 			&i.UserBankAccount.CreatedAt,
 			&i.UserBankAccount.UpdatedAt,
+			&i.UserBankAccount.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -164,7 +166,7 @@ func (q *Queries) ListUserWithdrawalRequests(ctx context.Context, arg ListUserWi
 
 const listWithdrawalRequests = `-- name: ListWithdrawalRequests :many
 SELECT wr.id, wr.user_id, wr.bank_account_id, wr.amount, wr.status, wr.processed_by, wr.processed_at, wr.rejected_reason, wr.transaction_reference, wr.wallet_entry_id, wr.created_at, wr.updated_at, wr.completed_at,
-       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at
+       uba.id, uba.user_id, uba.account_name, uba.account_number, uba.bank_code, uba.bank_name, uba.bank_short_name, uba.created_at, uba.updated_at, uba.deleted_at
 FROM withdrawal_requests wr
          LEFT JOIN user_bank_accounts uba ON wr.bank_account_id = uba.id
 WHERE wr.status = COALESCE($1, wr.status)
@@ -208,6 +210,7 @@ func (q *Queries) ListWithdrawalRequests(ctx context.Context, status NullWithdra
 			&i.UserBankAccount.BankShortName,
 			&i.UserBankAccount.CreatedAt,
 			&i.UserBankAccount.UpdatedAt,
+			&i.UserBankAccount.DeletedAt,
 		); err != nil {
 			return nil, err
 		}

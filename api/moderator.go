@@ -621,7 +621,7 @@ func (server *Server) getModeratorDashboard(c *gin.Context) {
 //	@Security		accessToken
 //	@Router			/mod/auctions [get]
 func (server *Server) listAuctionsForModerator(c *gin.Context) {
-	_ = c.MustGet(sellerPayloadKey).(*db.User)
+	_ = c.MustGet(moderatorPayloadKey).(*db.User)
 	
 	status := c.Query("status")
 	if status != "" {

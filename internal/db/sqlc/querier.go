@@ -207,6 +207,7 @@ type Querier interface {
 	UpdateSellerProfileByID(ctx context.Context, arg UpdateSellerProfileByIDParams) (SellerProfile, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserAddress(ctx context.Context, arg UpdateUserAddressParams) (UserAddress, error)
+	UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error)
 	UpdateWalletEntryByID(ctx context.Context, arg UpdateWalletEntryByIDParams) (WalletEntry, error)
 	UpdateWithdrawalRequest(ctx context.Context, arg UpdateWithdrawalRequestParams) (WithdrawalRequest, error)
 }

@@ -349,8 +349,9 @@ func (server *Server) setupRouter() *gin.Engine {
 	
 	userBankAccountGroup := v1.Group("/users/me/bank-accounts", authMiddleware(server.tokenMaker))
 	{
-		userBankAccountGroup.POST("", server.addBankAccount)      // ✅
-		userBankAccountGroup.GET("", server.listUserBankAccounts) // ✅
+		userBankAccountGroup.POST("", server.addBankAccount)                    // ✅
+		userBankAccountGroup.GET("", server.listUserBankAccounts)               // ✅
+		userBankAccountGroup.DELETE(":accountID", server.deleteUserBankAccount) // ✅
 	}
 	
 	v1.GET("/grades", server.listGundamGrades)                  // Liệt kê tất cả các cấp độ Gundam

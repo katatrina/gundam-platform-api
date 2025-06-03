@@ -1768,15 +1768,16 @@ type UserAddress struct {
 }
 
 type UserBankAccount struct {
-	ID            uuid.UUID `json:"id"`
-	UserID        string    `json:"user_id"`
-	AccountName   string    `json:"account_name"`
-	AccountNumber string    `json:"account_number"`
-	BankCode      string    `json:"bank_code"`
-	BankName      string    `json:"bank_name"`
-	BankShortName string    `json:"bank_short_name"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            uuid.UUID  `json:"id"`
+	UserID        string     `json:"user_id"`
+	AccountName   string     `json:"account_name"`
+	AccountNumber string     `json:"account_number"`
+	BankCode      string     `json:"bank_code"`
+	BankName      string     `json:"bank_name"`
+	BankShortName string     `json:"bank_short_name"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	DeletedAt     *time.Time `json:"deleted_at"`
 }
 
 type Wallet struct {

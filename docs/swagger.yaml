@@ -2521,6 +2521,8 @@ definitions:
         type: string
       created_at:
         type: string
+      deleted_at:
+        type: string
       id:
         type: string
       updated_at:
@@ -2534,6 +2536,7 @@ definitions:
     - bank_name
     - bank_short_name
     - created_at
+    - deleted_at
     - id
     - updated_at
     - user_id
@@ -5492,6 +5495,27 @@ paths:
       security:
       - accessToken: []
       summary: Add bank account
+      tags:
+      - wallet
+  /users/me/bank-accounts/{accountID}:
+    delete:
+      description: Delete a bank account for the authenticated user (for withdrawals)
+      parameters:
+      - description: Bank account ID
+        in: path
+        name: accountID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted bank account
+          schema:
+            $ref: '#/definitions/db.UserBankAccount'
+      security:
+      - accessToken: []
+      summary: Delete user bank account
       tags:
       - wallet
   /users/me/exchange-offers:

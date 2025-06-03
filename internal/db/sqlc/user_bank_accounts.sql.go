@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +20,7 @@ INSERT INTO user_bank_accounts (id,
                                 bank_code,
                                 bank_name,
                                 bank_short_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at, deleted_at
 `
 
 type CreateUserBankAccountParams struct {
@@ -53,15 +54,17 @@ func (q *Queries) CreateUserBankAccount(ctx context.Context, arg CreateUserBankA
 		&i.BankShortName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getUserBankAccount = `-- name: GetUserBankAccount :one
-SELECT id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at
+SELECT id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at, deleted_at
 FROM user_bank_accounts
 WHERE id = $1
   AND user_id = $2
+  AND deleted_at IS NULL
 `
 
 type GetUserBankAccountParams struct {
@@ -82,14 +85,16 @@ func (q *Queries) GetUserBankAccount(ctx context.Context, arg GetUserBankAccount
 		&i.BankShortName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const listUserBankAccounts = `-- name: ListUserBankAccounts :many
-SELECT id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at
+SELECT id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at, deleted_at
 FROM user_bank_accounts
 WHERE user_id = $1
+  AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
@@ -112,6 +117,7 @@ func (q *Queries) ListUserBankAccounts(ctx context.Context, userID string) ([]Us
 			&i.BankShortName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -121,4 +127,37 @@ func (q *Queries) ListUserBankAccounts(ctx context.Context, userID string) ([]Us
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateUserBankAccount = `-- name: UpdateUserBankAccount :one
+UPDATE user_bank_accounts
+SET deleted_at = COALESCE($3, deleted_at),
+    updated_at = now()
+WHERE id = $1
+  AND user_id = $2
+  AND deleted_at IS NULL RETURNING id, user_id, account_name, account_number, bank_code, bank_name, bank_short_name, created_at, updated_at, deleted_at
+`
+
+type UpdateUserBankAccountParams struct {
+	ID        uuid.UUID  `json:"id"`
+	UserID    string     `json:"user_id"`
+	DeletedAt *time.Time `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error) {
+	row := q.db.QueryRow(ctx, updateUserBankAccount, arg.ID, arg.UserID, arg.DeletedAt)
+	var i UserBankAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AccountName,
+		&i.AccountNumber,
+		&i.BankCode,
+		&i.BankName,
+		&i.BankShortName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
