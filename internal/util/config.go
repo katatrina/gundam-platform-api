@@ -178,7 +178,7 @@ func validateConfig(config Config) error {
 	if config.RedisServerAddress == "" {
 		return fmt.Errorf("REDIS_SERVER_ADDRESS is required")
 	}
-	if config.RedisServerPassword == "" {
+	if config.RedisServerPassword == "" && config.Environment == EnvironmentProduction {
 		return fmt.Errorf("REDIS_SERVER_PASSWORD is required")
 	}
 	if config.DiscordBotToken == "" {

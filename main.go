@@ -32,7 +32,7 @@ import (
 //	@version		1.0.0
 //	@description	API documentation for Gundam Platform application
 
-//	@host		localhost:8080
+//	@host		https://gundam-platform-api.fly.dev
 //	@BasePath	/v1
 //	@schemes	http https
 
