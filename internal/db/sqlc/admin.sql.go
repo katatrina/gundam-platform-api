@@ -13,7 +13,8 @@ const getAdminCompletedAuctionsThisWeek = `-- name: GetAdminCompletedAuctionsThi
 SELECT COUNT(*) as count
 FROM auctions
 WHERE status = 'completed'
-  AND updated_at >= date_trunc('week', CURRENT_DATE)
+  AND updated_at >= date_trunc('week'
+    , CURRENT_DATE)
 `
 
 // Metric 7: Đấu giá hoàn thành thành công tuần này (bảng auctions)
@@ -28,7 +29,8 @@ const getAdminCompletedExchangesThisMonth = `-- name: GetAdminCompletedExchanges
 SELECT COUNT(*) as count
 FROM exchanges
 WHERE status = 'completed'
-  AND completed_at >= date_trunc('month', CURRENT_DATE)
+  AND completed_at >= date_trunc('month'
+    , CURRENT_DATE)
 `
 
 // Metric 6: Trao đổi hoàn thành thành công tháng này (bảng exchanges)
@@ -42,7 +44,8 @@ func (q *Queries) GetAdminCompletedExchangesThisMonth(ctx context.Context) (int6
 const getAdminNewUsersThisWeek = `-- name: GetAdminNewUsersThisWeek :one
 SELECT COUNT(*) as count
 FROM users
-WHERE created_at >= date_trunc('week', CURRENT_DATE)
+WHERE created_at >= date_trunc('week'
+    , CURRENT_DATE)
   AND deleted_at IS NULL
 `
 
@@ -58,7 +61,8 @@ const getAdminTotalAuctionOrdersThisMonth = `-- name: GetAdminTotalAuctionOrders
 SELECT COUNT(*) as count
 FROM orders
 WHERE type = 'auction'
-  AND created_at >= date_trunc('month', CURRENT_DATE)
+  AND created_at >= date_trunc('month'
+    , CURRENT_DATE)
 `
 
 // Metric 4: Tổng đơn hàng đấu giá tháng này (bảng orders)
@@ -89,7 +93,8 @@ const getAdminTotalExchangeOrdersThisMonth = `-- name: GetAdminTotalExchangeOrde
 SELECT COUNT(*) as count
 FROM orders
 WHERE type = 'exchange'
-  AND created_at >= date_trunc('month', CURRENT_DATE)
+  AND created_at >= date_trunc('month'
+    , CURRENT_DATE)
 `
 
 // Metric 3: Tổng đơn hàng trao đổi tháng này (bảng orders)
@@ -118,7 +123,8 @@ const getAdminTotalRegularOrdersThisMonth = `-- name: GetAdminTotalRegularOrders
 SELECT COUNT(*) as count
 FROM orders
 WHERE type = 'regular'
-  AND created_at >= date_trunc('month', CURRENT_DATE)
+  AND created_at >= date_trunc('month'
+    , CURRENT_DATE)
 `
 
 // Metric 2: Tổng đơn hàng thường tháng này (bảng orders)
@@ -130,7 +136,7 @@ func (q *Queries) GetAdminTotalRegularOrdersThisMonth(ctx context.Context) (int6
 }
 
 const getAdminTotalRevenueThisMonth = `-- name: GetAdminTotalRevenueThisMonth :one
-SELECT COALESCE(SUM(amount), 0)::bigint as revenue
+SELECT COALESCE(-SUM(amount), 0) ::bigint as revenue
 FROM wallet_entries
 WHERE entry_type = 'subscription_payment'
   AND status = 'completed'
@@ -146,7 +152,7 @@ func (q *Queries) GetAdminTotalRevenueThisMonth(ctx context.Context) (int64, err
 }
 
 const getAdminTotalWalletVolumeThisWeek = `-- name: GetAdminTotalWalletVolumeThisWeek :one
-SELECT COALESCE(SUM(ABS(amount)), 0)::bigint as total_volume
+SELECT COALESCE(SUM(ABS(amount)), 0) ::bigint as total_volume
 FROM wallet_entries
 WHERE status = 'completed'
   AND created_at >= date_trunc('week', CURRENT_DATE)
